@@ -621,8 +621,9 @@
   const STORY_FINAL = { name: 'Csillagszív-lámpás', line: 'Ozsvát lámpása. A fénye már nem lopott: a holdé, és most a tiéd is.' };
   // a főellenfelek ereje (független ellenőrzéssel kalibrálva, minden kaszt átlaga): a fejezet szintjén, reálisan fejlesztett
   // felszereléssel kb. 60–72% győzelmi esély, lemaradt felszereléssel 31–56%; az 1. fejezet barátságos (~78%).
-  const STORY_BOSS = [{ lm: 0.5, pw: 0.96 }, { lm: 3.77, pw: 1.1 }, { lm: 8.58, pw: 1.1 }, { lm: 14.54, pw: 1.1 }, { lm: 20.5, pw: 1.1 },
-    { lm: 25.8, pw: 1.1 }, { lm: 32, pw: 1.1 }, { lm: 39, pw: 1.1 }, { lm: 45.5, pw: 1.1 }, { lm: 50.5, pw: 1.1 }];
+  // a hosszabb, képességdúsabb harcokhoz újramérve: ugyanaz a győzelmi esély (78–94%), mint korábban
+  const STORY_BOSS = [{ lm: 0.56, pw: 0.96 }, { lm: 3.89, pw: 1.1 }, { lm: 9.19, pw: 1.1 }, { lm: 14.8, pw: 1.1 }, { lm: 21.25, pw: 1.1 },
+    { lm: 26.72, pw: 1.1 }, { lm: 33.75, pw: 1.1 }, { lm: 40.98, pw: 1.1 }, { lm: 48.14, pw: 1.1 }, { lm: 53.15, pw: 1.1 }];
   function storyChapters() { return (D.STORY && D.STORY.chapters) || []; }
   function storyState(save, now) {
     const today = day(now);

@@ -25,7 +25,13 @@
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
   // ---------- Alapértékek ----------
-  var MAX_ROUNDS = 15, GEAR_AVG = 1.25, MAX_LEVEL = 50;
+  var MAX_ROUNDS = 25, GEAR_AVG = 1.25, MAX_LEVEL = 50;
+  // a harc tempója: minden ütés ekkora részét viszi be (hosszabb harc → több képesség jut szóhoz);
+  // a képességek a harc elején sorban készen állnak (1., 2., 3. … kör), utána a saját újratöltésük szerint jönnek
+  // dmg: a hős (és társai) ütése; a szörny ütése ehhez képest képességenként perSkill-lel erősebb, hogy a
+  // harc elején sorban kész képességek többlete ne billentse el az erőviszonyokat (független szimulációval hangolva)
+  // boss: a heti szörnynél az ütést visszaskálázzuk, hogy átlagosan ugyanannyit vigyen be, mint a régi rendszerben (mérve: ×1,146)
+  var COMBAT = { dmg: 0.55, perSkill: 0.06, readyAtStart: true, boss: 1 / (0.55 * 1.146) };
   var DIFF = {
     konnyu:  { name: 'Könnyű',  band: [0.85, 0.95], target: 0.90, xp: 0.8, itemChance: 0.40, silver: 0.8, dust: 0.8 },
     kozepes: { name: 'Közepes', band: [0.65, 0.80], target: 0.72, xp: 1.0, itemChance: 0.55, silver: 1.0, dust: 1.0 },
@@ -311,8 +317,9 @@
     var st = { buffDmg: 0, buffUntil: 0, guard: 1, guardUntil: 0, shield: 0, dodge: 0, dodgeUntil: 0,
                haste: 0, hasteUntil: 0, regen: 0, regenUntil: 0, packUntil: 0, petGoneUntil: 0 };
     var ms = { stunned: false, slow: 0, slowUntil: 0, weak: 1, weakUntil: 0, armor: 0, armorUntil: 0, dot: 0, dotUntil: 0 };
-    var ready = {};
-    hero.loadout.forEach(function (id) { ready[id] = D.SKILLS[id].cd; });
+    // egy másik hős szelleme a saját képességszámával üt (azzal is lett hangolva)
+    var ready = {}, monMul = COMBAT.dmg + COMBAT.perSkill * ((mon.ghostOf && mon.loadout) || hero.loadout || []).length;
+    (hero.loadout || []).forEach(function (id, i) { ready[id] = COMBAT.readyAtStart ? i + 1 : D.SKILLS[id].cd; });
     var firstHitDone = false, rnd, dmgDealt = 0, dmgTaken = 0, dodged = 0, crits = 0;
 
     function emit(e) { if (log) { e.r = rnd; e.hp = Math.max(0, hp); e.mhp = Math.max(0, mhp); log.push(e); } }
@@ -339,7 +346,7 @@
       var critP = 0.05 + 0.25 * attFur / (attFur + sc) + att.critPct / 100 + (opts.crit || 0);
       var crit = rng() < critP;
       if (crit) d *= 1.75;
-      return { dmg: d, crit: crit };
+      return { dmg: d * (att.side === 'm' ? monMul : COMBAT.dmg), crit: crit };
     }
 
     function heroHit(mult, skillId, extra) {
@@ -405,7 +412,7 @@
       }
       // méreg
       if (mhp > 0 && rnd <= ms.dotUntil && ms.dot > 0) {
-        var dd = hero.tam * 2 * ms.dot * K / (K + mon.ved) * T.out;
+        var dd = hero.tam * 2 * ms.dot * K / (K + mon.ved) * T.out * COMBAT.dmg;
         mhp -= dd; dmgDealt += dd;
         emit({ who: 'h', kind: 'dot', dmg: Math.round(dd) });
       }
@@ -893,7 +900,13 @@
     opts = opts || {};
     var f = simulateFight(heroF, bossF, tacticId, seed, !!opts.log, { maxRounds: 3 });
     var mult = (opts.weakness && opts.weakness === tacticId ? 1.3 : 1) * (1 + (opts.bonusPct || 0) / 100);
-    f.damage = Math.round(f.dmgDealt * mult);
+    var k = COMBAT.boss * mult;
+    f.damage = Math.round(f.dmgDealt * k);
+    // a lejátszás számlálója is ugyanazt mutassa, mint a végeredmény
+    if (f.log) f.log.forEach(function (e) {
+      if (e.mhp != null) e.mhp = 1e12 - (1e12 - e.mhp) * k;
+      if (e.dmg != null && e.who !== 'm') e.dmg = Math.round(e.dmg * k);
+    });
     f.weak = mult > 1.0001 && opts.weakness === tacticId;
     return f;
   }
@@ -929,7 +942,7 @@
     itemStats: itemStats, makeItem: makeItem, affixText: affixText, salvageValue: salvageValue, sellValue: sellValue, upgradeCost: upgradeCost,
     newHero: newHero, unlockedSkills: unlockedSkills, nextSkillUnlock: nextSkillUnlock, heroStats: heroStats, power: power, powerRaw: powerRaw, lootLevel: lootLevel,
     fighterFromHero: fighterFromHero, monsterFighter: monsterFighter, simulateFight: simulateFight, winChance: winChance,
-    findMonsterLevel: findMonsterLevel, regionFor: regionFor, makeOffers: makeOffers, offerTarget: offerTarget, ELITE: ELITE, offerMoon: offerMoon, eliteTarget: eliteTarget, normEvent: normEvent, eventOptions: eventOptions, eventCost: eventCost, eventCheckChance: eventCheckChance, applyFollow: applyFollow, offerChance: offerChance,
+    findMonsterLevel: findMonsterLevel, COMBAT: COMBAT, regionFor: regionFor, makeOffers: makeOffers, offerTarget: offerTarget, ELITE: ELITE, offerMoon: offerMoon, eliteTarget: eliteTarget, normEvent: normEvent, eventOptions: eventOptions, eventCost: eventCost, eventCheckChance: eventCheckChance, applyFollow: applyFollow, offerChance: offerChance,
     startExpedition: startExpedition, resolveCard: resolveCard, guardPreview: guardPreview, fightGuard: fightGuard,
     finishExpedition: finishExpedition, applyChoice: applyChoice, lossAdvice: lossAdvice,
     torchState: torchState, spendTorch: spendTorch, dustRoom: dustRoom, dustCap: dustCap, weekOf: weekOf, addDust: addDust, addXp: addXp,

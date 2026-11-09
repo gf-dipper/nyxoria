@@ -1576,7 +1576,9 @@
   }
   function delayFor(e) {
     const base = { round: 380, skill: 520, hit: 700, heal: 520, shield: 480, stun: 520, dot: 520, skip: 560 }[e.kind] || 500;
-    return base / (S.save.settings.speed || 1);
+    // hosszú harcnál a későbbi körök gyorsabban peregnek, hogy a gyógyítós/kitartós harcok se húzódjanak el
+    const late = e.r > 9 ? 0.5 : e.r > 4 ? 0.75 : 1;
+    return base * late / (S.save.settings.speed || 1);
   }
   function stepCombat() {
     const c = S.combat;
@@ -1591,7 +1593,7 @@
   function endLine() {
     const c = S.combat, f = c.fight, H = esc(c.heroName), M = esc(art(c.monName));
     if (c.boss) return `<p class="r">VÉGE</p><p class="crit">${H} ${fmt(c.extra.damage || c.dealt)} sebzést vitt be a heti szörnynek (${esc(c.monName)})${c.extra.weak ? ', telibe találta a gyenge pontját' : ''}!</p>`;
-    if (f.timeout) return `<p class="r">VÉGE</p><p><b>Letelt a 15 kör!</b> Az nyer, akinek százalékban több élete maradt: ${f.win ? H : M}.</p>`;
+    if (f.timeout) return `<p class="r">VÉGE</p><p><b>Letelt a ${E.MAX_ROUNDS} kör!</b> Az nyer, akinek százalékban több élete maradt: ${f.win ? H : M}.</p>`;
     return f.win ? `<p class="r">VÉGE</p><p class="crit">${M} a földre rogy. Győzelem!</p>` : `<p class="r">VÉGE</p><p class="mon">${H} megbotlik és elesik. Most nem sikerült.</p>`;
   }
   function finishCombatAnim() {

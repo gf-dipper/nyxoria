@@ -149,7 +149,7 @@
           ] },
           { h: 'Képességek', list: [
             'Mindenkinek van egy alaptámadása, és a 3., 6., 10. és 13. szinten egy-egy új képességet tanul.',
-            'A hős mindig a lista első kész képességét használja, utána az újratöltődik. Ha semmi sincs kész, alaptámadással üt.',
+            'A harc elején a képességeid sorban élesednek: az első az első körben, a második a másodikban, és így tovább. A hős mindig a lista első kész képességét használja, utána az újratöltődik. Ha semmi sincs kész, alaptámadással üt.',
             'A sorrendet a Karakter képernyőn, a Képességek résznél a nyilakkal állíthatod.',
             'Idéző: a szellem minden körben vele üt; a Falka két farkast hív, a Lélekcsere egy nagy robbanásért feláldozza a szellemet.',
             'Orgyilkos: a harc első találata másfélszeres. Dalnok és Alakváltó: gyengítés, gyorsítás és gyógyulás.'
