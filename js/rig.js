@@ -1085,7 +1085,12 @@
     if (turned) body = `<g transform="translate(${fx(160 + 10 * sn)} 0) scale(${fx(sg * bodyW)} 1) translate(-160 0)">${body}</g>`;
     const sleeve = L.c1;
     const cuffC = cls === 'harcos' ? metalFill(id) : L.c2;
-    const hand = (H, Tm, side) => shaded(id, H, L.skin, { off: [-3, -2], rim: 1.4 }) + P(Tm, L.skin, { sw: 1.6 }) + S(side > 0 ? 'M210 279 L222 278 M210 284.5 L221.5 284' : mirror('M210 279 L222 278 M210 284.5 L221.5 284'), dark(L.skin, 0.4), 1.1, { op: 0.7 });
+    // hátulról a kézfej látszik: nincs hüvelykujj és ujjhajlat, helyette a bütykök íve és két finom ín
+    const handBack = c < -0.2;
+    const hand = (H, Tm, side) => handBack
+      ? shaded(id, H, L.skin, { off: [-3, -2], rim: 1.4 }) + S(side > 0 ? 'M203.5 287 C209 291.5 216 291.5 221.5 286.5' : mirror('M203.5 287 C209 291.5 216 291.5 221.5 286.5'), dark(L.skin, 0.38), 1.2, { op: 0.75 })
+        + S(side > 0 ? 'M209 271 L210.5 284 M215.5 270.5 L216 283.5' : mirror('M209 271 L210.5 284 M215.5 270.5 L216 283.5'), dark(L.skin, 0.25), 0.9, { op: 0.45 })
+      : shaded(id, H, L.skin, { off: [-3, -2], rim: 1.4 }) + P(Tm, L.skin, { sw: 1.6 }) + S(side > 0 ? 'M210 279 L222 278 M210 284.5 L221.5 284' : mirror('M210 279 L222 278 M210 284.5 L221.5 284'), dark(L.skin, 0.4), 1.1, { op: 0.7 });
     // férfiaknál vállvédő / vállkendő a karok tetején: szélesebb, szögletesebb vállvonal
     const PAUL = 'M183 196 C186 180 212 176 224 194 C226 205 219 213 208 213 C195 213 185 207 183 196 Z';
     const paulC = { harcos: null, alakvalto: '#8a6a4a', vadasz: '#6a4630', orgyilkos: dark(L.c1, 0.2) }[cls];
