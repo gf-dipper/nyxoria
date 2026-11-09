@@ -917,7 +917,7 @@ html { scrollbar-width: thin; scrollbar-color: rgba(127, 140, 255, .35) transpar
   .nx-grp h2, .nx-grp h3 { padding: 5px 8px 2px; font-size: 10.5px; }
   .nx-grp + .nx-grp { margin-top: 3px; padding-top: 3px; }
   .nx-rail-foot { padding: 6px 8px; }
-  .nx-rail { max-height: calc(100vh - var(--topbar) - 24px); }
+  .nx-rail { max-height: calc(100vh - var(--topbar) - 40px); } /* a rács fenti+lenti 20-20 px-es párnája: így az oldal sem lóg le */
   .nx-rail-foot .icon-btn { padding: 4px; }
 }
 .nx-admbtn { height: 40px; gap: 6px; }
@@ -985,3 +985,23 @@ html { scrollbar-width: thin; scrollbar-color: rgba(127, 140, 255, .35) transpar
 .elite-tag { display: inline-block; padding: 1px 8px; border-radius: 999px; background: #ff8aa8; color: #2a0a18; font-weight: 800; letter-spacing: .5px; margin-right: 4px; }
 .elite-why { margin-top: 8px; color: #ffc2d0; }
 .portrait.elite { box-shadow: 0 0 0 2px rgba(255,138,168,.6), 0 0 26px rgba(255,138,168,.35); }
+
+/* alacsonyabb asztali képernyőn a menü fokozatosan tömörödik, hogy görgetés nélkül elférjen */
+@media (min-width: 761px) and (max-height: 960px) {
+  .nx-grp button { min-height: 27px; font-size: 13px; }
+  .nx-grp h2, .nx-grp h3 { padding: 4px 8px 1px; }
+}
+@media (min-width: 761px) and (max-height: 800px) {
+  .nx-grp button { min-height: 24px; padding: 0 8px; gap: 8px; }
+  .nx-grp button .ni { width: 17px; height: 17px; }
+  .nx-grp h2, .nx-grp h3 { display: none; }
+  .nx-grp + .nx-grp { margin-top: 4px; padding-top: 4px; }
+  .nx-rail-foot .icon-btn small { display: none; }
+}
+@media (min-width: 761px) and (max-height: 690px) {
+  .nx-grp button { min-height: 21px; font-size: 12.5px; }
+  .nx-rail-foot { padding: 4px 8px; }
+  .nx-grp ul { gap: 0; }
+  .nx-rail-scroll { padding: 4px 8px; }
+  .nx-grp + .nx-grp { margin-top: 2px; padding-top: 2px; }
+}
