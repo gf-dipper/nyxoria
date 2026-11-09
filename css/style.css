@@ -870,3 +870,8 @@ svg.nxi-misc { width: 1.3em; height: 1.3em; flex: none; display: inline-block; v
 .nx-hcard.empty { cursor: pointer; border-style: dashed; justify-content: flex-start; min-height: 108px; }
 .nx-hcard.empty:hover { border-color: var(--hold-300, #cfd8ff); }
 .nx-hplus { width: 72px; height: 84px; display: grid; place-items: center; font-size: 34px; color: var(--hold-500); border-radius: 12px; background: rgba(255, 255, 255, .03); flex-shrink: 0; }
+/* a karakterkészítő asztali gépen pontosan kitölti a képernyőt: az oldalt nem kell görgetni, csak a jobb oldali panelt */
+@media (min-width: 900px) {
+  .creator-shell .nxc .nxc-creator { --stage-h: clamp(440px, calc(100dvh - 160px), 880px); }
+  .layout.wide .nxc .nxc-creator { --stage-h: clamp(440px, calc(100dvh - 200px), 880px); }
+}
