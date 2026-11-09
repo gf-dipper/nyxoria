@@ -382,6 +382,646 @@ import postgres from 'npm:postgres@3.4.9';
   };
 })(typeof window !== 'undefined' ? window : globalThis);
 
+// ===== js/content.js =====
+(function (root) {
+  var D = root.NYX.data;
+  D.ADVENTURE = {
+    intros: {
+      any: [
+        'Kiérsz a fák közül egy kerek tisztásra. Három dolog néz vissza rád, és mindegyik azt súgja: „Engem válassz!”',
+        'A hold épp kibújik a felhők mögül, és három helyre világít rá. Mintha direkt mutatná, merre érdemes menni.',
+        'Leülsz egy tönkre kifújni magad. Mire felnézel, három dolog is történik körülötted. Ennyit a pihenésről.',
+        'A fáklyád lángja megremeg. Három irányból is hívogat valami: egy nesz, egy csillogás és egy furcsa illat.',
+        'Egy öreg útjelző kőhöz érsz. A felirata szerint: „Erre is, arra is, amarra is.” Hát, ez sokat segít.',
+        'Kis tisztás, nagy csend. Túl nagy csend. Aztán egyszerre három helyről is megmozdul valami.'
+      ],
+      kodlap: [
+        'A köd itt bokáig ér, a nád suttog. A pára három helyen ritkul meg, mintha meg akarna mutatni valamit.',
+        'Egy korhadt pallóhoz érsz. Balra bugyog a víz, jobbra lámpás dereng, előtted pedig valaki horkol a nádasban.',
+        'A láp békái egyszerre elhallgatnak. Ilyenkor érdemes körülnézni. Három dolgot is látsz, ami eddig nem volt itt.',
+        'Végre szilárd talaj! A kis zsombékszigeten három dolog vár rád, a csizmád viszont tele van vízzel.'
+      ],
+      holdfeny: [
+        'Ezüstös fény szűrődik át a lombokon. A tisztáson három fénynyaláb ér földet, mindegyik máshol.',
+        'Puha a talaj, gyantaillat lebeg. Valahol bagoly huhog, valahol csengettyű szól, valahol valaki dudorászik.',
+        'Holdfényben fürdő rétre érsz. Szentjánosbogarak rajzanak három kupacban, mintha útjelzők volnának.',
+        'A fenyők olyan magasak, hogy a hold csak résnyire lát be közéjük. Ebben a résben három dologon is megakad a szemed.'
+      ],
+      arnyromok: [
+        'Ledőlt oszlopok között jársz. A kövek hidegek, az árnyékok hosszabbak a kelleténél. Három dolog vonja magára a figyelmedet.',
+        'Beomlott csarnokba érsz. Fent hiányzik a tető, lent a padló fele. A kettő között azért akad pár érdekesség.',
+        'Rúnák gyúlnak fel a falon, aztán kialszanak. Három helyen viszont tovább világítanak. Ez biztosan jelent valamit.',
+        'A romok közt visszhangzik a lépted. Háromszor, pedig csak egyet léptél. Mindhárom visszhang máshonnan jön.'
+      ],
+      szirtek: [
+        'Fent süvít a szél, lent szikrázik a tenger. Köztük egy keskeny párkány, rajta három különös dolog.',
+        'Egy hullócsillag húz el a fejed fölött, és valahol a közelben csapódik be. Füst, csillogás és furcsa zümmögés.',
+        'A kristályok zenélnek a szélben. Ahogy körülnézel, három helyen is megcsillan valami.',
+        'Széles sziklapadra érsz. A kilátás lélegzetelállító, de most fontosabb az a három dolog, ami a lábad előtt van.'
+      ],
+      ejkatlan: [
+        'Itt még a sötétnek is van árnyéka. A fáklyád fénye három dolgot ragad ki a feketeségből.',
+        'A föld langyos, mintha alattad lélegezne valami. Három halvány fény pislákol, és mind téged figyel.',
+        'Fekete hamu ropog a talpad alatt. Előtted három út, egyik sem barátságos. Na de melyik a legkevésbé?',
+        'A hold innen csak egy vékony ezüstkarcolás az égen. Alatta három dolog dereng, mintha rád várna.'
+      ]
+    },
+
+    searches: {
+      any: [
+        { title: 'Rókalyuk', text: 'A róka nincs itthon. A lyuka viszont tele van mindenféle holmival, amit ő kincsnek gondol.' },
+        { title: 'Ágra akasztott batyu', text: 'A gazdája vagy visszajön érte, vagy már rég elfelejtette. Inkább az utóbbi.' },
+        { title: 'Odvas fa', text: 'Az odúban zörög valami. Remélhetőleg dió. Remélhetőleg nem harap.' },
+        { title: 'Gondos kőrakás', text: 'Valaki szépen egymásra rakta a köveket. Ilyet csak az csinál, aki meg akar jelölni valamit.' },
+        { title: 'Felborult kosár', text: 'Gomba, bogyó és egy elgurult, gyanúsan fényes golyó. A gombát inkább hagyd.' },
+        { title: 'Gyökerek ölelése', text: 'A fa gyökerei körbefonnak egy ládikát. Mintha vigyáznának rá. Vagy nem akarnák visszaadni.' }
+      ],
+      kodlap: [
+        { title: 'Iszapba ragadt láda', text: 'Csak a sarka áll ki a sárból. Ha jó erősen húzod, talán kijön. Vagy te mész be.' },
+        { title: 'Cölöpös halászkunyhó', text: 'Bent hálók, horgok és egy furcsán nehéz bögre. A halász rég nem járt erre.' },
+        { title: 'Nádas rejtek', text: 'Valaki kitaposott magának egy kis fészket a nádban. Elég kényelmes, és nem is üres.' },
+        { title: 'Elsüllyedt harang', text: 'A víz alól egy harang teteje kandikál ki. Ki tudja, mi lapul alatta.' }
+      ],
+      holdfeny: [
+        { title: 'Bagolyodú', text: 'A gazdája vadászni ment. A fészek alján csillog valami, amit egy bagoly sem tud megenni.' },
+        { title: 'Ezüstpáfrányos', text: 'A páfrányok levele ezüstös. Alattuk toboz, avar, és talán valami értékesebb is.' },
+        { title: 'Rozoga vadászles', text: 'A létrája nyikorog, de fent senki sincs. Csak egy ottfelejtett tarisznya.' },
+        { title: 'Tündérkör', text: 'Gombák kerek körben. Középen lelapult a fű, mintha valaki épp most táncolt volna ott.' }
+      ],
+      arnyromok: [
+        { title: 'Beomlott kripta', text: 'A fedőlap félrecsúszott. Bent por, pókháló és egy gondosan becsomagolt valami.' },
+        { title: 'Rúnás ládika', text: 'A rúnák elhalványultak, a zár viszont még mindig makacs. Ez jó jel.' },
+        { title: 'Ledőlt szobor', text: 'A szobor feje leesett, a nyakában pedig egy rejtett rekesz tátong.' },
+        { title: 'Poros könyvtárszoba', text: 'A könyvek nagy része porrá lett. A maradék között még lapulhat valami hasznos.' }
+      ],
+      szirtek: [
+        { title: 'Friss kráter', text: 'A kráter alján még izzik a kő. Körülötte apró, csillogó szilánkok hevernek.' },
+        { title: 'Elhagyott griffészek', text: 'Ágakból, csontokból és egy szakadt nyeregből épült. A griffeknek fura az ízlésük.' },
+        { title: 'Kristálybarlang', text: 'A falon kristályok nőnek. Némelyik annyira laza, hogy szinte kínálja magát.' },
+        { title: 'Remetelak a sziklában', text: 'Egy remete lakott itt valaha. A falba vájt polcokon még maradt néhány üvegcse.' }
+      ],
+      ejkatlan: [
+        { title: 'Kihűlt üst', text: 'Hatalmas üst. Az alján odaszáradt valami, ami egykor nagyon fontos lehetett.' },
+        { title: 'Lépcső a sötétbe', text: 'Hét lépcsőfok lefelé, utána csak sötét. Az első fokokon valaki otthagyott valamit.' },
+        { title: 'Fekete obeliszk', text: 'Az obeliszk tövében áldozati tálak. A legtöbb üres, de nem mind.' },
+        { title: 'Megkövült vándor', text: 'Kőszobor, de nagyon olyan, mintha élt volna. A tarisznyája viszont még valódi.' }
+      ]
+    },
+
+    events: [
+      // ===================== BÁRHOL =====================
+      { id: 'any_gazdatlan_lampas', region: 'any', kind: 'esemeny', title: 'A gazdátlan lámpás',
+        text: 'Egy viharlámpa ugrál az ösvényen, magától. Néha megáll, és visszanéz rád. Mármint visszanézne, ha lenne szeme.',
+        options: [
+          { label: 'Követem', result: 'A lámpás egy odvas fához vezet, aztán kialszik. Az odúban valaki régi megtakarítása lapul.', effect: 'silver' },
+          { label: 'Elkapom', check: { stat: 'fur', base: 0.6 },
+            result: 'Sikerül! A lámpás megadóan pislákol a kezedben, aztán csillagport szór rád.', effect: 'dust',
+            fail: { result: 'A lámpás kicsúszik a kezedből, te pedig hasra esel a mohában. Ő közben vidáman elugrál.', effect: 'hurt' } },
+          { label: 'Megkérdezem, hová siet', needs: { trait: 'kivancsi' },
+            result: 'Kiderül, hogy a gazdáját keresi. Elmeséli, merre járt eddig, és közben rengeteget megtudsz a környékről.', effect: 'xp', amount: 1.5 }
+        ] },
+
+      { id: 'any_szoszatyar_ko', region: 'any', kind: 'esemeny', title: 'A szószátyár kő',
+        text: 'Egy út menti kő megszólít, és azóta sem hallgat el. Háromszáz éve senki sem állt meg mellette, úgyhogy van mit bepótolnia.',
+        options: [
+          { label: 'Végighallgatom', result: 'Két órán át mesél. A fele unalmas, a másik felében viszont hasznos titkok vannak a környék szörnyeiről.', effect: 'xp' },
+          { label: 'Közben arrébb gurítom', result: 'A kő észre sem veszi, annyira belemerült a mesélésbe. Alatta egy kis üreg, benne csillagpor.', effect: 'dust' },
+          { label: 'Rámordulok, hogy elég', needs: { trait: 'mogorva' },
+            result: 'A kő döbbenten elhallgat. Végre valaki, aki kimondja, amit gondol! Tiszteletből elárulja, hová rejtették a vándorok a pénzüket.', effect: 'silver', amount: 1.5 }
+        ] },
+
+      { id: 'any_holdtukor_kut', region: 'any', kind: 'szentely', title: 'A holdtükör kútja',
+        text: 'Kerek kis kút a fűben, a vize mozdulatlan, mint a tükör. Nem az arcodat mutatja, hanem a holdat, pedig az most felhő mögött van.',
+        options: [
+          { label: 'Iszom a vizéből', result: 'Hideg és édes. A fáradtság lassan kiszivárog a tagjaidból.', effect: 'heal' },
+          { label: 'Beledobok egy érmét', result: 'Az érme nem csobban, egyszerűen elnyeli a fény. Cserébe egy kevés belőle a karodba költözik.', effect: 'blessing' },
+          { label: 'Elmondom a holdköszöntőt', needs: { origin: 'templom' },
+            result: 'A templomban ezerszer elmondtad. Most először felel is rá valaki: a víz felragyog, és te is vele ragyogsz.', effect: 'blessing', amount: 1.5 }
+        ] },
+
+      { id: 'any_korhado_pallo', region: 'any', kind: 'csapda', title: 'A korhadó palló',
+        text: 'Egy patak fölött vékony, korhadt palló vezet át. Már attól recseg, hogy ránézel.',
+        options: [
+          { label: 'Átszaladok rajta', check: { stat: 'fur', base: 0.6 },
+            result: 'Mire a palló beszakad, te már a túlparton vagy. A deszkák közül kiesik egy régi erszény.', effect: 'silver',
+            fail: { result: 'Félúton beszakad alattad. A patak hideg, a köveken ráadásul jól beütöd a térdedet.', effect: 'hurt' } },
+          { label: 'Lejjebb átgázolok', result: 'Lassú és vizes, de biztonságos. A mederben pár csillagporos kavics csillan meg.', effect: 'dust', amount: 0.5 },
+          { label: 'Megkeresem a rejtett gázlót', needs: { origin: 'csempesz' },
+            result: 'Ahol csempészek járnak, ott mindig van titkos gázló. Itt is akad, és valaki a rakománya egy részét is ottfelejtette.', effect: 'dust', amount: 1.5 }
+        ] },
+
+      { id: 'any_fekete_ko', region: 'any', kind: 'csapda', title: 'A fekete kő',
+        text: 'Egy sötét tavacskán lapos kövek vezetnek át. Mind szürke, csak a középső fekete. És persze pont arra kellene lépni.',
+        options: [
+          { label: 'Végigugrálok rajtuk', check: { stat: 'fur', base: 0.6 },
+            result: 'Kőről kőre szökkensz, mint egy kecske. A túlparton egy marék csillagpor vár, mintha jutalom volna.', effect: 'dust',
+            fail: { result: 'A fekete kő megbillen, és derékig merülsz. A tó nem mély, csak nagyon hideg. És a kövek élesek.', effect: 'hurt' } },
+          { label: 'Megkerülöm a tavat', result: 'Egy órába telik, de legalább száraz maradsz. Útközben szedsz egy marék erdei szamócát.', effect: 'heal', amount: 0.5 },
+          { label: 'Fekete kőre nem lépek!', needs: { trait: 'babonas' },
+            result: 'Átugrod, pedig nagy a táv. Kiderül, hogy ez volt az egyetlen billegő kő. A túlparton még egy erszény is vár. Mindig tudtad.', effect: 'silver', amount: 1.5 }
+        ] },
+
+      { id: 'any_teazo_mano', region: 'any', kind: 'arus', title: 'A teázó manó',
+        text: 'Egy gyökér alatt pici teázó működik. A gazdája, egy apró manó, csészéket törölget, és már tölt is. „Ez nem ingyen van ám!”',
+        options: [
+          { label: 'Kérek egy kamillát', cost: 0.5, result: 'Forró, illatos, és meglepően sok fér abba a pici csészébe. Jobban leszel tőle.', effect: 'heal' },
+          { label: 'A ház különlegességét kérem', cost: 1, result: 'Fogalmad sincs, mi volt benne, de a karod most erősebbnek tűnik. A manó sokatmondóan kacsint.', effect: 'blessing' },
+          { label: 'Köszönöm, majd máskor', result: 'A manó vállat von, de azért ad egy kockacukrot az útra. Ingyen. Csak most az egyszer.', effect: 'heal', amount: 0.5 },
+          { label: 'Kifizetem a következő vendég teáját', cost: 1, needs: { trait: 'joszivu' },
+            result: 'A manó meghatódik, és egy zacskó csillagporos cukrot nyom a kezedbe. „Ilyen vendég ritkán jön” – mondja, és megtörli a szemét.', effect: 'dust', amount: 1.5 }
+        ] },
+
+      { id: 'any_terkeparus', region: 'any', kind: 'arus', title: 'A térképárus',
+        text: 'Egy öregúr térképeket árul egy tönkön. „Mind pontos!” – bizonygatja. Az egyiken a hold a térkép közepén van.',
+        options: [
+          { label: 'Veszek egy térképet', cost: 0.5, result: 'Meglepő módon tényleg pontos. Egy csomó ösvényt és rejtekhelyet ismersz meg belőle.', effect: 'xp' },
+          { label: 'Kincses térképet kérek', cost: 1.5, result: 'Az X tényleg ott van, ahol a térkép mutatja. Alatta egy kis láda csillagpor.', effect: 'dust', amount: 1.5 },
+          { label: 'Kösz, eltévedek magamtól is', result: 'Az öreg nevet, és ad egy szem csillagport a szerencse kedvéért. „Ha eltévedsz, menj a hold felé.”', effect: 'dust', amount: 0.5 },
+          { label: 'Szólok, hogy rossz a csillagállás', needs: { origin: 'tanonc' },
+            result: 'Az öreg elsápad, aztán hálásan javítgat. A helyes égboltért busásan megfizet. Térképet persze nem kérsz tőle.', effect: 'silver', amount: 1.5 }
+        ] },
+
+      { id: 'any_kerdezo_varju', region: 'any', kind: 'rejtveny', title: 'A kérdező varjú',
+        text: 'Egy varjú ül az utat elzáró rúdon. „Csak az mehet tovább, aki megmondja: mi az, ami a tiéd, mégis mások használják gyakrabban?”',
+        options: [
+          { label: '„A nevem”', result: 'A varjú elégedetten károg, felbillenti a rudat, és egy fényes gombot dob utánad. Csillagporból van.', effect: 'dust' },
+          { label: '„A kardom”', result: 'A varjú hosszan néz. „Akkor jobban kéne vigyáznod rá.” Végül átenged, de láthatóan csalódott.', effect: 'none' },
+          { label: '„A tarisznyám”', result: '„Akkor rossz helyen hordod” – károgja a varjú. Végül átenged, mert ráunt a vitára.', effect: 'none' }
+        ] },
+
+      { id: 'any_csillageso', region: 'any', kind: 'arany', title: 'Csillageső',
+        text: 'A tisztás fölött megnyílik az ég, és apró csillagok kezdenek hullani, puhán, mint a hó. Ahol földet érnek, ezüstösen világít a fű.',
+        options: [
+          { label: 'Elkapok egyet', result: 'A csillag meleg, és dorombol, mint egy macska. Aztán finom porrá omlik a tenyeredben. Rengeteg porrá.', effect: 'dust', amount: 2 },
+          { label: 'Kívánok valamit', result: 'Nem mondod ki hangosan, úgy nem teljesülne. A karodba áramló erő viszont elárulja, hogy valaki így is meghallotta.', effect: 'blessing', amount: 2 },
+          { label: 'Csak nézem', result: 'Leülsz a fűbe, és nézed, amíg az utolsó csillag is földet ér. Ilyet kevesen láttak. Most már te is.', effect: 'xp', amount: 1.5 }
+        ] },
+
+      { id: 'any_postagalamb', region: 'any', kind: 'esemeny', title: 'Az eltévedt postagalamb',
+        text: 'Egy kimerült galamb pottyan eléd. A lábán levél, a pecsétje kissé megolvadt. Nagyon szeretné, ha végre kézbesítené valaki.',
+        options: [
+          { label: 'Elolvasom a levelet', result: 'Egy öreg kalandor írja a tanítványának: tippek, trükkök, a szörnyek gyenge pontjai. Neked is jól jön.', effect: 'xp' },
+          { label: 'Útba igazítom', result: 'A galamb hálásan búg, és otthagyja a postadíjat. Úgy látszik, nála ez fordítva működik.', effect: 'silver' },
+          { label: 'Felismerem a pecsétet', needs: { origin: 'nemes' },
+            result: 'A régi házad intézőjének pecsétje! A levél neked szól, és pénz is van benne. A galamb végre célba ért.', effect: 'silver', amount: 1.5 }
+        ] },
+
+      { id: 'any_kettetort_kard', region: 'any', kind: 'esemeny', title: 'A kettétört kard',
+        text: 'Egy kard hever két darabban egy tönk mellett. A pengéjén még látszik a kovácsjegy. Szép munka volt, amíg egyben volt.',
+        options: [
+          { label: 'Elteszem a markolatot', result: 'A markolatra ezüstszálat fontak. A következő vásáron szép pénzt kapsz érte.', effect: 'silver' },
+          { label: 'Tisztességgel elásom', result: 'Ahogy a gödröt ásod, csillagporos kavicsokra bukkansz. Mintha a kard egykori gazdája így köszönné meg.', effect: 'dust' },
+          { label: 'Összekovácsolom a tűznél', needs: { origin: 'kovacs' },
+            result: 'Egy lapos kő az üllő, egy másik a kalapács. Otthon tanultad. Nem lesz legendás, de újra egyben van, és a tiéd.', effect: 'item' }
+        ] },
+
+      { id: 'any_vandorok_tuznel', region: 'any', kind: 'esemeny', title: 'Vándorok a tűz körül',
+        text: 'Néhány vándor ül egy tűz körül, és épp azon vitatkoznak, ki mesél a legjobban. Helyet szorítanak neked is.',
+        options: [
+          { label: 'Leülök melegedni', result: 'A tűz meleg, a leves sűrű, a társaság jókedvű. Kipihenten indulsz tovább.', effect: 'heal' },
+          { label: 'Elmesélem a kalandjaimat', result: 'Kicsit kiszínezed, de csak egy kicsit. A vándorok cserébe elárulják, mire figyelj a környéken.', effect: 'xp' },
+          { label: 'Elsütöm a legjobb viccemet', needs: { trait: 'trefas' },
+            result: 'Akkorát nevetnek, hogy az egyikük leesik a farönkről. Összedobnak neked egy kis pénzt, hogy mondd el még egyszer.', effect: 'silver', amount: 1.5 }
+        ] },
+
+      { id: 'any_gyanus_pite', region: 'any', kind: 'esemeny', title: 'A gyanús pite',
+        text: 'Egy erdei kunyhó ablakában pite hűl. Az illata mennyei, a gazdája sehol. Kicsit túl könnyű ez így.',
+        options: [
+          { label: 'Bekopogok', result: 'Egy apró anyóka nyit ajtót, és úgy örül a vendégnek, hogy kapsz egy szeletet. Nem gyanús, csak isteni.', effect: 'heal' },
+          { label: 'Elveszek egy szeletet, és fizetek', result: 'A helyére egy érmét teszel. A kunyhóból elégedett kuncogás hallatszik, és furcsa erő árad szét benned.', effect: 'blessing' },
+          { label: 'Megeszem az egészet', needs: { trait: 'falanks' },
+            result: 'Gyanús volt, de megérte. Utána egy darabig mozdulni sem bírsz, viszont olyan jóllakott vagy, hogy minden fájdalmad elmúlik.', effect: 'heal', amount: 1.5 }
+        ] },
+
+      { id: 'any_sebzett_hollo', region: 'any', kind: 'esemeny', title: 'A sebzett holló',
+        text: 'Egy holló gubbaszt a földön, a szárnya furcsán lóg. Gyanakodva néz rád, de nem repül el. Talán nem is tudna.',
+        options: [
+          { label: 'Bekötöm a szárnyát', setFlag: 'hollo_megmentve',
+            result: 'Csíp egyet, de hagyja. Mire végzel, már a szárnyát próbálgatja. Kiköp egy szem csillagport, és hosszan néz utánad.', effect: 'dust', amount: 0.5 },
+          { label: 'Adok neki pár morzsát', result: 'Mohón eszik, aztán a csőrével odapöccint neked egy fényes érmét. Ki tudja, kitől csente.', effect: 'silver' }
+        ] },
+
+      { id: 'any_hollo_visszater', region: 'any', kind: 'esemeny', title: 'A holló visszatér', follow: 'hollo_megmentve',
+        text: 'Ismerős károgás. Az a holló az, akinek bekötötted a szárnyát, és egy egész csapatot hozott magával. Mindegyik csőrében van valami.',
+        options: [
+          { label: 'Elfogadom az ajándékokat', result: 'Gyűrű, gomb, kanál, csillagporos kavics. A hollók szerint ez mind kincs. A kavicsokban igazuk van.', effect: 'dust', amount: 1.5 },
+          { label: 'Megkérem, mutasson utat', result: 'A hollók olyan ösvényre vezetnek, amelyről a szörnyek sem tudnak. Felkészülten, magabiztosan haladsz tovább.', effect: 'blessing', amount: 1.5 }
+        ] },
+
+      { id: 'any_szakadt_hur', region: 'any', kind: 'esemeny', title: 'A szakadt húr',
+        text: 'Egy vándorlantos ül a tisztáson, és kétségbeesetten hangolja a lantját. Elszakadt egy húrja, és vele együtt az önbizalma is.',
+        options: [
+          { label: 'Odaadom a cipőfűzőmet', result: 'A fűzőből húr lesz, a húrból dal. Nem szép, de lelkes. Jókedvűen indulsz tovább.', effect: 'heal' },
+          { label: 'Megkérem, játsszon valamit', result: 'Öt húron is meglepően jól játszik. Arra járó vándorok állnak meg, pénzt dobnak a kalapjába, és a lantos megfelezi veled.', effect: 'silver' },
+          { label: 'Írok hozzá egy új versszakot', needs: { trait: 'almodozo' },
+            result: 'Egy holdfényes versszak jut eszedbe, a lantos meghatottan jegyzi le. Cserébe megtanít neked pár régi legendát.', effect: 'xp', amount: 1.5 }
+        ] },
+
+      // ===================== KÖDLÁP =====================
+      { id: 'kodlap_ingovany', region: 'kodlap', kind: 'csapda', title: 'Az ingovány',
+        text: 'Az ösvény elfogy, előtted csak zsombékok és csillogó, fekete víz. Az egyik zsombék gyanúsan bugyborékol.',
+        options: [
+          { label: 'Átugrálok a zsombékokon', check: { stat: 'fur', base: 0.55 },
+            result: 'Szökkensz, egyensúlyozol, és átérsz. Az utolsó zsombékba valaki egy erszényt dugott.', effect: 'silver',
+            fail: { result: 'Egy zsombék elsüllyed alattad. Derékig merülsz, és mire kikecmeregsz, minden porcikád sajog.', effect: 'hurt' } },
+          { label: 'Megvárom, míg felszáll a köd', result: 'Ahogy oszlik a pára, előbukkan egy keskeny gát. Kényelmesen átsétálsz, és közben ki is pihened magad.', effect: 'heal', amount: 0.5 },
+          { label: 'Követem a köd rajzolatát', needs: { origin: 'arva' },
+            result: 'Ködben nőttél fel, úgy olvasol belőle, mint más a könyvből. A biztos úton haladva egy elhagyott pénzeszsákra is rábukkansz.', effect: 'silver', amount: 1.5 }
+        ] },
+
+      { id: 'kodlap_lapi_anyoka', region: 'kodlap', kind: 'rejtveny', title: 'A horgászó anyóka',
+        text: 'Egy anyóka horgászik a lápon, pedig itt hal sincs. „Mondd meg nekem, mi az: folyton fut, mégsem fárad el, van ága, mégsem fa?”',
+        options: [
+          { label: '„A folyó”', result: '„Na végre valaki!” – kuncog az anyóka. A horgára épp ekkor akad fel valami csillogó, és neked adja.', effect: 'dust', amount: 1.5 },
+          { label: '„A szél”', result: '„A szélnek nincs ága, legfeljebb szárnya” – feleli az anyóka, és horgászik tovább. Ennyi volt.', effect: 'none' },
+          { label: '„A mókus”', result: 'Az anyóka olyan jót nevet, hogy majdnem beleesik a vízbe. „Fáradhatatlan, az igaz.” Aztán elhessent.', effect: 'none' }
+        ] },
+
+      { id: 'kodlap_segitokesz_liderc', region: 'kodlap', kind: 'esemeny', title: 'A segítőkész lidérc',
+        text: 'Kék lidércfény lebeg előtted. „Erre, erre! Mutatom a rövidebb utat!” Nagyon igyekszik. Kicsit túlságosan is.',
+        options: [
+          { label: 'Követem', check: { stat: 'fur', base: 0.55 },
+            result: 'A rövidebb út tényleg rövidebb, csak épp ingoványos. Ügyesen átjutsz, és a túloldalon egy elhagyott erszényt találsz.', effect: 'silver',
+            fail: { result: 'A rövidebb út egyenesen a mocsárba vezet. A lidérc kuncogva eltűnik, te pedig vizesen, horzsolásokkal mászol ki.', effect: 'hurt' } },
+          { label: 'Szólok, hogy menjen haza', result: 'A lidérc elszégyelli magát, és ellebeg. Bocsánatkérésképp egy kis csillagport hagy maga után.', effect: 'dust' },
+          { label: 'Kifordítom a köpenyemet', needs: { trait: 'babonas' },
+            result: 'Ősi trükk: aki kifordítja a ruháját, azt a lidérc nem vezetheti tévútra. A fény bosszúsan szétpukkan, és rád szórja az erejét.', effect: 'blessing', amount: 1.5 }
+        ] },
+
+      { id: 'kodlap_bekakorus', region: 'kodlap', kind: 'esemeny', title: 'Békakórus-próba',
+        text: 'Nagy a sürgés a lápon: a békák a lápkirály születésnapjára gyakorolnak. Csak a basszus hiányzik. Mindenki rád néz.',
+        options: [
+          { label: 'Beállok brummogni', result: 'Mélyen és hamisan brummogsz, de a karmester béka elégedett. A végén megtapsolnak, és ettől egészen jókedvű leszel.', effect: 'heal' },
+          { label: 'Inkább vezényelek', result: 'Kiderül, hogy a ritmus nem a békák erőssége. A tiéd sem. Közben viszont sok mindent megtudsz a lápkirály szokásairól.', effect: 'xp' },
+          { label: 'Beállok szólistának', needs: { trait: 'trefas' },
+            result: 'Akkorát brekegsz, hogy a kórus elnémul, aztán tapsvihar tör ki. A közönség soraiból még pár érme is a lábad elé gurul.', effect: 'silver', amount: 1.5 }
+        ] },
+
+      { id: 'kodlap_pikkelyoltar', region: 'kodlap', kind: 'szentely', title: 'A vedlett bőr oltára',
+        text: 'Egy mohos kőre valaki ezüstös kígyóbőrt terített, mint egy abroszt. Körülötte apró áldozati tálkák. A levegő hűvös és csendes.',
+        options: [
+          { label: 'Megérintem a kígyóbőrt', result: 'A pikkelyek hidegek, de a bizsergés egészen a válladig fut. A kezedet most fürgébbnek érzed.', effect: 'blessing' },
+          { label: 'Megmosakodom a tálban', result: 'A víz csíp egy kicsit, aztán minden karcolásod begyógyul. Az Ezüstpikkely ezek szerint jókedvében van.', effect: 'heal' },
+          { label: 'Magamra terítem a bőrt', needs: { trait: 'vakmero' },
+            result: 'Bárki más szerint őrültség. Neked pont jó: a bőr szétporlik rajtad, és a kígyó ereje egy időre a tiéd.', effect: 'blessing', amount: 1.5 }
+        ] },
+
+      { id: 'kodlap_beragadt_reves', region: 'kodlap', kind: 'esemeny', title: 'A beragadt révész',
+        text: 'Egy öreg révész toporog a sárban, a csónakja félig elmerült. „Hé, vándor! Segíts már egy öregembernek!”',
+        options: [
+          { label: 'Kihúzom a csónakot', setFlag: 'reves_kihuzva',
+            result: 'Nyögsz, húzol, a sár nagyot cuppan, és a csónak kiszabadul. A révész hálásan a markodba nyom pár érmét.', effect: 'silver' },
+          { label: 'Tanácsot adok neki', result: 'Elmagyarázod, hogyan lazítsa meg a sarat. Működik. A révész a tanácsért is fizet, igaz, csak félárat.', effect: 'silver', amount: 0.5 },
+          { label: 'Bevetem a csempészfogást', needs: { origin: 'csempesz' }, setFlag: 'reves_kihuzva',
+            result: 'Az evezővel megemeled a csónak orrát, és már csúszik is. Az öreg kacsint: „Ismerem ezt a fogást.” És duplán fizet.', effect: 'silver', amount: 1.5 }
+        ] },
+
+      { id: 'kodlap_reves_fuvar', region: 'kodlap', kind: 'esemeny', title: 'A révész fuvarja', follow: 'reves_kihuzva',
+        text: 'Csónak siklik elő a ködből. A révész az, akit kihúztál a sárból. „Szállj be, ingyen viszlek. Amíg evezek, pihenj csak!”',
+        options: [
+          { label: 'Beszállok és pihenek', result: 'A csónak ringat, a köd betakar. Mire kikötsz, teljesen kipihented magad.', effect: 'heal', amount: 1.5 },
+          { label: 'Kifaggatom a láp őreiről', result: 'Az öreg mindegyiket ismeri, és a gyenge pontjaikat is elárulja. Brekusról például azt, hogy csiklandós.', effect: 'blessing', amount: 1.5 }
+        ] },
+
+      // ===================== HOLDFÉNY-ERDŐ =====================
+      { id: 'holdfeny_kobold_vam', region: 'holdfeny', kind: 'esemeny', title: 'Kobold-vámszedők',
+        text: 'Három fenyőkobold állja el az ösvényt, kezükben tobozos lándzsa. „Vám! Ez itt királyi út, egy toboz a díja!”',
+        options: [
+          { label: 'Fizetek egy tobozzal', result: 'A koboldok alaposan megvizsgálják, aztán visszajárót adnak. Ezüstben. A kobold-gazdaság rejtély, de nem panaszkodsz.', effect: 'silver' },
+          { label: 'Elzavarom őket', check: { stat: 'tam', base: 0.6 },
+            result: 'Nagyot dobbantasz, és a koboldok fejvesztve menekülnek, a vámpénzt is otthagyják. A hangerő néha fél győzelem.', effect: 'silver',
+            fail: { result: 'A koboldok összezárnak, és addig bökdösnek, amíg el nem hátrálsz. Kicsik, de kitartóak.', effect: 'hurt' } },
+          { label: 'Felmutatom a pecsétgyűrűmet', needs: { origin: 'nemes' },
+            result: 'A koboldok meglátják a családi címert, és mélyen meghajolnak. Királyi vendégnek járó ajándékkal engednek tovább.', effect: 'silver', amount: 1.5 }
+        ] },
+
+      { id: 'holdfeny_remete', region: 'holdfeny', kind: 'rejtveny', title: 'Az ezüstszakállú remete',
+        text: 'Egy remete ül egy kidőlt fenyőn, és a holdat bámulja. „Felelj, és mehetsz: hol kerek, hol sarló, hol meg el is bújik. Mi az?”',
+        options: [
+          { label: '„A hold”', result: 'A remete elmosolyodik. „Pedig ott volt az orrod előtt.” Cserébe megtanít pár régi holdvadász-trükkre.', effect: 'xp' },
+          { label: '„A sajt”', result: '„A hold nem sajtból van – sóhajt a remete. – Pedig milyen jó lenne.” Aztán szó nélkül elenged.', effect: 'none' },
+          { label: '„A bagoly szeme”', result: 'A remete gyanakodva felnéz a fára, ahol épp egy bagoly pislog. „Hát, félig talált” – mondja. Többet nem.', effect: 'none' }
+        ] },
+
+      { id: 'holdfeny_tuskes_mancs', region: 'holdfeny', kind: 'esemeny', title: 'A tüskés mancs',
+        text: 'Egy ezüstbundás holdfarkas fekszik az ösvényen, és a mancsát nyalogatja. Morog, de nem áll fel. Valami beleállt a talpába.',
+        options: [
+          { label: 'Kihúzom a tüskét', setFlag: 'farkas_baratsag', check: { stat: 'ved', base: 0.6 },
+            result: 'A farkas felnyüszít, aztán hálásan megnyalja a kezedet. Mielőtt elfut, hosszan a szemedbe néz. Erőt ad ez a pillantás.', effect: 'blessing',
+            fail: { result: 'A farkas ijedtében a karodba kap. Nem harap meg komolyan, és a tüske is kijött. Most mindketten sántítotok egy kicsit.', effect: 'hurt' } },
+          { label: 'Lassan hátrálok', result: 'A farkas utánad néz, de nem mozdul. A bokorban, ahová hátrálsz, valaki egy kis erszényt rejtett el.', effect: 'silver' },
+          { label: 'Visszamorgok rá', needs: { trait: 'mogorva' },
+            result: 'Egy darabig farkasszemet néztek, aztán ő hajtja le a fejét. Most te vagy a falkavezér, és ettől nagyon erősnek érzed magad.', effect: 'blessing', amount: 1.5 }
+        ] },
+
+      { id: 'holdfeny_farkasfalka', region: 'holdfeny', kind: 'esemeny', title: 'A farkasfalka', follow: 'farkas_baratsag',
+        text: 'Ezüst bundák villannak a fák között. Az a holdfarkas az, akinek kihúztad a tüskét, és most az egész falkát elhozta. Csóválják a farkukat.',
+        options: [
+          { label: 'Futok velük egy kört', result: 'Együtt rohantok át az éjszakai erdőn, szinte repülsz. A végére minden izmod tele van erővel.', effect: 'blessing', amount: 1.5 },
+          { label: 'Hagyom, hogy vezessenek', result: 'A falka egy barlanghoz visz, ahol évek óta gyűjtik a fényes holmikat. Egy részét neked adják.', effect: 'dust', amount: 1.5 }
+        ] },
+
+      { id: 'holdfeny_gyantakonny', region: 'holdfeny', kind: 'szentely', title: 'A gyantakönny-oltár',
+        text: 'Egy öreg fenyő tövében kis oltár áll, a kérgén aranyló gyanta csorog. Azt mondják, ez a Fenyőkirálynő könnye.',
+        options: [
+          { label: 'Gyantát kenek a fegyveremre', result: 'A gyanta megkeményedik, és halványan dereng a fegyvereden. Minden ütésed súlyosabb lesz tőle.', effect: 'blessing' },
+          { label: 'Lefekszem a fa tövébe', result: 'Puha a tűlevél, bódító a gyantaillat. Csak egy kicsit szundítasz, mégis olyan, mintha egész éjjel aludtál volna.', effect: 'heal' },
+          { label: 'Elültetek egy fenyőmagot', needs: { trait: 'joszivu' },
+            result: 'A mag azonnal kicsírázik, a kis hajtás feléd hajol. Az öreg fenyő megremeg, mintha megköszönné, és erővel tölt el.', effect: 'blessing', amount: 1.5 }
+        ] },
+
+      { id: 'holdfeny_lengo_ronk', region: 'holdfeny', kind: 'csapda', title: 'A lengő rönk',
+        text: 'Az ösvény fölött kötélen lóg egy rönk. A fűben vékony zsinór fut keresztben. Valaki nagyon szeretné, ha belebotlanál.',
+        options: [
+          { label: 'Átszökkenek a zsinóron', check: { stat: 'fur', base: 0.6 },
+            result: 'Könnyedén átugrod. A zsinór végén ott lóg a csalétek is: egy zacskó csillagpor. Most már a tiéd.', effect: 'dust',
+            fail: { result: 'A lábad beleakad, a rönk meglendül. Az utolsó pillanatban hasra vágódsz előle, de a földet már nem tudod kikerülni.', effect: 'hurt' } },
+          { label: 'Kerülök egyet a fák között', result: 'Hosszabb út, de csendes. A mohában egy elveszett ezüstérmére bukkansz.', effect: 'silver', amount: 0.5 },
+          { label: 'Megnézem, ki állította', needs: { trait: 'kivancsi' },
+            result: 'A zsinórt követve egy kobold-rejtekhez érsz. A gazdája elszalad, a zsákmánya viszont itt marad.', effect: 'dust', amount: 1.5 }
+        ] },
+
+      { id: 'holdfeny_feher_szarvas', region: 'holdfeny', kind: 'arany', title: 'A fehér szarvas',
+        text: 'Hófehér szarvas lép ki a fák közül, és egy forrásnál iszik. Ahol a patája földet ér, virág nyílik. Rád néz, és nem fut el.',
+        options: [
+          { label: 'Iszom a forrásból, ahol ivott', result: 'A víz édes, mint a holdfény. Minden fáradtságod elszáll, mintha csak most indultál volna útnak.', effect: 'heal', amount: 2 },
+          { label: 'Megérintem az agancsát', result: 'Az agancs meleg és ezüstös. A fény átköltözik a karodba, és ott is marad.', effect: 'blessing', amount: 2 },
+          { label: 'Követem a nyomait', result: 'A szarvas egy patakhoz vezet, amelynek medrében ezüstérmék csillognak. Aztán eltűnik, mintha ott sem lett volna.', effect: 'silver', amount: 2 }
+        ] },
+
+      // ===================== ÁRNYROMOK =====================
+      { id: 'arnyromok_nema_kapu', region: 'arnyromok', kind: 'rejtveny', title: 'A néma kapu',
+        text: 'Zárt kőkapu, rajta vésett felirat: „Mi az, ami megtörik, ha kimondod a nevét?” Alá valaki odakarcolta: „Én se tudom.”',
+        options: [
+          { label: '„A csend”', result: 'Ahogy kimondod, a kapu hangtalanul kinyílik. Mögötte kis kamra, tele régi feljegyzésekkel.', effect: 'xp', amount: 1.5 },
+          { label: '„A tükör”', result: 'Semmi. A kapu zárva marad, a tükrök pedig ezek szerint bírják, ha a nevükön szólítják őket. Kerülővel mész tovább.', effect: 'none' },
+          { label: '„A kapu”', result: 'Kimondod. A kapu nem törik meg. Kicsit butának érzed magad, amiért egy kapuval vitatkozol.', effect: 'none' }
+        ] },
+
+      { id: 'arnyromok_runatolvaj', region: 'arnyromok', kind: 'esemeny', title: 'A beszorult rúnatolvaj',
+        text: 'Egy ledőlt gerenda alól egy rúnatolvaj kalimpál, a zsákja tele lopott rúnakővel. „Segíts ki, és nem felejtem el!”',
+        options: [
+          { label: 'Kiszabadítom', setFlag: 'tolvaj_kiszabaditva',
+            result: 'Megemeled a gerendát, ő kicsusszan. „Tartozom neked!” – kiáltja, hátradob egy érmét, és már el is tűnt.', effect: 'silver', amount: 0.5 },
+          { label: 'Elveszem a zsákját', result: 'A tolvaj szitkozódik, te pedig elégedetten méregeted a rúnaköveket. Mindegyikre csillagpor tapad.', effect: 'dust' },
+          { label: 'Vasrúddal kiemelem a gerendát', needs: { origin: 'kovacs' }, setFlag: 'tolvaj_kiszabaditva',
+            result: 'Egy rozsdás vasrúdból emelőt csinálsz, ahogy a műhelyben tanultad. A tolvaj meghatódik, és megoszt veled pár rúnát.', effect: 'dust', amount: 1.5 }
+        ] },
+
+      { id: 'arnyromok_suttogas', region: 'arnyromok', kind: 'esemeny', title: 'Suttogás a sötétből', follow: 'tolvaj_kiszabaditva',
+        text: '„Pszt!” A rúnatolvaj az, akit kiszabadítottál. „Előtted csapda van, üreges a padló. De tudok egy jobb utat, sőt egy rejteket is.”',
+        options: [
+          { label: 'Megfogadom a tanácsát', result: 'Kikerülöd a csapdát, a tolvaj pedig még a környék őreinek szokásait is elárulja. Felkészülten mész tovább.', effect: 'blessing', amount: 1.5 },
+          { label: 'Megosztozunk a rejteken', result: 'A rejtek tele van régi érmékkel, és a tolvaj becsületesen megfelezi. Tolvajhoz képest egész rendes.', effect: 'silver', amount: 1.5 }
+        ] },
+
+      { id: 'arnyromok_holdszobor', region: 'arnyromok', kind: 'szentely', title: 'A fejetlen holdszobor',
+        text: 'Egy holdpapnőt ábrázoló szobor áll a romok közt, fej nélkül. A feje ott hever mellette a fűben, és mintha szemrehányóan nézne.',
+        options: [
+          { label: 'Visszateszem a fejét', result: 'Nehéz, de sikerül. A szobor szeme felvillan, és áldást mormol, amit a karodban érzel.', effect: 'blessing' },
+          { label: 'Leülök a talapzatára', result: 'A kő langyos, mintha valaki épp most kelt volna fel róla. Ahogy pihensz, a sebeid begyógyulnak.', effect: 'heal' },
+          { label: 'Elmondom az esti imát', needs: { origin: 'templom' },
+            result: 'Ezt az imát a Holdtemplomban tanultad. A szobor ráismer, és a legerősebb áldását adja neked.', effect: 'blessing', amount: 1.5 }
+        ] },
+
+      { id: 'arnyromok_csillagos_padlo', region: 'arnyromok', kind: 'csapda', title: 'A csillagos padló',
+        text: 'A folyosó padlóját kőlapok borítják, mindegyiken egy csillagkép. Néhány lap kicsit mélyebben ül a többinél. Gyanúsan.',
+        options: [
+          { label: 'Átszökkenek a gyanúsakon', check: { stat: 'fur', base: 0.55 },
+            result: 'Úgy ugrálsz, mint gyerekkorodban az ugróiskolában. Egyetlen lapot sem nyomsz be, és a túloldalon egy marék csillagpor vár.', effect: 'dust',
+            fail: { result: 'Egy lap kattan, és a falból ősi por meg pár tompa nyílvessző zúdul rád. Inkább kellemetlen, mint veszélyes, de fáj.', effect: 'hurt' } },
+          { label: 'A fal mentén araszolok', result: 'Lassú, de a fal mellett tömörek a lapok. Útközben egy repedésben pár régi ezüstpénzt találsz.', effect: 'silver', amount: 0.5 },
+          { label: 'A csillagképek szerint lépek', needs: { origin: 'tanonc' },
+            result: 'A csillagképek az évszakok sorrendjét követik, ezt minden tanonc tudja. Biztosan átérsz, a végén pedig egy rejtett fülke vár.', effect: 'dust', amount: 1.5 }
+        ] },
+
+      { id: 'arnyromok_szellemkalmar', region: 'arnyromok', kind: 'arus', title: 'A szellemkalmár',
+        text: 'Áttetsző kalmár ül egy áttetsző pult mögött. „Mindent eladok! Csak megfogni nem tudom.” Az áruját te sem, de érezni igen.',
+        options: [
+          { label: 'Veszek egy régi áldást', cost: 1, result: 'A kalmár rád fújja. Előbb hideg, aztán meleg, aztán nagyon erősnek érzed magad tőle.', effect: 'blessing' },
+          { label: 'Veszek egy emléket', cost: 0.5, result: 'Egy rég elhunyt vívómester emléke költözik beléd. Egy pillanatra tudod, amit ő tudott, és valami meg is marad belőle.', effect: 'xp' },
+          { label: 'Csak nézelődöm', result: 'A kalmár sóhajt: kétszáz éve mindenki csak nézelődik. Azért eléd gurít egy érmét. Ő úgysem tudná elkölteni.', effect: 'silver', amount: 0.5 },
+          { label: 'Elbeszélgetek vele', needs: { trait: 'almodozo' },
+            result: 'Órákig meséltek egymásnak régi időkről és meg nem történt kalandokról. Búcsúzóul a kalmár megtanít egy régi trükkre.', effect: 'xp', amount: 1.5 }
+        ] },
+
+      { id: 'arnyromok_sopro_golem', region: 'arnyromok', kind: 'esemeny', title: 'A söprögető gólem',
+        text: 'Egy kőgólem söpri a romokat, megállás nélkül. A por felszáll, aztán visszaszáll, ő pedig kezdi elölről. Évszázadok óta.',
+        options: [
+          { label: 'Segítek neki', result: 'Együtt söpritek fel a csarnokot. A gólem nem szól, de a végén eléd tol egy marék csillagport, amit a por alatt talált.', effect: 'dust' },
+          { label: 'Megkérdezem, miért csinálja', result: 'A gólem megáll, és gondolkodik. Sokáig. Végül annyit mond: „Rend.” Valahogy mégis sokat tanulsz ebből.', effect: 'xp' },
+          { label: 'Megmutatom, hogy kell igazán', needs: { trait: 'buszke' },
+            result: 'Olyan tökéletesen söpörsz, hogy a gólem meghajol előtted. Kőből van, ez neki nem könnyű. Aztán neked adja az évszázadok alatt összesöpört érméket.', effect: 'silver', amount: 1.5 }
+        ] },
+
+      // ===================== CSILLAGHULLÁS-SZIRTEK =====================
+      { id: 'szirtek_griffcsibe', region: 'szirtek', kind: 'esemeny', title: 'A kiesett griffcsibe',
+        text: 'Pihés griffcsibe csipog a sziklán. Fent, a szirt peremén üres fészek. Az anyja valószínűleg vadászik. Valószínűleg.',
+        options: [
+          { label: 'Visszaviszem a fészekbe', setFlag: 'griff_segitve', check: { stat: 'fur', base: 0.6 },
+            result: 'A mászás nehéz, a csibe csipked, de felérsz. A fészek szélén pár csillogó kristályszilánk hever.', effect: 'dust',
+            fail: { result: 'Félúton megcsúszol, és visszahuppansz. A csibének semmi baja, neked annál inkább. Másodszorra azért sikerül.', effect: 'hurt' } },
+          { label: 'Megvárom az anyját', result: 'Az anyja hamar megérkezik, és gyanakodva méreget. Aztán biccent. Közben sokat tanulsz a griffekről.', effect: 'xp' },
+          { label: 'Odaadom neki a kolbászomat', needs: { trait: 'falanks' }, setFlag: 'griff_segitve',
+            result: 'Nehezen válsz meg tőle. A csibe egyben lenyeli, böfög egyet, és felköhög egy csillogó kavicsot. A griffek így köszönik meg.', effect: 'dust', amount: 1.5 }
+        ] },
+
+      { id: 'szirtek_anyagriff', region: 'szirtek', kind: 'esemeny', title: 'Az anyagriff', follow: 'griff_segitve',
+        text: 'Hatalmas szárnyak suhognak, és egy griff ereszkedik le eléd. A csibe anyja, és láthatóan hallott rólad. Lehajtja a fejét, és a hátára mutat.',
+        options: [
+          { label: 'Felülök a hátára', result: 'Fentről mindent látsz: a szörnyek ösvényeit, az őrök rejtekét. Ezzel a tudással sokkal könnyebb lesz a harc.', effect: 'blessing', amount: 1.5 },
+          { label: 'Elfogadom a tollát', result: 'Aranyló tollat ad. A szirti kufárok szép summát fizetnek egy ilyenért.', effect: 'silver', amount: 1.5 }
+        ] },
+
+      { id: 'szirtek_omlo_parkany', region: 'szirtek', kind: 'csapda', title: 'Az omladozó párkány',
+        text: 'A szirtfalon keskeny párkány vezet körbe. A széléről apró kövek peregnek le a mélybe. Hosszan peregnek.',
+        options: [
+          { label: 'Végigfutok rajta', check: { stat: 'fur', base: 0.55 },
+            result: 'Mire a kövek utánad omlanak, te már a túloldalon vagy. A párkány végén egy gazdátlan erszény lapul.', effect: 'silver',
+            fail: { result: 'Leszakad alattad egy darab, de egy bokorba kapaszkodva visszahúzod magad. Lehorzsolt tenyérrel, de megvagy.', effect: 'hurt' } },
+          { label: 'A falhoz simulva araszolok', result: 'Lassú és ijesztő, de épségben átérsz. A fal egyik repedésében valaki pár érmét rejtett el.', effect: 'silver', amount: 0.5 },
+          { label: 'Előbb lerugdosom a laza köveket', needs: { trait: 'ovatos' },
+            result: 'Ahol a kövek leomlanak, kristályerek bukkannak elő, a párkány pedig biztonságosabb lett. Az óvatosság megtérült.', effect: 'dust', amount: 1.5 }
+        ] },
+
+      { id: 'szirtek_csillagporkufar', region: 'szirtek', kind: 'arus', title: 'A csillagporkufár',
+        text: 'Viharvert kufár árul csillagport egy szirti pihenőn. „Frissen hullott, garantáltan égi!” A zsákja alja mintha homokos lenne.',
+        options: [
+          { label: 'Veszek egy marékkal', cost: 1, result: 'A por nagyobb része tényleg csillagpor. A kisebbik része homok. Ennyi belefér.', effect: 'dust' },
+          { label: 'Veszek egy szélamulettet', cost: 1.5, result: 'Az amulett halkan fütyül, ha megmozdulsz. Furcsa, de a karod tőle könnyebb és gyorsabb.', effect: 'blessing', amount: 1.5 },
+          { label: 'Nem kérek, köszönöm', result: 'A kufár vállat von. Közben észreveszed, hogy a zsák fele tényleg homok. Ezt jó tudni a következő vásárra.', effect: 'xp', amount: 0.5 },
+          { label: 'Előbb megvizsgálom az árut', cost: 1, needs: { trait: 'ovatos' },
+            result: 'Kiszúrod a homokot, a kufár pedig szégyenében a jobbik zsákból mér. Ugyanannyiért, csak bővebben.', effect: 'dust', amount: 1.5 }
+        ] },
+
+      { id: 'szirtek_bogarvonulas', region: 'szirtek', kind: 'esemeny', title: 'Kristálybogár-vonulás',
+        text: 'Kristálybogarak ezrei kelnek át az ösvényen. Mindegyik páncélja másképp töri meg a holdfényt, az egész szirt szivárványban úszik.',
+        options: [
+          { label: 'Megvárom, míg átkelnek', result: 'Leülsz egy kőre, és gyönyörködsz. Mire az utolsó bogár is átér, kipihented magad.', effect: 'heal' },
+          { label: 'Felszedek pár levedlett páncélt', result: 'Az üres páncélok könnyűek, és a markodban csillagporrá morzsolódnak.', effect: 'dust' },
+          { label: 'Átsétálok a hátukon', needs: { trait: 'vakmero' },
+            result: 'A bogarak meg sem érzik. Úgy lépdelsz rajtuk, mint egy szivárványhídon. Ezt kevesen mondhatják el magukról.', effect: 'xp', amount: 1.5 }
+        ] },
+
+      { id: 'szirtek_meteorko', region: 'szirtek', kind: 'szentely', title: 'A meteorkő oltára',
+        text: 'Fekete meteorkő áll a szirt peremén, a felszíne még langyos. Valaki virágot hagyott a tövében.',
+        options: [
+          { label: 'Rátenyerelek', result: 'A kő melege átjárja a tagjaidat, a fáradtság kiolvad belőled.', effect: 'heal' },
+          { label: 'Hozzáérintem a fegyveremet', result: 'A fegyvered felizzik, mintha egy darabka csillag ragadt volna rá. Egy darabig így is marad.', effect: 'blessing' },
+          { label: 'Kimondom a kő égi nevét', needs: { origin: 'tanonc' },
+            result: 'Tanoncként megtanultad a hullócsillagok nevét. Ahogy kimondod, a kő felragyog, és minden erejét neked adja.', effect: 'blessing', amount: 1.5 }
+        ] },
+
+      { id: 'szirtek_kristalykert', region: 'szirtek', kind: 'arany', title: 'A zengő kristálykert',
+        text: 'A szirten nálad is magasabb kristályok nőnek. A szél végigsimít rajtuk, és dallam szólal meg, mintha a csillagok énekelnének.',
+        options: [
+          { label: 'Hallgatom a dalt', result: 'A dallam végigfolyik rajtad, és minden sebed, minden fáradtságod elsimul.', effect: 'heal', amount: 1.5 },
+          { label: 'Felszedek egy letört ágat', result: 'A kristályág a kezedben csillagporrá omlik. Annyi lesz belőle, hogy alig fér a tarisznyádba.', effect: 'dust', amount: 2 },
+          { label: 'Megtanulom a dallamot', result: 'Mire indulsz, már fütyülni is tudod. A dallamban régi tudás rejlik, és most már a tiéd.', effect: 'xp', amount: 1.5 }
+        ] },
+
+      // ===================== ÉJKATLAN =====================
+      { id: 'ejkatlan_arnyek_kerdese', region: 'ejkatlan', kind: 'rejtveny', title: 'Az árnyék kérdése',
+        text: 'Egy árnyék ül az út szélén, de nincs senki, akihez tartozna. „Felelj: minél több van belőle, annál kevesebbet látsz. Mi az?”',
+        options: [
+          { label: '„A sötétség”', result: 'Az árnyék elégedetten bólint. „Itt aztán van belőle bőven.” Félreáll, és egy marék csillagport hagy hátra.', effect: 'dust' },
+          { label: '„A pénz”', result: '„Az inkább a kalmárok baja” – mondja az árnyék. Azért továbbenged, mert jót nevetett.', effect: 'none' },
+          { label: '„A fáklya”', result: 'Épp fordítva. Az árnyék sajnálkozva összemegy, és szó nélkül elenged.', effect: 'none' }
+        ] },
+
+      { id: 'ejkatlan_feregjarat', region: 'ejkatlan', kind: 'csapda', title: 'A féregjárat',
+        text: 'Hullámzik a talaj a lábad alatt. Valahol mélyen egy Holdfaló féreg fúrja a járatait. Előtted megnyílik egy repedés.',
+        options: [
+          { label: 'Átvetődöm a repedésen', check: { stat: 'fur', base: 0.55 },
+            result: 'Épp időben érsz át. A túloldalon a felszakadt föld csillagport hozott a felszínre.', effect: 'dust',
+            fail: { result: 'A perem beomlik, és félig belecsúszol. Kikapaszkodsz, de a térded és a könyököd is megsínyli.', effect: 'hurt' } },
+          { label: 'Messziről megkerülöm', result: 'Hosszú kerülő, de a féreg észre sem vesz. Egy kihűlt tűzrakás mellett pár érmét is találsz.', effect: 'silver', amount: 0.5 },
+          { label: 'Beugrom a járatba', needs: { trait: 'vakmero' },
+            result: 'A féreg épp nincs otthon. A kincsei viszont igen: fényes érmék, amiket a felszínről nyelt le. Gyorsan kimászol.', effect: 'silver', amount: 1.5 }
+        ] },
+
+      { id: 'ejkatlan_utolso_mecses', region: 'ejkatlan', kind: 'szentely', title: 'Az utolsó mécses',
+        text: 'Egy fülkében mécses pislákol. Rajta kívül semmi fény nincs a környéken. A lángja aprócska, de esze ágában sincs kialudni.',
+        options: [
+          { label: 'Olajat töltök bele', result: 'A láng magasra csap, és egy része átkúszik a fegyveredre. Így már nem félsz a sötétben.', effect: 'blessing' },
+          { label: 'Melegedem a lángjánál', result: 'Apró láng, mégis csontig átmelegít. Ide nem ér el a sötét.', effect: 'heal' },
+          { label: 'Esküt teszek a lángra', needs: { trait: 'buszke' },
+            result: 'Megesküszöl, hogy nem hátrálsz meg a sötét elől. A láng mintha elhinné, és veled együtt lobog tovább.', effect: 'blessing', amount: 1.5 }
+        ] },
+
+      { id: 'ejkatlan_arnyekarus', region: 'ejkatlan', kind: 'arus', title: 'Az árnyékárus',
+        text: 'Hosszú, vékony árnyék köszön rád egy kőfal tövéből. „Holdfényt, bátorságot, titkokat! Jó áron, mert idelent ritka portéka.”',
+        options: [
+          { label: 'Veszek egy üveg holdfényt', cost: 1, result: 'Kinyitod, és a fény végigfolyik rajtad. A sebeid bezárulnak, a fáradtságod elillan.', effect: 'heal' },
+          { label: 'Megveszem egy titkát', cost: 1.5, result: 'Az árnyék a füledbe súgja a katlan őreinek gyenge pontját. Hidegrázós, de hasznos.', effect: 'blessing', amount: 1.5 },
+          { label: 'Kösz, inkább nem', result: 'Az árnyék sértődötten összemegy, és közben elejt egy szem csillagport. Most te vagy a magasabb.', effect: 'dust', amount: 0.5 }
+        ] },
+
+      { id: 'ejkatlan_nevtelen_vandor', region: 'ejkatlan', kind: 'esemeny', title: 'A névtelen vándor',
+        text: 'Egy Üresség-vándor ül egy kövön. Nem támad, csak üres szemmel bámul maga elé. „Elfelejtettem a nevemet – mondja. – Te tudod?”',
+        options: [
+          { label: 'Adok neki egy új nevet', result: 'Gondolkodsz egy kicsit, aztán kimondasz egy szép nevet. A vándor ízlelgeti, és elmosolyodik. Ezt a pillanatot nem felejted el.', effect: 'xp' },
+          { label: 'Mesélek neki magamról', result: 'Hallgat, bólogat, és mire a végére érsz, már nem olyan üres a tekintete. Hálából elárulja, hová rejtette a régi kincseit.', effect: 'silver' },
+          { label: 'Elmondom, milyen név nélkül élni', needs: { origin: 'arva' },
+            result: 'Te is a ködből jöttél, név és múlt nélkül. A vándor megérti. Megölel, és a sötétben melegség marad utána.', effect: 'heal', amount: 1.5 }
+        ] },
+
+      { id: 'ejkatlan_mecsesmano', region: 'ejkatlan', kind: 'esemeny', title: 'Az eltévedt mécsesmanó',
+        text: 'Aprócska manó pityereg a sötétben, a kezében kialudt mécses. „Kialudt a lángom, és nem találok haza!”',
+        options: [
+          { label: 'Meggyújtom a fáklyámmal', setFlag: 'mano_langja',
+            result: 'A mécses felragyog, a manó pedig örömében körbeugrál. „Elmondom mindenkinek!” – kiabálja, és elszalad. Rád is átragad a jókedve.', effect: 'heal', amount: 0.5 },
+          { label: 'Megmutatom az irányt', result: 'Elmagyarázod, merre van a fény. A manó bólint, és ad egy szem csillagport. Nála ez a legnagyobb kincs.', effect: 'dust' }
+        ] },
+
+      { id: 'ejkatlan_mecsesmanok', region: 'ejkatlan', kind: 'esemeny', title: 'Mécsesmanók serege', follow: 'mano_langja',
+        text: 'Apró fények gyúlnak a sötétben, egy tucat is. Mécsesmanók, és az élükön ott ugrál az, akinek meggyújtottad a lángját.',
+        options: [
+          { label: 'Velük tartok', result: 'Fényes kis menet kísér. A sötét lények csak messziről figyelnek, te pedig erőt merítesz a fényből.', effect: 'blessing', amount: 1.5 },
+          { label: 'Kérek tőlük egy lángot', result: 'Minden manó ad egy szikrát a lángjából. Melegítenek, gyógyítanak, és nem alszanak ki.', effect: 'heal', amount: 1.5 }
+        ] }
+    ],
+
+    guards: {
+      'Öreg Brekus, a lápkirály': {
+        intro: 'Hatalmas, mohos béka ül a láp közepén, a fején nádkorona. Unottan pislog rád, aztán megszólal: „Megint egy hős? Hát jó. Brekk.”',
+        win: 'Brekus elnyúlik a sárban, és megadóan brekeg egyet. „Jól van, jól van. Ma te vagy a láp ura. Holnap megint én.”',
+        lose: 'Brekus akkorát huppan melléd, hogy a hullám kimos a partra. Csuromvizesen kászálódsz fel, és jobbnak látod hazamenni.'
+      },
+      'Ködanya': {
+        intro: 'A köd sűrűsödni kezd, és lassan magas, fátylas alakká áll össze. Nincs arca, mégis érzed, hogy mosolyog. Nem túl barátságosan.',
+        win: 'Ködanya szétfoszlik, mint reggel a pára. Csak a hangja marad utána: „Ügyes vagy, kicsim. De a köd mindig visszajön.”',
+        lose: 'A köd körbeölel, és mire kitisztul, a láp szélén ébredsz, betakarva. Ködanya ezek szerint mégsem olyan szívtelen.'
+      },
+      'Ezüstpikkelyű kígyó': {
+        intro: 'A vízből lassan, tekeregve emelkedik ki egy óriási kígyó. Ezüstpikkelyein megcsillan a hold. A szeme nem pislog, és rád szegeződik.',
+        win: 'A kígyó visszasiklik a mélybe. A víz tetején csak egy csillogó pikkely marad utána, mint valami búcsúajándék.',
+        lose: 'A kígyó egy laza farokcsapással kipöccint a partra. Mire feltápászkodsz, már nyoma sincs. Csak a büszkeséged sajog.'
+      },
+      'Ezüstszarvú kos': {
+        intro: 'A tisztás túlsó végén egy kos kaparja a földet. A szarva ezüstösen ragyog. Lehajtja a fejét. Ebből nem beszélgetés lesz.',
+        win: 'A kos megtorpan, megrázza a fejét, és sértődötten elballag. Ilyen kitartóan még senki sem nézett vele farkasszemet.',
+        lose: 'Egy jól irányzott öklelés, és már repülsz is. Puhán érkezel egy bokorba. A kos elégedetten bégetve távozik.'
+      },
+      'A Fenyőkirálynő': {
+        intro: 'A legöregebb fenyő kérge megnyílik, és kilép belőle a Fenyőkirálynő. Tűlevélkoronája zizeg. „Ki zavarja az erdőm álmát?”',
+        win: 'A királynő biccent. „Erős vagy, és tisztességesen harcoltál. Mehetsz.” A fák utat nyitnak előtted.',
+        lose: 'A gyökerek gyengéden, de határozottan kitessékelnek az erdőből. Egy toboz még utánad gurul. Talán búcsúzóul.'
+      },
+      'Holdvadász': {
+        intro: 'Köpenyes alak lép elő a fák közül, a kezében ezüstíj. „Régóta követlek – mondja. – Lássuk, mennyit érsz.”',
+        win: 'A Holdvadász leereszti az íját, és elismerően biccent. „Jó préda lettél volna. Szerencsére nem az vagy.”',
+        lose: 'Egy nyílvessző a fához szegezi a köpenyedet. Mire kiszabadulsz, a vadász már messze jár. Tisztességes volt: nem beléd célzott.'
+      },
+      'A Romok Kapuőre': {
+        intro: 'A kapu két oldalán kőszobrok állnak. Az egyik megmozdul, és leporolja magát. „Jelszó?” A jelszót persze nem tudod.',
+        win: 'A Kapuőr visszadermed a helyére. „A jelszó egyébként »kérem« volt” – morogja még. Na, ezt is jó tudni.',
+        lose: 'A kőkéz finoman, de ellentmondást nem tűrően kitol a kapun. „Majd ha megtanultad a jelszót” – szól utánad.'
+      },
+      'Árnypap': {
+        intro: 'Fekete csuhás alak mormol a ledőlt oltár előtt. Körülötte hajladoznak az árnyékok, mintha vele imádkoznának. Most feléd fordul.',
+        win: 'Az Árnypap imája elakad, a csuhája üresen hullik a kövekre. Az árnyékok szétszaladnak, mint a megriadt macskák.',
+        lose: 'Az árnyékok körülfonnak, és kituszkolnak a romok közül. Mire észhez térsz, a pap mormolása már csak távoli zümmögés.'
+      },
+      'Bukott lovag': {
+        intro: 'Rozsdás páncélú lovag áll a csarnok közepén. A sisakrostélya mögött két halvány fény ég. Lassan feléd fordítja a kardját.',
+        win: 'A lovag fél térdre ereszkedik, és leteszi a kardját. „Végre egy méltó ellenfél” – suttogja, aztán porrá omlik.',
+        lose: 'A lovag egyetlen lapos csapással leültet. Többet nem üt. „Gyere vissza, ha erősebb leszel” – mondja, és visszaáll az őrhelyére.'
+      },
+      'A Lehullott Csillag Őre': {
+        intro: 'Fénylő páncélos alak őrködik a kráter szélén. Mögötte még izzik a lehullott csillag. „Ezt a fényt senki nem viheti el.”',
+        win: 'Az Őr leengedi a pajzsát. „Talán te méltó vagy rá” – mondja, és félreáll. A csillag fénye egy pillanatra rád ragyog.',
+        lose: 'Az Őr pajzsa felvillan, és a vakító fénytől hátratántorodsz. Mire újra látsz, a szirt alján ülsz. Elég kínos.'
+      },
+      'Kristálysárkány-fióka': {
+        intro: 'Kutyányi sárkány bújik elő a kristályok közül. Csilingel, ahogy mozog. Aranyos. Aztán tüzet fúj, és már kevésbé aranyos.',
+        win: 'A fióka hanyatt fekszik, és kidugja a nyelvét. Sárkányul ez valószínűleg azt jelenti: „Feladom.” Vagy azt: „Vakarj meg.”',
+        lose: 'A fióka addig fújja rád a szikrázó leheletét, amíg el nem menekülsz. Utánad csilingel. Nagyon úgy hangzik, mintha nevetne.'
+      },
+      'Griffkirály': {
+        intro: 'Árnyék vetül rád, aztán egy hatalmas griff ereszkedik le a szirt csúcsára. Aranytollú, büszke, és egyáltalán nem örül neked.',
+        win: 'A Griffkirály összecsukja a szárnyát, és meghajtja a fejét. Ritka pillanat: a griffek nem hajolnak meg akárki előtt.',
+        lose: 'A griff a karmai közé kap, tesz veled egy tiszteletkört, aztán szépen letesz a szirt aljánál. Királyi gesztus volt.'
+      },
+      'Az Éjkatlan Ura': {
+        intro: 'A katlan mélyén trón áll, rajta egy alak, akinek a köpenye maga az éjszaka. Felnéz rád, és kialszanak a csillagok.',
+        win: 'Az Éjkatlan Ura felemelkedik a trónjáról, aztán szétfoszlik. Az égen egyenként gyúlnak ki újra a csillagok, mintha számolnák magukat.',
+        lose: 'Az Úr csak felemeli a kezét, és a sötétség kisodor a katlanból. Messziről még hallod: „Majd ha készen állsz.”'
+      },
+      'Fekete Holdpap': {
+        intro: 'Egy pap áll a fekete oltárnál, és egy sötét holdat emel a magasba. Holdfény helyett hideg árnyék árad belőle.',
+        win: 'A sötét hold kicsúszik a pap kezéből, és szilánkokra törik. Egy pillanatra ezüstös fény önti el a katlant. Jólesik.',
+        lose: 'A pap sötét holdja beárnyékolja az eget, és a lábad magától indul hazafelé. Csak a katlan szélén tudsz megállni.'
+      },
+      'Az Utolsó Árnyék': {
+        intro: 'Nincs ott semmi. Aztán rájössz, hogy a saját árnyékod nem követ. Előtted áll, és pontosan úgy tartja a fegyverét, mint te.',
+        win: 'Az árnyék leengedi a fegyverét, aztán halkan visszasimul a lábad elé. Mostantól megint követ, mintha mi sem történt volna.',
+        lose: 'Az árnyékod a földre visz, aztán leül melléd, és megvárja, míg összeszeded magad. Együtt mentek haza. Kicsit kínos.'
+      }
+    }
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+
 // ===== js/engine.js =====
 /* Nyxoria RPG – játéklogika. Tiszta függvények, nincs benne DOM.
    Később változtatás nélkül a szerverre költöztethető (Supabase Edge Function). */
@@ -652,7 +1292,7 @@ import postgres from 'npm:postgres@3.4.9';
       side: 'h', name: hero.name, classId: hero.classId, level: hero.level,
       maxHp: s.elet, hpStart: s.elet * (extra.hpFactor || 1),
       tam: s.tam, ved: s.ved, fur: s.fur,
-      dmgPct: s.dmg + (extra.blessing ? 10 : 0), critPct: s.crit, dodgePct: s.dodge, healPct: s.heal, firstPct: s.first,
+      dmgPct: s.dmg + (extra.blessing === true ? 10 : (+extra.blessing || 0)), critPct: s.crit, dodgePct: s.dodge, healPct: s.heal, firstPct: s.first,
       loadout: (hero.loadout || []).slice(), basic: D.CLASSES[hero.classId].basic,
       pet: D.CLASSES[hero.classId].pet || 0, firstStrike: D.CLASSES[hero.classId].firstStrike || 1
     };
@@ -883,7 +1523,8 @@ import postgres from 'npm:postgres@3.4.9';
       offer: offer, step: 0, clearings: [], blessing: false, hpFactor: 1, bonusXp: 0, loot: [], silver: 0, dust: 0,
       log: [], seed: newSeed(rng), done: false
     };
-    for (var i = 0; i < 3; i++) exp.clearings.push(makeClearing(rng, hero, offer, region, i));
+    var used = {};
+    for (var i = 0; i < 3; i++) exp.clearings.push(makeClearing(rng, hero, offer, region, i, used));
     return exp;
   }
 
@@ -892,14 +1533,82 @@ import postgres from 'npm:postgres@3.4.9';
     return clamp(0.62 + 0.3 * s.fur / (s.fur + sc * 0.5), 0.62, 0.92);
   }
 
-  function makeClearing(rng, hero, offer, region, idx) {
-    var ev = pick(rng, D.EVENTS), se = pick(rng, D.SEARCHES), mname = pick(rng, region.monsters);
+  // ---------- kalandtartalom (js/content.js bővíti; ha nincs, a régi lista marad) ----------
+  // a régi események (a/b) is ugyanabban a formában: options tömb
+  function normEvent(ev) {
+    if (!ev || ev.options) return ev;
+    return { id: ev.id || ev.title, region: 'any', kind: 'esemeny', title: ev.title, text: ev.text, options: [ev.a, ev.b] };
+  }
+  function advPool(key, regionId, legacy) {
+    var A = D.ADVENTURE, out = (legacy || []).slice();
+    if (A && A[key]) out = out.concat(A[key].any || [], A[key][regionId] || []);
+    return out;
+  }
+  function eventPool(regionId) {
+    var list = D.EVENTS.map(normEvent);
+    if (D.ADVENTURE && D.ADVENTURE.events) list = list.concat(D.ADVENTURE.events.filter(function (e) { return !e.follow && (e.region === 'any' || e.region === regionId); }));
+    return list;
+  }
+  // súlyozott választás: az „arany tisztás” ritka; egy kalandon belül nem ismétlődik esemény
+  function pickEvent(rng, regionId, used) {
+    var last = used.__n >= 2; used.__n = (used.__n || 0) + 1;
+    // az utolsó tisztáson nem indulhat lánc (nem lenne hol folytatódnia)
+    var pool = eventPool(regionId).filter(function (e) { return !used[e.id || e.title] && !(last && e.options.some(function (o) { return o.setFlag; })); });
+    if (!pool.length) pool = eventPool(regionId);
+    var tot = 0, w = pool.map(function (e) { var x = e.kind === 'arany' ? 0.12 : 1; tot += x; return x; }), r = rng() * tot;
+    for (var i = 0; i < pool.length; i++) { r -= w[i]; if (r <= 0) return pool[i]; }
+    return pool[pool.length - 1];
+  }
+  function makeClearing(rng, hero, offer, region, idx, used) {
+    used = used || {};
+    var ev = pickEvent(rng, region.id, used); used[ev.id || ev.title] = 1;
+    var se = pick(rng, advPool('searches', region.id, D.SEARCHES)), mname = pick(rng, region.monsters);
     var cards = [
       { type: 'harc', title: mname, text: 'Könnyebb ellenfél, de tapasztalatot ad.', monster: mname, seed: newSeed(rng) },
       { type: 'kutatas', title: se.title, text: se.text, chance: searchChance(hero), seed: newSeed(rng) },
       { type: 'esemeny', title: ev.title, text: ev.text, event: ev, seed: newSeed(rng) }
     ];
-    return { intro: pick(rng, D.CLEARING_INTROS), cards: shuffle(rng, cards) };
+    return { intro: pick(rng, advPool('intros', region.id, D.CLEARING_INTROS)), cards: shuffle(rng, cards) };
+  }
+  // a láncesemény: ha az előző tisztáson valami elindult, a következő tisztás eseménye annak a folytatása
+  function applyFollow(exp) {
+    var f = exp.pendingFollow, cl = exp.clearings[exp.step];
+    exp.pendingFollow = null;
+    if (!f || !cl || !D.ADVENTURE) return;
+    var ev = (D.ADVENTURE.events || []).filter(function (e) { return e.follow === f; })[0];
+    if (!ev) return;
+    cl.cards.forEach(function (c) { if (c.type === 'esemeny') { c.event = ev; c.title = ev.title; c.text = ev.text; } });
+  }
+  // a választható lehetőségek (a származáshoz vagy jellemhez kötöttek csak annak, akire illik)
+  function eventOptions(hero, ev) {
+    ev = normEvent(ev);
+    return ev.options.map(function (o, i) { return { o: o, i: i }; }).filter(function (x) {
+      var n = x.o.needs; if (!n) return true;
+      return (n.origin && n.origin === hero.origin) || (n.trait && n.trait === hero.trait);
+    });
+  }
+  function eventCost(lm, o) { return o && o.cost ? Math.round(silverBase(lm) * 0.35 * o.cost) : 0; }
+  // próba (pl. fürgeség): az alapesély a jellemzővel nő, de 30% és 92% között marad
+  function eventCheckChance(hero, check) {
+    var s = heroStats(hero), k = ['tam', 'ved', 'elet'].indexOf(check.stat) >= 0 ? check.stat : 'fur';
+    var ref = refBase(hero.level)[k];
+    return clamp(check.base - 0.12 + 0.3 * s[k] / (s[k] + ref), 0.3, 0.92);
+  }
+  function applyEventEffect(hero, exp, rng, eff, amount, out) {
+    var lm = exp.offer.lm, m = clamp(amount == null ? 1 : +amount, 0.5, 2);
+    if (eff === 'heal' && exp.hpFactor >= 1) { eff = 'xp'; out.healToXp = true; } // teljes életerőnél a pihenő tapasztalatot ad, hogy ne vesszen el
+    out.effect = eff;
+    if (eff === 'blessing') { exp.blessing = Math.min(20, (exp.blessing === true ? 10 : (+exp.blessing || 0)) + Math.round(10 * m)); out.blessPct = Math.round(10 * m); }
+    else if (eff === 'silver') { out.silver = Math.round(silverBase(lm) * 0.5 * m); exp.silver += out.silver; }
+    else if (eff === 'dust') { out.dust = Math.round((6 + lm) * 0.8 * m); exp.dust += out.dust; }
+    else if (eff === 'heal') { exp.hpFactor = Math.min(1, exp.hpFactor + 0.1 * m); out.healed = true; }
+    else if (eff === 'hurt') { exp.hpFactor = Math.max(0.7, exp.hpFactor - 0.06 * m); out.hpLoss = true; }
+    else if (eff === 'xp') { out.xp = Math.round(xpBase(hero.level) * 0.08 * m); exp.bonusXp += out.xp; }
+    else if (eff === 'item' && exp.torchInfo && exp.torchInfo.tired) { out.effect = 'silver'; out.silver = Math.round(silverBase(lm) * 0.5); exp.silver += out.silver; }
+    else if (eff === 'item') {
+      var it2 = makeItem(rng, { slot: 'fegyver', rarity: rng() < 0.5 ? 'zold' : 'szurke', level: lootLevel(hero, lm), classId: hero.classId });
+      exp.loot.push(it2); out.item = it2;
+    }
   }
 
   function expeditionMonster(exp, power) {
@@ -929,17 +1638,17 @@ import postgres from 'npm:postgres@3.4.9';
         } else { out.silver = Math.round(silverBase(lm) * (0.6 + rng() * 0.6)); exp.silver += out.silver; }
       } else { exp.hpFactor = Math.max(0.7, exp.hpFactor - 0.04); out.hpLoss = true; } // a sikertelen kutatás csak kis sérülés (különben csapda lenne)
     } else if (card.type === 'esemeny') {
-      var opt = choice === 'b' ? card.event.b : card.event.a;
-      out.result = opt.result; out.effect = opt.effect;
-      if (opt.effect === 'blessing') exp.blessing = true;
-      else if (opt.effect === 'silver') { out.silver = Math.round(silverBase(lm) * 0.5); exp.silver += out.silver; }
-      else if (opt.effect === 'dust') { out.dust = Math.round((6 + lm) * 0.8); exp.dust += out.dust; }
-      else if (opt.effect === 'heal') { exp.hpFactor = Math.min(1, exp.hpFactor + 0.1); out.healed = true; }
-      else if (opt.effect === 'item' && exp.torchInfo && exp.torchInfo.tired) { out.silver = Math.round(silverBase(lm) * 0.5); exp.silver += out.silver; }
-      else if (opt.effect === 'item') {
-        var it2 = makeItem(rng, { slot: 'fegyver', rarity: rng() < 0.5 ? 'zold' : 'szurke', level: lootLevel(hero, lm), classId: hero.classId });
-        exp.loot.push(it2); out.item = it2;
-      }
+      var ev = normEvent(card.event), idx = choice === 'a' ? 0 : choice === 'b' ? 1 : +choice;
+      var opt = ev.options[idx];
+      out.result = opt.result; out.kind = ev.kind || 'esemeny';
+      if (opt.check) {
+        out.checkChance = eventCheckChance(hero, opt.check);
+        out.checkOk = rng() < out.checkChance;
+        // a kockázatért több jár: sikernél legalább másfélszeres jutalom, kudarcnál csak kisebb baj
+        if (!out.checkOk && opt.fail) { out.result = opt.fail.result; applyEventEffect(hero, exp, rng, opt.fail.effect, (opt.fail.effect === 'hurt' ? 0.5 : 1) * (opt.fail.amount == null ? 1 : opt.fail.amount), out); }
+        else applyEventEffect(hero, exp, rng, opt.effect, Math.max(1.5, opt.amount == null ? 1 : opt.amount), out);
+      } else applyEventEffect(hero, exp, rng, opt.effect, opt.amount, out);
+      if (opt.setFlag) { exp.flags = exp.flags || {}; exp.flags[opt.setFlag] = 1; exp.pendingFollow = opt.setFlag; out.follow = true; }
     }
     exp.step++;
     return out;
@@ -1227,7 +1936,7 @@ import postgres from 'npm:postgres@3.4.9';
     itemStats: itemStats, makeItem: makeItem, affixText: affixText, salvageValue: salvageValue, sellValue: sellValue, upgradeCost: upgradeCost,
     newHero: newHero, unlockedSkills: unlockedSkills, nextSkillUnlock: nextSkillUnlock, heroStats: heroStats, power: power, powerRaw: powerRaw, lootLevel: lootLevel,
     fighterFromHero: fighterFromHero, monsterFighter: monsterFighter, simulateFight: simulateFight, winChance: winChance,
-    findMonsterLevel: findMonsterLevel, regionFor: regionFor, makeOffers: makeOffers, offerTarget: offerTarget, offerChance: offerChance,
+    findMonsterLevel: findMonsterLevel, regionFor: regionFor, makeOffers: makeOffers, offerTarget: offerTarget, normEvent: normEvent, eventOptions: eventOptions, eventCost: eventCost, eventCheckChance: eventCheckChance, applyFollow: applyFollow, offerChance: offerChance,
     startExpedition: startExpedition, resolveCard: resolveCard, guardPreview: guardPreview, fightGuard: fightGuard,
     finishExpedition: finishExpedition, applyChoice: applyChoice, lossAdvice: lossAdvice,
     torchState: torchState, spendTorch: spendTorch, dustRoom: dustRoom, dustCap: dustCap, weekOf: weekOf, addDust: addDust, addXp: addXp,
@@ -1385,7 +2094,8 @@ import postgres from 'npm:postgres@3.4.9';
     const o = { type: out.type, title: card.title };
     if (out.type === 'harc') { o.win = out.fight.win; o.monster = card.monster; o.xp = out.xp || 0; o.silver = out.silver || 0; o.traitLine = out.fight.win ? tr.win : tr.lose; }
     if (out.type === 'kutatas') { o.success = out.success; o.item = out.item || null; o.silver = out.silver || 0; }
-    if (out.type === 'esemeny') { o.result = out.result; o.effect = out.effect; o.silver = out.silver || 0; o.dust = out.dust || 0; o.item = out.item || null; o.title = card.event.title; }
+    if (out.type === 'esemeny') { o.result = out.result; o.effect = out.effect; o.silver = out.silver || 0; o.dust = out.dust || 0; o.xp = out.xp || 0; o.item = out.item || null; o.title = card.event.title; o.kind = out.kind || 'esemeny'; if (out.blessPct) o.blessPct = out.blessPct; if (out.healToXp) o.healToXp = true;
+      if (out.checkChance != null) { o.checkOk = out.checkOk; o.checkChance = out.checkChance; } if (out.cost) o.cost = out.cost; if (out.follow) o.follow = true; }
     return o;
   }
   function fightPayload(f, heroF, mon) {
@@ -1435,12 +2145,20 @@ import postgres from 'npm:postgres@3.4.9';
   A.event = (save, a) => {
     const exp = needExp(save, ['event']);
     const card = exp.clearings[exp.step].cards[exp.pendingCard];
-    const out = E.resolveCard(save.hero, exp, card, a.v === 'b' ? 'b' : 'a');
+    const h = save.hero, ev = E.normEvent(card.event), idx = a.v === 'a' ? 0 : a.v === 'b' ? 1 : (a.v | 0);
+    const ok = E.eventOptions(h, ev).some(x => x.i === idx);
+    if (!ok || !ev.options[idx]) fail('arg', 'Ez a lehetőség most nem választható.');
+    const cost = E.eventCost(exp.offer.lm, ev.options[idx]);
+    if (cost > h.silver) fail('cost', 'Nincs elég Holdezüstöd.');
+    h.silver -= cost;
+    const out = E.resolveCard(h, exp, card, idx);
+    if (cost) out.cost = cost;
     exp.lastOut = summarizeOut(save, out, card); exp.pendingCard = null; exp.phase = 'cardResult';
   };
   A.next = (save) => {
     const exp = needExp(save, ['cardResult']);
     exp.phase = exp.step >= 3 ? 'guard' : 'clearing'; exp.lastOut = null;
+    if (exp.phase === 'clearing') E.applyFollow(exp);
   };
 
   A.fight = (save, a, ctx) => {

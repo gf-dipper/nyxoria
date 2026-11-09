@@ -1163,28 +1163,41 @@
       tip('expedicio');
       body = `<div class="cards">${cl.cards.map((c, i) => cardHtml(c, i)).join('')}</div>`;
     } else if (exp.phase === 'event') {
-      const c = cl.cards[exp.pendingCard];
-      body = `<div class="result-box"><div class="row" style="gap:8px"><span class="ic-badge t-esemeny">${I.esemeny}</span><span class="tiny" style="color:var(--tunde-400)">Esemény</span></div>
-        <h2 style="margin-top:8px">${esc(c.event.title)}</h2><p style="margin-top:6px">${esc(c.event.text)}</p>
-        <div class="event-choices"><button class="btn" data-act="event" data-v="a">${esc(c.event.a.label)}</button><button class="btn" data-act="event" data-v="b">${esc(c.event.b.label)}</button></div></div>`;
+      const c = cl.cards[exp.pendingCard], ev = E.normEvent(c.event), h = hero();
+      const opts = E.eventOptions(h, ev).map(x => {
+        const o = x.o, cost = E.eventCost(exp.offer.lm, o), sub = [];
+        if (cost) sub.push(`Ára: ${fmt(cost)} Holdezüst`);
+        if (o.effect === 'heal' && exp.hpFactor >= 1) sub.push('Teljes erőben vagy: gyógyulás helyett tapasztalatot kapsz');
+        if (o.check) sub.push(`${pct(E.eventCheckChance(h, o.check))} esély (${STAT_NAME[o.check.stat] || 'fürgeség'})`);
+        if (o.needs) sub.push(o.needs.origin ? `${esc(D.ORIGINS[o.needs.origin].name)}ként` : `Mert ${esc(D.TRAITS[o.needs.trait].name.toLowerCase())} vagy`);
+        const poor = cost > h.silver;
+        return `<button class="btn ev-opt${o.needs ? ' ev-special' : ''}" data-act="event" data-v="${x.i}"${poor ? ' disabled' : ''}><span>${esc(o.label)}</span>${sub.length ? `<span class="ev-sub">${sub.join(' · ')}${poor ? ' · nincs elég' : ''}</span>` : ''}</button>`;
+      }).join('');
+      body = `<div class="result-box"><div class="row" style="gap:8px"><span class="ic-badge t-esemeny">${I.esemeny}</span><span class="tiny" style="color:var(--tunde-400)">${KIND_NAME[ev.kind] || 'Esemény'}</span></div>
+        <h2 style="margin-top:8px">${esc(ev.title)}</h2><p style="margin-top:6px">${esc(ev.text)}</p>
+        <div class="event-choices${E.eventOptions(h, ev).length > 2 ? ' many' : ''}">${opts}</div></div>`;
     } else if (exp.phase === 'cardResult') body = cardResultHtml(exp.lastOut);
     const introCl = exp.clearings[Math.min(exp.phase === 'cardResult' ? exp.step - 1 : exp.step, 2)];
     return expHead() + `<div class="exp-scene">${A.sceneSvg(r.scene, exp.step + 3)}<p class="intro">${esc(exp.step === 0 && exp.phase === 'clearing' ? r.intro + ' ' + introCl.intro : introCl.intro)}</p></div>` + body + modsHtml(exp);
   }
   function modsHtml(exp) {
     const m = [];
-    if (exp.blessing) m.push('<span class="good">Áldás: +10% sebzés az őrző ellen</span>');
+    if (exp.blessing) m.push(`<span class="good">Áldás: +${exp.blessing === true ? 10 : exp.blessing}% sebzés az őrző ellen</span>`);
     if (exp.hpFactor < 1) m.push(`<span class="bad">Sérülten érsz az őrzőhöz: ${Math.round(exp.hpFactor * 100)}%-os életerővel kezdesz</span>`);
     if (exp.loot.length || exp.silver) m.push(`<span>Eddig gyűjtöttél: ${exp.loot.length ? exp.loot.length + ' tárgy, ' : ''}${fmt(exp.silver)} Holdezüst</span>`);
     return m.length ? `<div class="mods">${m.join('')}</div>` : '';
   }
+  const KIND_NAME = { esemeny: 'Esemény', szentely: 'Szentély', csapda: 'Csapda', arus: 'Vándorárus', rejtveny: 'Rejtvény', arany: 'Arany tisztás' };
+  const KIND_HINT = { esemeny: 'Meglepetés: áldás, kincs vagy történet', szentely: 'Egy régi szentély: áldás vagy gyógyulás', csapda: 'Gyanús hely: ügyesség kell hozzá', arus: 'Valaki árul valamit: fizetni kell érte', rejtveny: 'Fejtörő: aki megfejti, jutalmat kap', arany: 'Ritka, ragyogó hely: bőséges jutalom' };
+  const STAT_NAME = { fur: 'fürgeség', tam: 'támadás', ved: 'védekezés', elet: 'életerő' };
   function cardHtml(c, i) {
-    const label = { harc: 'Harc', kutatas: 'Kutatás', esemeny: 'Esemény' }[c.type];
+    const kind = c.type === 'esemeny' ? (c.event.kind || 'esemeny') : null;
+    const label = kind ? KIND_NAME[kind] || 'Esemény' : { harc: 'Harc', kutatas: 'Kutatás' }[c.type];
     let extra = '';
     if (c.type === 'harc') extra = '<span class="small" style="color:var(--hold-300)">+ tapasztalat, kis Holdezüst</span>';
     if (c.type === 'kutatas') extra = `<span class="small" style="color:var(--fakla-300)">${pct(c.chance)} esély (a fürgeségedtől függ) · tárgy vagy Holdezüst</span>`;
-    if (c.type === 'esemeny') extra = '<span class="small" style="color:var(--tunde-400)">Meglepetés: áldás, kincs vagy történet</span>';
-    return `<button class="ccard t-${c.type}" data-act="card" data-v="${i}"><span class="ctype"><span class="ic">${I[c.type]}</span>${label}</span>
+    if (c.type === 'esemeny') extra = `<span class="small" style="color:var(--tunde-400)">${KIND_HINT[kind] || KIND_HINT.esemeny}</span>`;
+    return `<button class="ccard t-${c.type}${kind === 'arany' ? ' k-arany' : ''}" data-act="card" data-v="${i}"><span class="ctype"><span class="ic">${I[c.type]}</span>${label}</span>
       <h3>${esc(c.title)}</h3><p>${esc(c.type === 'esemeny' ? c.event.text : c.text)}</p>${extra}</button>`;
   }
   function cardResultHtml(o) {
@@ -1195,14 +1208,17 @@
       else { cls2 = 'bad'; html = `<h3>${esc(art(o.monster))} elkergetett</h3><p class="muted" style="margin-top:4px">Nem nagy baj, de megsérültél: az őrző ellen 10%-kal kevesebb életerővel indulsz.</p>`; }
     } else if (o.type === 'kutatas') {
       if (o.success) html = `<h3>Sikeres kutatás!</h3>${o.item ? `<div style="margin-top:10px">${itemHtml(o.item, { delta: true })}</div><p class="small muted" style="margin-top:6px">A tárgy a kaland végén a táskádba kerül.</p>` : `<div class="gains" style="justify-content:flex-start"><span class="gain">${I.silver}+${fmt(o.silver)} Holdezüst</span></div>`}`;
-      else { cls2 = 'bad'; html = `<h3>Nem találtál semmit</h3><p class="muted" style="margin-top:4px">Közben megcsúsztál, és jól beverted a térded. Az őrző ellen 10%-kal kevesebb életerővel indulsz.</p>`; }
+      else { cls2 = 'bad'; html = `<h3>Nem találtál semmit</h3><p class="muted" style="margin-top:4px">Közben megcsúsztál, és beverted a térded. Az őrző ellen kicsit (4%-kal) kevesebb életerővel indulsz.</p>`; }
     } else if (o.type === 'esemeny') {
-      const eff = { blessing: 'Áldást kaptál: +10% sebzés az őrző ellen.', silver: `+${fmt(o.silver || 0)} Holdezüst`, dust: `+${fmt(o.dust || 0)} Csillagpor`, heal: 'Kipihented magad: +10% életerő az őrző ellen.', item: 'Új tárgyat kaptál!' }[o.effect];
-      html = `<h3>${esc(o.title)}</h3><p style="margin-top:6px">${esc(o.result)}</p><p class="small" style="margin-top:8px;color:var(--tunde-400);font-weight:800">${eff}</p>${o.item ? `<div style="margin-top:10px">${itemHtml(o.item, { delta: true })}</div>` : ''}`;
+      const eff = { blessing: `Áldást kaptál: +${o.blessPct || 10}% sebzés az őrző ellen.`, silver: `+${fmt(o.silver || 0)} Holdezüst`, dust: `+${fmt(o.dust || 0)} Csillagpor`, heal: 'Kipihented magad: több életerővel érsz az őrzőhöz.', hurt: 'Megsérültél: kevesebb életerővel érsz az őrzőhöz.', xp: o.healToXp ? `Teljes erőben voltál, így a pihenőből tapasztalat lett: +${fmt(o.xp || 0)} TP` : `+${fmt(o.xp || 0)} TP`, item: 'Új tárgyat kaptál!', none: 'Nem történt semmi különös.' }[o.effect] || '';
+      if (o.effect === 'hurt' || (o.checkOk === false)) cls2 = 'bad';
+      const pre = [o.cost ? `Fizettél: ${fmt(o.cost)} Holdezüst` : '', o.checkChance != null ? (o.checkOk ? `Sikerült (${pct(o.checkChance)} esély volt)` : `Nem sikerült (${pct(o.checkChance)} esély volt)`) : ''].filter(Boolean).join(' · ');
+      html = `${pre ? `<p class="tiny muted">${pre}</p>` : ''}<h3>${esc(o.title)}</h3><p style="margin-top:6px">${esc(o.result)}</p><p class="small" style="margin-top:8px;color:var(--tunde-400);font-weight:800">${eff}</p>${o.item ? `<div style="margin-top:10px">${itemHtml(o.item, { delta: true })}</div>` : ''}${o.follow ? '<p class="small" style="margin-top:8px;color:var(--fakla-300)">Ennek még lesz folytatása a következő tisztáson…</p>' : ''}`;
     }
     const last = S.save.expedition.step >= 3;
     return `<div class="result-box ${cls2}">${html}<div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn primary" data-act="next">${last ? 'Tovább az őrzőhöz' : 'Tovább'}</button></div></div>`;
   }
+  function guardText(name, k) { const g = D.ADVENTURE && D.ADVENTURE.guards && D.ADVENTURE.guards[name]; return g ? g[k] : ''; }
   function renderGuard(exp) {
     const h = hero(), r = region(exp.offer.region), c = cls(h);
     // A győzelmi esélyt a böngésző számolja ki a látható adatokból (az eredményt a szerver dönti el)
@@ -1211,7 +1227,7 @@
     const chance = E.winChance(heroF, mon, h.tactic, 400, 777);
     const tacticSeg = ['roham', 'kiegy', 'kitartas'].map(id => `<button data-act="tactic" data-v="${id}" aria-pressed="${h.tactic === id}">${D.TACTICS[id].name}${c.tactic === id ? ' <span class="rec-tag">ajánlott</span>' : ''}</button>`).join('');
     const col = chance >= 0.65 ? 'var(--jo-400)' : chance >= 0.45 ? 'var(--kozepes-400)' : 'var(--veszely-400)';
-    return `<div class="exp-scene">${A.sceneSvg(r.scene, 9)}<p class="intro">A tisztás végén ott vár a terület őrzője: <b>${esc(exp.offer.guard)}</b>.</p></div>
+    return `<div class="exp-scene">${A.sceneSvg(r.scene, 9)}<p class="intro">${guardText(exp.offer.guard, 'intro') ? esc(guardText(exp.offer.guard, 'intro')) : `A tisztás végén ott vár a terület őrzője: <b>${esc(exp.offer.guard)}</b>.`}</p></div>
       <div class="result-box"><div class="guard-box">
         <div class="portrait md">${A.monsterSvg(exp.offer.guard, r.id, true)}</div>
         <div><div class="tiny">Az őrző</div><h2>${esc(exp.offer.guard)}</h2><p class="small muted">${exp.offer.level}. szint · ${fmt(mon.maxHp)} ÉLET · ${fmt(mon.tam)} TÁM</p>
@@ -1468,6 +1484,7 @@
     return `<div class="banner ${res.win ? 'win' : 'lose'}">
         <div class="tiny">${esc(region(exp.offer.region).name)} · ${E.DIFF[exp.offer.diff].name}</div>
         <h1>${res.win ? 'Győzelem!' : 'Most nem sikerült'}</h1>
+        ${guardText(exp.offer.guard, res.win ? 'win' : 'lose') ? `<p style="margin-top:6px;max-width:560px;margin-left:auto;margin-right:auto">${esc(guardText(exp.offer.guard, res.win ? 'win' : 'lose'))}</p>` : ''}
         <p class="muted" style="margin-top:4px">${esc(res.win ? tr.win : tr.lose)}</p>
         <div class="gains">${gains.join('')}</div>
         <div style="max-width:420px;margin:14px auto 0;text-align:left">${xpBar(h)}</div>

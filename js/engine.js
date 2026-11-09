@@ -267,7 +267,7 @@
       side: 'h', name: hero.name, classId: hero.classId, level: hero.level,
       maxHp: s.elet, hpStart: s.elet * (extra.hpFactor || 1),
       tam: s.tam, ved: s.ved, fur: s.fur,
-      dmgPct: s.dmg + (extra.blessing ? 10 : 0), critPct: s.crit, dodgePct: s.dodge, healPct: s.heal, firstPct: s.first,
+      dmgPct: s.dmg + (extra.blessing === true ? 10 : (+extra.blessing || 0)), critPct: s.crit, dodgePct: s.dodge, healPct: s.heal, firstPct: s.first,
       loadout: (hero.loadout || []).slice(), basic: D.CLASSES[hero.classId].basic,
       pet: D.CLASSES[hero.classId].pet || 0, firstStrike: D.CLASSES[hero.classId].firstStrike || 1
     };
@@ -498,7 +498,8 @@
       offer: offer, step: 0, clearings: [], blessing: false, hpFactor: 1, bonusXp: 0, loot: [], silver: 0, dust: 0,
       log: [], seed: newSeed(rng), done: false
     };
-    for (var i = 0; i < 3; i++) exp.clearings.push(makeClearing(rng, hero, offer, region, i));
+    var used = {};
+    for (var i = 0; i < 3; i++) exp.clearings.push(makeClearing(rng, hero, offer, region, i, used));
     return exp;
   }
 
@@ -507,14 +508,82 @@
     return clamp(0.62 + 0.3 * s.fur / (s.fur + sc * 0.5), 0.62, 0.92);
   }
 
-  function makeClearing(rng, hero, offer, region, idx) {
-    var ev = pick(rng, D.EVENTS), se = pick(rng, D.SEARCHES), mname = pick(rng, region.monsters);
+  // ---------- kalandtartalom (js/content.js bővíti; ha nincs, a régi lista marad) ----------
+  // a régi események (a/b) is ugyanabban a formában: options tömb
+  function normEvent(ev) {
+    if (!ev || ev.options) return ev;
+    return { id: ev.id || ev.title, region: 'any', kind: 'esemeny', title: ev.title, text: ev.text, options: [ev.a, ev.b] };
+  }
+  function advPool(key, regionId, legacy) {
+    var A = D.ADVENTURE, out = (legacy || []).slice();
+    if (A && A[key]) out = out.concat(A[key].any || [], A[key][regionId] || []);
+    return out;
+  }
+  function eventPool(regionId) {
+    var list = D.EVENTS.map(normEvent);
+    if (D.ADVENTURE && D.ADVENTURE.events) list = list.concat(D.ADVENTURE.events.filter(function (e) { return !e.follow && (e.region === 'any' || e.region === regionId); }));
+    return list;
+  }
+  // súlyozott választás: az „arany tisztás” ritka; egy kalandon belül nem ismétlődik esemény
+  function pickEvent(rng, regionId, used) {
+    var last = used.__n >= 2; used.__n = (used.__n || 0) + 1;
+    // az utolsó tisztáson nem indulhat lánc (nem lenne hol folytatódnia)
+    var pool = eventPool(regionId).filter(function (e) { return !used[e.id || e.title] && !(last && e.options.some(function (o) { return o.setFlag; })); });
+    if (!pool.length) pool = eventPool(regionId);
+    var tot = 0, w = pool.map(function (e) { var x = e.kind === 'arany' ? 0.12 : 1; tot += x; return x; }), r = rng() * tot;
+    for (var i = 0; i < pool.length; i++) { r -= w[i]; if (r <= 0) return pool[i]; }
+    return pool[pool.length - 1];
+  }
+  function makeClearing(rng, hero, offer, region, idx, used) {
+    used = used || {};
+    var ev = pickEvent(rng, region.id, used); used[ev.id || ev.title] = 1;
+    var se = pick(rng, advPool('searches', region.id, D.SEARCHES)), mname = pick(rng, region.monsters);
     var cards = [
       { type: 'harc', title: mname, text: 'Könnyebb ellenfél, de tapasztalatot ad.', monster: mname, seed: newSeed(rng) },
       { type: 'kutatas', title: se.title, text: se.text, chance: searchChance(hero), seed: newSeed(rng) },
       { type: 'esemeny', title: ev.title, text: ev.text, event: ev, seed: newSeed(rng) }
     ];
-    return { intro: pick(rng, D.CLEARING_INTROS), cards: shuffle(rng, cards) };
+    return { intro: pick(rng, advPool('intros', region.id, D.CLEARING_INTROS)), cards: shuffle(rng, cards) };
+  }
+  // a láncesemény: ha az előző tisztáson valami elindult, a következő tisztás eseménye annak a folytatása
+  function applyFollow(exp) {
+    var f = exp.pendingFollow, cl = exp.clearings[exp.step];
+    exp.pendingFollow = null;
+    if (!f || !cl || !D.ADVENTURE) return;
+    var ev = (D.ADVENTURE.events || []).filter(function (e) { return e.follow === f; })[0];
+    if (!ev) return;
+    cl.cards.forEach(function (c) { if (c.type === 'esemeny') { c.event = ev; c.title = ev.title; c.text = ev.text; } });
+  }
+  // a választható lehetőségek (a származáshoz vagy jellemhez kötöttek csak annak, akire illik)
+  function eventOptions(hero, ev) {
+    ev = normEvent(ev);
+    return ev.options.map(function (o, i) { return { o: o, i: i }; }).filter(function (x) {
+      var n = x.o.needs; if (!n) return true;
+      return (n.origin && n.origin === hero.origin) || (n.trait && n.trait === hero.trait);
+    });
+  }
+  function eventCost(lm, o) { return o && o.cost ? Math.round(silverBase(lm) * 0.35 * o.cost) : 0; }
+  // próba (pl. fürgeség): az alapesély a jellemzővel nő, de 30% és 92% között marad
+  function eventCheckChance(hero, check) {
+    var s = heroStats(hero), k = ['tam', 'ved', 'elet'].indexOf(check.stat) >= 0 ? check.stat : 'fur';
+    var ref = refBase(hero.level)[k];
+    return clamp(check.base - 0.12 + 0.3 * s[k] / (s[k] + ref), 0.3, 0.92);
+  }
+  function applyEventEffect(hero, exp, rng, eff, amount, out) {
+    var lm = exp.offer.lm, m = clamp(amount == null ? 1 : +amount, 0.5, 2);
+    if (eff === 'heal' && exp.hpFactor >= 1) { eff = 'xp'; out.healToXp = true; } // teljes életerőnél a pihenő tapasztalatot ad, hogy ne vesszen el
+    out.effect = eff;
+    if (eff === 'blessing') { exp.blessing = Math.min(20, (exp.blessing === true ? 10 : (+exp.blessing || 0)) + Math.round(10 * m)); out.blessPct = Math.round(10 * m); }
+    else if (eff === 'silver') { out.silver = Math.round(silverBase(lm) * 0.5 * m); exp.silver += out.silver; }
+    else if (eff === 'dust') { out.dust = Math.round((6 + lm) * 0.8 * m); exp.dust += out.dust; }
+    else if (eff === 'heal') { exp.hpFactor = Math.min(1, exp.hpFactor + 0.1 * m); out.healed = true; }
+    else if (eff === 'hurt') { exp.hpFactor = Math.max(0.7, exp.hpFactor - 0.06 * m); out.hpLoss = true; }
+    else if (eff === 'xp') { out.xp = Math.round(xpBase(hero.level) * 0.08 * m); exp.bonusXp += out.xp; }
+    else if (eff === 'item' && exp.torchInfo && exp.torchInfo.tired) { out.effect = 'silver'; out.silver = Math.round(silverBase(lm) * 0.5); exp.silver += out.silver; }
+    else if (eff === 'item') {
+      var it2 = makeItem(rng, { slot: 'fegyver', rarity: rng() < 0.5 ? 'zold' : 'szurke', level: lootLevel(hero, lm), classId: hero.classId });
+      exp.loot.push(it2); out.item = it2;
+    }
   }
 
   function expeditionMonster(exp, power) {
@@ -544,17 +613,17 @@
         } else { out.silver = Math.round(silverBase(lm) * (0.6 + rng() * 0.6)); exp.silver += out.silver; }
       } else { exp.hpFactor = Math.max(0.7, exp.hpFactor - 0.04); out.hpLoss = true; } // a sikertelen kutatás csak kis sérülés (különben csapda lenne)
     } else if (card.type === 'esemeny') {
-      var opt = choice === 'b' ? card.event.b : card.event.a;
-      out.result = opt.result; out.effect = opt.effect;
-      if (opt.effect === 'blessing') exp.blessing = true;
-      else if (opt.effect === 'silver') { out.silver = Math.round(silverBase(lm) * 0.5); exp.silver += out.silver; }
-      else if (opt.effect === 'dust') { out.dust = Math.round((6 + lm) * 0.8); exp.dust += out.dust; }
-      else if (opt.effect === 'heal') { exp.hpFactor = Math.min(1, exp.hpFactor + 0.1); out.healed = true; }
-      else if (opt.effect === 'item' && exp.torchInfo && exp.torchInfo.tired) { out.silver = Math.round(silverBase(lm) * 0.5); exp.silver += out.silver; }
-      else if (opt.effect === 'item') {
-        var it2 = makeItem(rng, { slot: 'fegyver', rarity: rng() < 0.5 ? 'zold' : 'szurke', level: lootLevel(hero, lm), classId: hero.classId });
-        exp.loot.push(it2); out.item = it2;
-      }
+      var ev = normEvent(card.event), idx = choice === 'a' ? 0 : choice === 'b' ? 1 : +choice;
+      var opt = ev.options[idx];
+      out.result = opt.result; out.kind = ev.kind || 'esemeny';
+      if (opt.check) {
+        out.checkChance = eventCheckChance(hero, opt.check);
+        out.checkOk = rng() < out.checkChance;
+        // a kockázatért több jár: sikernél legalább másfélszeres jutalom, kudarcnál csak kisebb baj
+        if (!out.checkOk && opt.fail) { out.result = opt.fail.result; applyEventEffect(hero, exp, rng, opt.fail.effect, (opt.fail.effect === 'hurt' ? 0.5 : 1) * (opt.fail.amount == null ? 1 : opt.fail.amount), out); }
+        else applyEventEffect(hero, exp, rng, opt.effect, Math.max(1.5, opt.amount == null ? 1 : opt.amount), out);
+      } else applyEventEffect(hero, exp, rng, opt.effect, opt.amount, out);
+      if (opt.setFlag) { exp.flags = exp.flags || {}; exp.flags[opt.setFlag] = 1; exp.pendingFollow = opt.setFlag; out.follow = true; }
     }
     exp.step++;
     return out;
@@ -842,7 +911,7 @@
     itemStats: itemStats, makeItem: makeItem, affixText: affixText, salvageValue: salvageValue, sellValue: sellValue, upgradeCost: upgradeCost,
     newHero: newHero, unlockedSkills: unlockedSkills, nextSkillUnlock: nextSkillUnlock, heroStats: heroStats, power: power, powerRaw: powerRaw, lootLevel: lootLevel,
     fighterFromHero: fighterFromHero, monsterFighter: monsterFighter, simulateFight: simulateFight, winChance: winChance,
-    findMonsterLevel: findMonsterLevel, regionFor: regionFor, makeOffers: makeOffers, offerTarget: offerTarget, offerChance: offerChance,
+    findMonsterLevel: findMonsterLevel, regionFor: regionFor, makeOffers: makeOffers, offerTarget: offerTarget, normEvent: normEvent, eventOptions: eventOptions, eventCost: eventCost, eventCheckChance: eventCheckChance, applyFollow: applyFollow, offerChance: offerChance,
     startExpedition: startExpedition, resolveCard: resolveCard, guardPreview: guardPreview, fightGuard: fightGuard,
     finishExpedition: finishExpedition, applyChoice: applyChoice, lossAdvice: lossAdvice,
     torchState: torchState, spendTorch: spendTorch, dustRoom: dustRoom, dustCap: dustCap, weekOf: weekOf, addDust: addDust, addXp: addXp,

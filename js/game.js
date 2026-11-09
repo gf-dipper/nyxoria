@@ -146,7 +146,8 @@
     const o = { type: out.type, title: card.title };
     if (out.type === 'harc') { o.win = out.fight.win; o.monster = card.monster; o.xp = out.xp || 0; o.silver = out.silver || 0; o.traitLine = out.fight.win ? tr.win : tr.lose; }
     if (out.type === 'kutatas') { o.success = out.success; o.item = out.item || null; o.silver = out.silver || 0; }
-    if (out.type === 'esemeny') { o.result = out.result; o.effect = out.effect; o.silver = out.silver || 0; o.dust = out.dust || 0; o.item = out.item || null; o.title = card.event.title; }
+    if (out.type === 'esemeny') { o.result = out.result; o.effect = out.effect; o.silver = out.silver || 0; o.dust = out.dust || 0; o.xp = out.xp || 0; o.item = out.item || null; o.title = card.event.title; o.kind = out.kind || 'esemeny'; if (out.blessPct) o.blessPct = out.blessPct; if (out.healToXp) o.healToXp = true;
+      if (out.checkChance != null) { o.checkOk = out.checkOk; o.checkChance = out.checkChance; } if (out.cost) o.cost = out.cost; if (out.follow) o.follow = true; }
     return o;
   }
   function fightPayload(f, heroF, mon) {
@@ -196,12 +197,20 @@
   A.event = (save, a) => {
     const exp = needExp(save, ['event']);
     const card = exp.clearings[exp.step].cards[exp.pendingCard];
-    const out = E.resolveCard(save.hero, exp, card, a.v === 'b' ? 'b' : 'a');
+    const h = save.hero, ev = E.normEvent(card.event), idx = a.v === 'a' ? 0 : a.v === 'b' ? 1 : (a.v | 0);
+    const ok = E.eventOptions(h, ev).some(x => x.i === idx);
+    if (!ok || !ev.options[idx]) fail('arg', 'Ez a lehetőség most nem választható.');
+    const cost = E.eventCost(exp.offer.lm, ev.options[idx]);
+    if (cost > h.silver) fail('cost', 'Nincs elég Holdezüstöd.');
+    h.silver -= cost;
+    const out = E.resolveCard(h, exp, card, idx);
+    if (cost) out.cost = cost;
     exp.lastOut = summarizeOut(save, out, card); exp.pendingCard = null; exp.phase = 'cardResult';
   };
   A.next = (save) => {
     const exp = needExp(save, ['cardResult']);
     exp.phase = exp.step >= 3 ? 'guard' : 'clearing'; exp.lastOut = null;
+    if (exp.phase === 'clearing') E.applyFollow(exp);
   };
 
   A.fight = (save, a, ctx) => {

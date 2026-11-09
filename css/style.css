@@ -223,6 +223,13 @@ p { margin: 0; }
 .result-box.good { border-color: rgba(95, 211, 154, .5); }
 .result-box.bad { border-color: rgba(255, 143, 143, .45); }
 .event-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.event-choices.many { grid-template-columns: 1fr; }
+.ev-opt { flex-direction: column; align-items: flex-start; text-align: left; height: auto; min-height: 44px; padding: 10px 14px; gap: 2px; white-space: normal; }
+.ev-opt .ev-sub { font-size: 12px; font-weight: 600; color: var(--muted, #9aa3c7); }
+.ev-opt.ev-special { border-color: var(--fakla-300); }
+.ev-opt.ev-special .ev-sub { color: var(--fakla-300); }
+.ev-opt:disabled { opacity: .5; cursor: not-allowed; }
+.ccard.k-arany { border-color: #e9c46a; box-shadow: 0 0 18px rgba(233,196,106,.28); }
 @media (max-width: 480px) { .event-choices { grid-template-columns: 1fr; } }
 .guard-box { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; align-items: center; }
 .guard-box > :last-child { grid-column: 1 / -1; }
