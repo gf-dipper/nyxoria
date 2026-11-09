@@ -41,6 +41,16 @@
     verhold:  { name: 'Vérhold',  power: 1.12, dust: 2.00, mythic: 2.00, silver: 1.35, xp: 1.15, risk: 0.15, minLevel: 20 }
   };
   var MOON_ORDER = ['ujhold', 'felhold', 'telihold', 'verhold'];
+  // elit őrző: a Közepes és Nehéz ajánlatok egy része (az 5. szinttől) feldühödött, megerősödött őrzővel jön.
+  // Az esély ennyivel kisebb (risk), cserébe több Holdezüst, Csillagpor, tapasztalat, és nagyobb eséllyel jár tárgy.
+  var ELITE = { chance: 0.2, minLevel: 5, risk: 0.08, silver: 1.2, dust: 1.2, xp: 1.15, item: 0.15, mythic: 1.3 };
+  function offerMoon(o) {
+    var m = MOONS[o && o.moon] || MOONS.ujhold;
+    if (!o || !o.elite) return m;
+    return { name: m.name, power: m.power, dust: m.dust * ELITE.dust, mythic: m.mythic * ELITE.mythic, silver: m.silver * ELITE.silver, xp: m.xp * ELITE.xp, risk: m.risk, minLevel: m.minLevel };
+  }
+  // a kockázat a célesélyhez arányos, mint a holdaknál (Nehéznél kisebb levonás, különben az elit Nehéz csapda lenne)
+  function eliteTarget(d, moon, elite) { return offerTarget(d, moon) - (elite ? ELITE.risk * DIFF[d].target / DIFF.kozepes.target : 0); }
   var TORCH = { max: 8, regenMs: 90 * 60 * 1000, restedMax: 16 };
   var DUST_WEEKLY = 1500, WEEK_MS = 7 * 24 * 3600 * 1000; // DUST_WEEKLY: a régi, fix keret (már csak tájékoztatásul); az új: dustCap(szint)
   // Ritkaság-kapuk és lila esély (független szimulációval hangolva: első lila kb. a 16. szinten, utána heti ~2–3, teljes lila szett kb. a 32. szint körül)
@@ -468,14 +478,19 @@
     var moon = MOONS[moonId] || MOONS.ujhold;
     var used = {};
     return DIFF_ORDER.map(function (d, idx) {
-      var Lm = findMonsterLevel(heroF, hero.tactic, offerTarget(d, moon), { seed: 1000 + idx, n: 240, power: moon.power });
+      // az elit sorsolás független a felszereléstől: a szint és a megtett kalandok száma dönti el (felszerelés-cserével nem lehet „horgászni”)
+      var elite = d !== 'konnyu' && hero.level >= ELITE.minLevel && mulberry32(((hero.level * 7919) ^ ((hero.stats && hero.stats.expeditions || 0) * 104729) ^ (idx * 31 + 0x51ed)) >>> 0)() < ELITE.chance;
+      var Lm = findMonsterLevel(heroF, hero.tactic, eliteTarget(d, moon, elite), { seed: 1000 + idx, n: 240, power: moon.power });
       var region = regionFor(Lm, d);
       var guards = region.guards.filter(function (g) { return !used[g]; });
       var guard = pick(rng, guards.length ? guards : region.guards); used[guard] = 1;
       var mon = monsterFighter(Lm, { power: moon.power, name: guard });
       var chance = winChance(heroF, mon, hero.tactic, 500, 4242); // rögzített próbaharcok: ugyanarra a helyzetre mindig ugyanazt az esélyt mutatja
-      return { diff: d, lm: Lm, level: mon.level, region: region.id, guard: guard, moon: moonId || 'ujhold',
-               chance: chance, seed: newSeed(rng), rewards: expeditionRewardsPreview(hero, d, Lm, moonId) };
+      var o = { diff: d, lm: Lm, level: mon.level, region: region.id, guard: guard, moon: moonId || 'ujhold',
+               chance: chance, seed: newSeed(rng) };
+      if (elite) o.elite = true;
+      o.rewards = expeditionRewardsPreview(hero, d, Lm, moonId, elite);
+      return o;
     });
   }
 
@@ -484,10 +499,10 @@
     var moon = MOONS[o.moon] || MOONS.ujhold;
     return winChance(fighterFromHero(hero), monsterFighter(o.lm, { power: moon.power, name: o.guard }), hero.tactic, 500, 4242);
   }
-  function expeditionRewardsPreview(hero, d, Lm, moonId) {
+  function expeditionRewardsPreview(hero, d, Lm, moonId, elite) {
     var D2 = DIFF[d];
-    var mo = MOONS[moonId || 'ujhold'] || MOONS.ujhold;
-    return { xp: Math.round(xpBase(hero.level) * D2.xp * mo.xp), silver: Math.round(silverBase(Math.max(1, Lm)) * D2.silver * mo.silver), itemChance: D2.itemChance };
+    var mo = offerMoon({ moon: moonId || 'ujhold', elite: elite });
+    return { xp: Math.round(xpBase(hero.level) * D2.xp * mo.xp), silver: Math.round(silverBase(Math.max(1, Lm)) * D2.silver * mo.silver), itemChance: D2.itemChance + (elite ? ELITE.item : 0) };
   }
 
   // ---------- Expedíció menete ----------
@@ -722,7 +737,7 @@
   // Az őrző-harc utáni jutalmak kiszámítása (a választás még a játékosé)
   function finishExpedition(save, hero, exp, guardFight, torchInfo, now) {
     var rng = mulberry32(exp.seed ^ 0x9e3779b9);
-    var d = exp.offer.diff, D2 = DIFF[d], lm = exp.offer.lm, moon = MOONS[exp.offer.moon] || MOONS.ujhold;
+    var d = exp.offer.diff, D2 = DIFF[d], lm = exp.offer.lm, moon = offerMoon(exp.offer), itemChance = D2.itemChance + (exp.offer.elite ? ELITE.item : 0);
     var win = guardFight.fight.win;
     var res = { win: win, diff: d, xp: 0, silver: exp.silver, dust: 0, items: torchInfo.tired ? [] : exp.loot.slice(), choices: [], levelUps: [], mythic: null,
                 xpMult: torchInfo.xpMult, rested: torchInfo.rested, tired: torchInfo.tired };
@@ -737,7 +752,7 @@
       // zsákmány: 3 választás
       var itemLv = lootLevel(hero, lm);
       var choices = [];
-      if (!torchInfo.tired && rng() < D2.itemChance) { // fáradtan (fáklya nélkül) nincs tárgy
+      if (!torchInfo.tired && rng() < itemChance) { // fáradtan (fáklya nélkül) nincs tárgy
         var rarity = rollLoot(rng, d, hero, { pity: true });
         choices.push({ kind: 'item', item: makeItem(rng, { rarity: rarity, level: itemLv, classId: hero.classId, hero: hero }) });
         if (rng() < 0.35) {
@@ -911,7 +926,7 @@
     itemStats: itemStats, makeItem: makeItem, affixText: affixText, salvageValue: salvageValue, sellValue: sellValue, upgradeCost: upgradeCost,
     newHero: newHero, unlockedSkills: unlockedSkills, nextSkillUnlock: nextSkillUnlock, heroStats: heroStats, power: power, powerRaw: powerRaw, lootLevel: lootLevel,
     fighterFromHero: fighterFromHero, monsterFighter: monsterFighter, simulateFight: simulateFight, winChance: winChance,
-    findMonsterLevel: findMonsterLevel, regionFor: regionFor, makeOffers: makeOffers, offerTarget: offerTarget, normEvent: normEvent, eventOptions: eventOptions, eventCost: eventCost, eventCheckChance: eventCheckChance, applyFollow: applyFollow, offerChance: offerChance,
+    findMonsterLevel: findMonsterLevel, regionFor: regionFor, makeOffers: makeOffers, offerTarget: offerTarget, ELITE: ELITE, offerMoon: offerMoon, eliteTarget: eliteTarget, normEvent: normEvent, eventOptions: eventOptions, eventCost: eventCost, eventCheckChance: eventCheckChance, applyFollow: applyFollow, offerChance: offerChance,
     startExpedition: startExpedition, resolveCard: resolveCard, guardPreview: guardPreview, fightGuard: fightGuard,
     finishExpedition: finishExpedition, applyChoice: applyChoice, lossAdvice: lossAdvice,
     torchState: torchState, spendTorch: spendTorch, dustRoom: dustRoom, dustCap: dustCap, weekOf: weekOf, addDust: addDust, addXp: addXp,

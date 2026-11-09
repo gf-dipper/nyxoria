@@ -1060,10 +1060,10 @@
       const r = region(o.region), rec = o.diff === 'kozepes';
       const tf = tired ? ((S.save.tiredRun || 0) < 8 ? 0.5 : (S.save.tiredRun || 0) < 16 ? 0.25 : 0.1) : 1;
       const xp = Math.round(o.rewards.xp * (t.rested && !tired ? 2 : 1) * xm * tf);
-      return `<button class="offer${rec ? ' rec' : ''}" data-act="start" data-v="${o.diff}" aria-label="${E.DIFF[o.diff].name} kaland: ${esc(r.name)}, győzelmi esély ${pct(o.chance)}">
+      return `<button class="offer${rec ? ' rec' : ''}${o.elite ? ' elite' : ''}" data-act="start" data-v="${o.diff}" aria-label="${E.DIFF[o.diff].name} kaland: ${esc(r.name)}, győzelmi esély ${pct(o.chance)}">
         <div class="scene">${A.sceneSvg(r.scene, A.hash(o.guard) % 997)}<span class="diff-pill d-${o.diff}">${E.DIFF[o.diff].name}</span>${rec ? '<span class="rec-pill">AJÁNLOTT</span>' : ''}</div>
         <div class="body">
-          <div><h3>${esc(r.name)}</h3><div class="small muted">Őrző: ${esc(o.guard)} · <span style="white-space:nowrap">${o.level}. szint</span></div></div>
+          <div><h3>${esc(r.name)}</h3><div class="small muted">Őrző: ${esc(o.guard)} · <span style="white-space:nowrap">${o.level}. szint</span></div>${o.elite ? '<div class="elite-line">Elit őrző: kisebb esély, több jutalom</div>' : ''}</div>
           <div class="chance"><b class="d-${o.diff}">${pct(o.chance)}</b><span class="small muted">győzelmi esély</span></div>
           <div class="reward-line"><span>${I.xp}${fmt(xp)} TP${t.rested && !tired ? ' (×2)' : tired ? ' (fáradtan)' : ''}</span><span>${I.silver}${fmt(Math.round(o.rewards.silver * tf))}</span>${tired ? '<span>tárgy nélkül</span>' : `<span>${pct(o.rewards.itemChance)} tárgy</span>`}</div>
         </div></button>`;
@@ -1261,6 +1261,7 @@
     const last = S.save.expedition.step >= 3;
     return `<div class="result-box ${cls2}">${html}<div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn primary" data-act="next">${last ? 'Tovább az őrzőhöz' : 'Tovább'}</button></div></div>`;
   }
+  function eliteText(name) { return (D.GUARD_EXTRA && D.GUARD_EXTRA.elite && D.GUARD_EXTRA.elite[name]) || 'Ma különösen erős és dühös.'; }
   function guardText(name, k) { const g = D.ADVENTURE && D.ADVENTURE.guards && D.ADVENTURE.guards[name]; return g ? g[k] : ''; }
   function renderGuard(exp) {
     const h = hero(), r = region(exp.offer.region), c = cls(h);
@@ -1272,9 +1273,10 @@
     const col = chance >= 0.65 ? 'var(--jo-400)' : chance >= 0.45 ? 'var(--kozepes-400)' : 'var(--veszely-400)';
     return `<div class="exp-scene">${A.sceneSvg(r.scene, 9)}<p class="intro">${guardText(exp.offer.guard, 'intro') ? esc(guardText(exp.offer.guard, 'intro')) : `A tisztás végén ott vár a terület őrzője: <b>${esc(exp.offer.guard)}</b>.`}</p></div>
       <div class="result-box"><div class="guard-box">
-        <div class="portrait md">${A.monsterSvg(exp.offer.guard, r.id, true)}</div>
-        <div><div class="tiny">Az őrző</div><h2>${esc(exp.offer.guard)}</h2><p class="small muted">${exp.offer.level}. szint · ${fmt(mon.maxHp)} ÉLET · ${fmt(mon.tam)} TÁM</p>
+        <div class="portrait md${exp.offer.elite ? ' elite' : ''}">${A.monsterSvg(exp.offer.guard, r.id, true)}</div>
+        <div><div class="tiny">${exp.offer.elite ? '<span class="elite-tag">Elit</span> őrző' : 'Az őrző'}</div><h2>${esc(exp.offer.guard)}</h2><p class="small muted">${exp.offer.level}. szint · ${fmt(mon.maxHp)} ÉLET · ${fmt(mon.tam)} TÁM</p>
           <div class="chance" style="margin-top:8px"><b style="color:${col}">${pct(chance)}</b><span class="small muted">győzelmi esély (próbaharcok alapján)</span></div>
+          ${exp.offer.elite ? `<p class="small elite-why">${esc(eliteText(exp.offer.guard))} Ha legyőzöd, több Holdezüst, Csillagpor és tapasztalat jár, és nagyobb eséllyel kapsz tárgyat.</p>` : ''}
           ${modsHtml(exp)}</div>
         <div class="stack" style="min-width:220px"><div class="seg" role="group" aria-label="Taktika">${tacticSeg}</div><button class="btn fakla lg block" data-act="fight">Harcba!</button></div>
       </div></div>`;

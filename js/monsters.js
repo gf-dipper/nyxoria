@@ -675,6 +675,7 @@
     }
   });
   // minden név kifejezett hozzárendelése: test + változat (szín, kiegészítő, méret). Ismeretlen névnél: figyelmeztetés.
+  // a js/guards.js új őrzőinek és a Holdkrónika főellenfeleinek kinézete a NAMES végére fűződik (lásd lent)
   const NAMES = {
     'Mocsári lidérc': { kind: 'wisp' },
     'Iszapmanó': { kind: 'imp', tint: '#7a5a3a', acc: 'mud' },
@@ -721,6 +722,7 @@
     'A Mocsárkirály': { kind: 'frog' },
     'Éjanya': { kind: 'spider', acc: 'eggs' }
   };
+  { const X = root.NYX.data && root.NYX.data.GUARD_EXTRA; if (X && X.art) Object.keys(X.art).forEach(k => { if (!NAMES[k]) NAMES[k] = X.art[k]; }); }
   // korona: az alsó közepe a fej tetejére kerül. [x, y, méretszorzó] a szörny saját koordinátáiban; a pontokat a szemek
   // helyéből és a sziluettből mértük ki (tools/korona-ellenorzes/measure.js), majd nagyított képen ellenőriztük (zoom.js), a chain.js pedig azt nézi, hogy a korona a fejjel együtt mozog-e. Változatonként eltérhet.
   const HEAD_TOP = {

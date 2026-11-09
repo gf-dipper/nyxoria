@@ -422,7 +422,7 @@
     heroF.pet = (heroF.pet || 0) + heroes.reduce((t, x) => t + allyShare(heroF, x), 0);
     const names = allies.map(x => x.name);
     const lm = E.findMonsterLevel(heroF, h.tactic, 0.53, { n: 160, power: 1.25 });
-    const region = E.regionFor(lm, 'nehez'), reg = D.REGIONS.filter(r => r.id === region)[0] || D.REGIONS[0];
+    const reg = E.regionFor(lm, 'nehez') || D.REGIONS[0], region = reg.id;
     const mon = E.monsterFighter(lm, { power: 1.25, name: reg.guards[Math.floor(Math.random() * reg.guards.length)] });
     const f = E.simulateFight(heroF, mon, h.tactic, E.newSeed(), true);
     s.runs++; s.cands = []; save.team = s;
@@ -491,7 +491,7 @@
     const moon = E.MOONS[exp.offer.moon] || E.MOONS.ujhold;
     if (!E.DIFF[exp.offer.diff]) return;
     // ugyanazzal a céllal (a hold kockázatával együtt) és ugyanazokkal a próbaharcokkal, mint az ajánlat
-    const lm = E.findMonsterLevel(E.fighterFromHero(h), h.tactic, E.offerTarget(exp.offer.diff, moon), { seed: 1000 + E.DIFF_ORDER.indexOf(exp.offer.diff), n: 240, power: moon.power });
+    const lm = E.findMonsterLevel(E.fighterFromHero(h), h.tactic, E.eliteTarget(exp.offer.diff, moon, exp.offer.elite), { seed: 1000 + E.DIFF_ORDER.indexOf(exp.offer.diff), n: 240, power: moon.power });
     if (lm > exp.offer.lm) { exp.offer.lm = lm; exp.offer.level = Math.max(1, Math.round(lm)); }
   }
   ['equip', 'tactic', 'skillMove', 'upgrade', 'reroll', 'pathPick'].forEach(n => wrap(n, save => recalibrate(save)));

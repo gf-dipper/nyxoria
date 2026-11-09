@@ -978,3 +978,10 @@ html { scrollbar-width: thin; scrollbar-color: rgba(127, 140, 255, .35) transpar
 .st-past summary { cursor: pointer; font-weight: 700; }
 .st-past[open] summary { margin-bottom: 10px; }
 .st-past .ok { color: var(--jo-400); margin-left: 4px; }
+
+/* elit őrző */
+.offer.elite { border-color: rgba(255,138,168,.55); box-shadow: 0 0 0 1px rgba(255,138,168,.25), 0 0 22px rgba(255,138,168,.12); }
+.elite-line { margin-top: 4px; font-size: 12px; font-weight: 800; color: #ff9ab4; }
+.elite-tag { display: inline-block; padding: 1px 8px; border-radius: 999px; background: #ff8aa8; color: #2a0a18; font-weight: 800; letter-spacing: .5px; margin-right: 4px; }
+.elite-why { margin-top: 8px; color: #ffc2d0; }
+.portrait.elite { box-shadow: 0 0 0 2px rgba(255,138,168,.6), 0 0 26px rgba(255,138,168,.35); }
