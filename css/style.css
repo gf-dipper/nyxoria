@@ -741,11 +741,11 @@ svg.nxi-misc { width: 1.3em; height: 1.3em; flex: none; display: inline-block; v
 .nx-tiers li.here { border-color: var(--fakla-300); }
 .nx-tiers li.done { opacity: .6; }
 .nx-tiers .ok { color: var(--jo-400); font-size: 13px; }
-.nx-wares { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 12px; }
+.nx-wares { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: 12px; margin-top: 12px; }
 .nx-ware { margin: 0; display: flex; flex-direction: column; justify-content: space-between; }
 .nx-ware.sold { opacity: .55; }
 .nx-ware .price { display: inline-flex; align-items: center; gap: 6px; font-size: 17px; }
-.nx-achs { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; margin-top: 14px; }
+.nx-achs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 10px; margin-top: 14px; }
 .nx-ach { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px; border-radius: 14px; background: var(--ej-900); border: 1px solid var(--ej-600); }
 .nx-ach > svg.nxi { width: 48px; height: 48px; border-radius: 12px; overflow: hidden; }
 .nx-ach:not(.can):not(.full) > svg.nxi { filter: grayscale(.7) brightness(.7); }
@@ -863,7 +863,7 @@ svg.nxi-misc { width: 1.3em; height: 1.3em; flex: none; display: inline-block; v
 @keyframes legend-glow { 0% { text-shadow: 0 0 60px #fff6d6; } 100% { text-shadow: 0 0 18px rgba(242, 193, 78, .6); } }
 @media (prefers-reduced-motion: reduce) { .legend-rays, .legend-back .legend-modal, .legend-back .legend-name { animation: none !important; } }
 /* hőseim */
-.nx-hcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin-top: 14px; }
+.nx-hcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 10px; margin-top: 14px; }
 .nx-hcard { display: flex; gap: 12px; align-items: center; padding: 12px; border-radius: 16px; background: var(--ej-900); border: 1px solid var(--ej-600); text-align: left; color: inherit; font: inherit; min-width: 0; }
 .nx-hcard.on { border-color: var(--jo-400); box-shadow: 0 0 0 1px var(--jo-400) inset; }
 .nx-hcard .portrait { width: 72px; height: 84px; flex-shrink: 0; margin: 0; }
@@ -921,3 +921,17 @@ html { scrollbar-width: thin; scrollbar-color: rgba(127, 140, 255, .35) transpar
 .nx-rail-foot { gap: 4px; }
 .nx-rail-foot .icon-btn { padding: 4px 1px; }
 .nx-rail-foot .icon-btn small { font-size: 9.5px; letter-spacing: -.1px; text-overflow: clip; }
+/* telefon: bejelentés, admin, eredmények a legkeskenyebb kijelzőn is */
+@media (max-width: 560px) {
+  .nx-notice { flex-wrap: wrap; }
+  .nx-notice > button { margin-left: auto; }
+  .nx-admtabs { display: grid; grid-template-columns: 1fr 1fr; }
+  .nx-admtabs button { white-space: normal; line-height: 1.2; min-height: 40px; }
+  .nx-admin .chron-item, .nx-admin .nx-glog li { overflow-wrap: anywhere; }
+  .nx-admbox input.input, .nx-admbox select.input { max-width: 100%; }
+}
+@media (max-width: 360px) {
+  .nx-ach { grid-template-columns: 40px minmax(0, 1fr); gap: 10px; }
+  .nx-ach > svg.nxi { width: 40px; height: 40px; }
+  .nx-ach > :last-child { grid-column: 1 / -1; justify-self: stretch; }
+}
