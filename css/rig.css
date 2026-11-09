@@ -1,0 +1,853 @@
+/* Nyxoria – a rig animációi. A .rig SVG belső csoportjait mozgatja (r-body, r-head, r-arm-r stb.). */
+svg.rig { overflow: visible; }
+.rig g { transform-box: view-box; }
+.rig .r-body { animation: rig-breathe 3.4s ease-in-out infinite; }
+.rig .r-head { animation: rig-head 5.2s ease-in-out -0.4s infinite; }
+.rig .r-hairback { animation: rig-hair 4.4s ease-in-out -0.9s infinite; }
+.rig .r-cape { animation: rig-cape 3.8s ease-in-out infinite; }
+.rig .r-arm-r { animation: rig-arm-r 3.4s ease-in-out infinite; }
+.rig .r-arm-l { animation: rig-arm-l 3.4s ease-in-out infinite; }
+.rig .r-eye { transform-box: fill-box; transform-origin: center; animation: rig-blink 5.3s infinite; }
+.rig .r-eyes > g:nth-child(2) .r-eye { animation-delay: 0.02s; }
+.rig .r-glow { animation: rig-glow 2.2s ease-in-out infinite; }
+.rig .r-float { animation: rig-float 2.6s ease-in-out infinite; }
+.rig .r-book { animation: rig-bob 2.8s ease-in-out infinite; }
+.rig .r-page { transform-box: fill-box; transform-origin: 0% 50%; animation: rig-page 4.2s ease-in-out infinite; }
+@keyframes rig-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes rig-page { 0%, 50% { transform: scaleX(1); opacity: 1; } 78% { transform: scaleX(-1); opacity: 1; } 84%, 100% { transform: scaleX(-1); opacity: 0; } }
+.rig .r-aura { transform-box: fill-box; transform-origin: center; animation: rig-aura 3s ease-in-out infinite; }
+.rig .r-p { transform-box: fill-box; animation: rig-rise 3.5s linear infinite; }
+.rig .r-spark { animation: rig-spark 2.4s steps(1) infinite; }
+.rig .r-shadow { transform-box: fill-box; transform-origin: center; animation: rig-shadow 3.4s ease-in-out infinite; }
+.rig .r-wing-l, .rig .r-wing-r { animation: rig-wing 1.8s ease-in-out infinite; }
+
+@keyframes rig-breathe { 0%, 100% { transform: translateY(0) scale(1, 1); } 50% { transform: translateY(-1.5px) scale(1.006, 1.012); } }
+@keyframes rig-head { 0%, 100% { transform: rotate(-1.2deg) translateY(0); } 50% { transform: rotate(1.2deg) translateY(-1.5px); } }
+@keyframes rig-hair { 0%, 100% { transform: rotate(-1.4deg); } 50% { transform: rotate(1.6deg); } }
+@keyframes rig-cape { 0%, 100% { transform: skewX(-1.5deg) scaleX(1); } 50% { transform: skewX(2deg) scaleX(1.02); } }
+@keyframes rig-arm-r { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-2.2deg); } }
+@keyframes rig-arm-l { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(2.2deg); } }
+@keyframes rig-blink { 0%, 92%, 100% { transform: scaleY(1); } 94% { transform: scaleY(0.06); } 96% { transform: scaleY(1); } }
+@keyframes rig-glow { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+@keyframes rig-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes rig-aura { 0%, 100% { transform: scale(1); opacity: 0.18; } 50% { transform: scale(1.06); opacity: 0.32; } }
+@keyframes rig-rise { 0% { transform: translateY(20px); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-90px); opacity: 0; } }
+@keyframes rig-spark { 0%, 70%, 100% { opacity: 0; } 72%, 78% { opacity: 1; } 75% { opacity: 0.2; } }
+@keyframes rig-shadow { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.97); } }
+@keyframes rig-wing { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(0.9); } }
+
+/* ---------- harci mozdulatok (a .rig elemre kerülő osztályok) ----------
+   Animációs alapelvek: lendületvétel (anticipation) → gyors mozdulat → túllendülés (overshoot) →
+   visszarendeződés; a fej, a haj és a köpeny késve követi a testet (overlapping action), a test
+   ugráskor/érkezéskor összenyomódik és megnyúlik (squash & stretch). */
+.rig .r-root { transform-origin: 160px 420px; animation: rig-sway 6.4s ease-in-out infinite; }
+@keyframes rig-sway { 0%, 100% { transform: rotate(-0.5deg); } 50% { transform: rotate(0.5deg); } }
+
+.rig.act-attack .r-root { animation: act-lunge 0.7s cubic-bezier(.25, .8, .3, 1); }
+.rig.act-attack .r-arm-r { animation: act-swing 0.7s cubic-bezier(.25, .8, .3, 1); }
+.rig.act-attack .r-weapon { animation: act-swing-blade 0.7s cubic-bezier(.25, .8, .3, 1); } /* a kard a feje fölött felfelé áll (nem a nyakánál), lecsapáskor előre-lefelé */
+.rig.act-attack .r-arm-l { animation: act-counter 0.7s ease-out; }
+.rig.act-attack .r-head { animation: act-head-strike 0.7s ease-out; }
+.rig.act-attack .r-hairback, .rig.act-attack .r-cape { animation: act-drag 0.8s ease-out; }
+
+.rig.act-cast .r-root { animation: act-cast-body 0.9s cubic-bezier(.3, .7, .3, 1); }
+.rig.act-cast .r-arm-r { animation: act-raise 0.9s cubic-bezier(.3, .7, .3, 1); }
+.rig.act-cast .r-arm-l { animation: act-open 0.9s ease-out; }
+.rig.act-cast .r-weapon { animation: act-staff-up 0.9s cubic-bezier(.3, .7, .3, 1); } /* a bot a felemelt kézben is felfelé mutasson */
+.rig.act-cast .r-head { animation: act-head-up 0.9s ease-out; }
+.rig.act-cast .r-hairback, .rig.act-cast .r-cape { animation: act-lift 0.9s ease-out; }
+.rig.act-cast .r-glow { animation: act-flare 0.9s ease-out; }
+
+.rig.act-shoot .r-root { animation: act-brace 0.8s ease-out; }
+.rig.act-shoot .r-arm-l { animation: act-aim 0.8s cubic-bezier(.3, .7, .3, 1); }
+.rig.act-shoot .r-arm-r { animation: act-draw 0.8s cubic-bezier(.3, .7, .3, 1); }
+.rig.act-shoot .r-lgrip { animation: act-bow-upright 0.8s cubic-bezier(.3, .7, .3, 1); } /* az íj kinyújtott karral is függőleges marad */
+
+.rig.act-hit { animation: act-flash 0.42s steps(3, start); }
+.rig.act-hit .r-root { animation: act-recoil 0.55s cubic-bezier(.2, .9, .3, 1); }
+.rig.act-hit .r-head { animation: act-head-hit 0.55s ease-out; }
+.rig.act-hit .r-arm-r { animation: act-flail-r 0.55s ease-out; }
+.rig.act-hit .r-arm-l { animation: act-flail-l 0.55s ease-out; }
+.rig.act-hit .r-hairback, .rig.act-hit .r-cape { animation: act-drag 0.6s ease-out; }
+
+.rig.act-dodge .r-root { animation: act-dodge 0.65s cubic-bezier(.3, .7, .3, 1); }
+.rig.act-dodge .r-hairback, .rig.act-dodge .r-cape { animation: act-lift 0.65s ease-out; }
+
+/* gyors döfés (orgyilkos alaptámadása): kis előrelépés, egy rövid szúrás a fordított fogású tőrrel */
+.rig.act-jab .r-root { animation: act-jab-body 0.5s cubic-bezier(.3, .8, .3, 1); }
+.rig.act-jab .r-arm-r { animation: act-jab-arm 0.5s cubic-bezier(.3, .8, .3, 1); }
+.rig.act-jab .r-hairback, .rig.act-jab .r-cape { animation: act-drag 0.6s ease-out; }
+/* hátbaszúrás: összehúzza magát, füstben eltűnik, az ellenfél MÖGÖTT bukkan fel (felé fordulva), két kézzel lecsap, majd visszatér */
+.rig.act-backstab .r-root { animation: act-backstab 1.4s cubic-bezier(.45, 0, .3, 1); }
+.rig.act-backstab .r-arm-r, .rig.act-backstab .r-arm-l { animation: act-stab-down 1.4s ease-in-out; }
+.rig.act-backstab .r-shadow { animation: act-shadow-blink 1.4s linear; }
+.rig.act-backstab .r-hairback, .rig.act-backstab .r-cape { animation: act-lift 1.4s ease-out; }
+/* ---------- képességenkénti saját mozdulatok ---------- */
+/* roham: lendületet vesz, odafut az ellenfélhez, lecsap, visszaszalad (--cx: a táv az ellenfél elé, a harcmező állítja be) */
+.rig.act-charge .r-root { animation: act-charge 1.05s cubic-bezier(.5, 0, .3, 1); }
+.rig.act-charge .r-arm-r { animation: act-charge-arm 1.05s ease-in-out; }
+.rig.act-charge .r-weapon { animation: act-charge-blade 1.05s ease-in-out; }
+.rig.act-charge .r-arm-l { animation: act-counter 1.05s ease-out; }
+.rig.act-charge .r-hairback, .rig.act-charge .r-cape { animation: act-drag 1.05s ease-out; }
+/* árnyékdöfés: villámgyorsan, „elmosódva” átsuhan az ellenfélhez, döf, és már vissza is ugrik */
+.rig.act-dash .r-root { animation: act-dash 0.8s cubic-bezier(.6, 0, .2, 1); }
+.rig.act-dash .r-arm-r { animation: act-dash-arm 0.8s ease-in-out; }
+.rig.act-dash .r-hairback, .rig.act-dash .r-cape { animation: act-drag 0.8s ease-out; }
+/* pajzscsapás: a pajzsos kéz lendül előre, a test beleadja a súlyát */
+.rig.act-bash .r-root { animation: act-bash-body 0.75s cubic-bezier(.3, .8, .3, 1); }
+.rig.act-bash .r-arm-l { animation: act-bash-arm 0.75s cubic-bezier(.3, .8, .3, 1); }
+.rig.act-bash .r-arm-r { animation: act-bash-back 0.75s ease-out; }
+.rig.act-bash .r-weapon { animation: act-bash-blade 0.75s ease-out; }
+.rig.act-bash .r-hairback, .rig.act-bash .r-cape { animation: act-drag 0.8s ease-out; }
+/* harci kiáltás: összehúzza magát, majd kihúzott mellkassal, széttárt karokkal, hátravetett fejjel üvölt */
+.rig.act-roar .r-root { animation: act-roar-body 1s ease-out; }
+.rig.act-roar .r-arm-r { animation: act-roar-r 1s ease-out; }
+.rig.act-roar .r-weapon { animation: act-roar-blade 1s ease-out; }
+.rig.act-roar .r-arm-l { animation: act-roar-l 1s ease-out; }
+.rig.act-roar .r-head { animation: act-roar-head 1s ease-out; }
+.rig.act-roar .r-hairback, .rig.act-roar .r-cape { animation: act-lift 1s ease-out; }
+/* kitartó állás: terpeszben leguggol, a pajzs/kar elöl, megveti a lábát */
+.rig.act-guard .r-root { animation: act-guard-body 0.95s ease-in-out; }
+.rig.act-guard .r-arm-l { animation: act-guard-l 0.95s ease-in-out; }
+.rig.act-guard .r-arm-r { animation: act-guard-r 0.95s ease-in-out; }
+/* dobás (füstbomba, csapda): hátralendíti, majd előrehajítja */
+.rig.act-throw .r-root { animation: act-throw-body 0.75s cubic-bezier(.3, .8, .3, 1); }
+.rig.act-throw .r-arm-r { animation: act-throw-arm 0.75s cubic-bezier(.3, .8, .3, 1); }
+.rig.act-throw .r-hairback, .rig.act-throw .r-cape { animation: act-drag 0.8s ease-out; }
+/* hangszeres dal: ringatózik, a jobb kéz pengeti a húrokat, a fej a ritmusra bólint */
+.rig.act-strum .r-root { animation: act-strum-body 1.1s ease-in-out; }
+.rig.act-strum .r-arm-r { animation: act-strum-arm 1.1s ease-in-out; }
+.rig.act-strum .r-weapon { animation: act-strum-lute 1.1s ease-in-out; }
+.rig.act-strum .r-arm-l { animation: act-strum-lhand 1.1s ease-in-out; }
+/* hárfa: a mellkas előtt, a bal kéz pengeti a húrokat */
+.rig.wpn-dalnok1.act-strum .r-arm-r { animation: act-harp-r 1.1s ease-in-out; }
+.rig.wpn-dalnok1.act-strum .r-weapon { animation: act-harp 1.1s ease-in-out; }
+.rig.wpn-dalnok1.act-strum .r-arm-l { animation: act-harp-l 1.1s ease-in-out; }
+/* furulya: a szájhoz emeli, oldalra tartva */
+.rig.wpn-dalnok2.act-strum .r-arm-r { animation: act-flute-r 1.1s ease-in-out; }
+.rig.wpn-dalnok2.act-strum .r-weapon { animation: act-flute 1.1s ease-in-out; }
+.rig.wpn-dalnok2.act-strum .r-arm-l { animation: none; }
+.rig.act-strum .r-head { animation: act-strum-head 1.1s ease-in-out; }
+/* ima: két kéz az ég felé, a test megemelkedik */
+.rig.act-pray .r-root { animation: act-pray-body 1.1s ease-in-out; }
+.rig.act-pray .r-arm-r { animation: act-pray-r 1.1s ease-in-out; }
+.rig.act-pray .r-arm-l { animation: act-pray-l 1.1s ease-in-out; }
+.rig.act-pray .r-head { animation: act-head-up 1.1s ease-out; }
+.rig.act-pray .r-weapon { animation: act-pray-staff 1.1s ease-in-out; }
+.rig.act-pray .r-lgrip { animation: act-pray-lgrip 1.1s ease-in-out; }
+.rig.act-pray .r-hairback, .rig.act-pray .r-cape { animation: act-lift 1.1s ease-out; }
+/* kitérő ugrás: hátraszaltózik, a levegőben lő */
+.rig.act-leap .r-root { animation: act-leap 0.9s cubic-bezier(.3, .7, .3, 1); }
+.rig.act-leap .r-arm-l { animation: act-aim 0.9s ease-out; }
+.rig.act-leap .r-arm-r { animation: act-draw 0.9s ease-out; }
+.rig.act-leap .r-lgrip { animation: act-bow-upright 0.9s ease-out; }
+.rig.act-leap .r-hairback, .rig.act-leap .r-cape { animation: act-lift 0.9s ease-out; }
+/* célzott lövés: hosszan kitartott célzás, csak utána enged el */
+.rig.act-aim .r-root { animation: act-brace 1.25s ease-out; }
+.rig.act-aim .r-arm-l { animation: act-aim-long 1.25s cubic-bezier(.3, .7, .3, 1); }
+.rig.act-aim .r-arm-r { animation: act-draw-long 1.25s cubic-bezier(.3, .7, .3, 1); }
+.rig.act-aim .r-lgrip { animation: act-bow-upright-long 1.25s cubic-bezier(.3, .7, .3, 1); }
+/* állatforma: előregörnyed, megnő, karmokkal ugrik előre */
+.rig.act-beast .r-root { animation: act-beast-body 0.95s cubic-bezier(.4, 0, .3, 1); }
+.rig.act-beast .r-arm-r { animation: act-beast-r 0.95s ease-out; }
+.rig.act-beast .r-arm-l { animation: act-beast-l 0.95s ease-out; }
+.rig.act-beast .r-head { animation: act-head-strike 0.95s ease-out; }
+.rig.act-beast .r-hairback, .rig.act-beast .r-cape { animation: act-drag 0.95s ease-out; }
+.rig.act-victory .r-root { animation: act-jump 0.85s cubic-bezier(.3, .8, .4, 1) 2; }
+.rig.act-victory .r-arm-r { animation: act-cheer 1.7s ease-in-out; }
+.rig.act-victory .r-arm-l { animation: act-cheer-l 1.7s ease-in-out; }
+.rig.act-victory .r-weapon { animation: act-raise-weapon 1.7s ease-in-out; }
+/* fordított fogású tőr: a felemelt kézben a penge magától is felfelé/hátra áll, nem kell visszafordítani */
+.rig.act-victory .r-weapon.rev, .rig.act-cast .r-weapon.rev, .rig.act-attack .r-weapon.rev, .rig.act-charge .r-weapon.rev, .rig.act-roar .r-weapon.rev { animation: none; } /* a fegyver hegye a magasba mutat */
+.rig.act-victory .r-hairback, .rig.act-victory .r-cape { animation: act-lift 0.85s ease-out 2; }
+
+.rig.act-ko .r-root { animation: act-ko 1s cubic-bezier(.5, 0, .8, .4) forwards; }
+.rig.act-heal { animation: act-heal-glow 0.9s ease-out; }
+/* választáskor egy kis „pukk”: a hős megrázkódik, mintha átváltozna */
+.rig.act-pop .r-root { animation: act-pop 0.42s cubic-bezier(.3, 1.6, .5, 1); }
+
+@keyframes act-dash-arm { 0%, 20% { transform: rotate(0); } 32% { transform: rotate(-80deg); } 44% { transform: rotate(-14deg); } 70% { transform: rotate(-20deg); } 100% { transform: rotate(0); } }
+@keyframes act-jab-body { 0% { transform: none; } 25% { transform: translateX(-6px) scale(1.03, 0.97); } 45% { transform: translateX(26px) rotate(4deg); } 70% { transform: translateX(18px) rotate(2deg); } 100% { transform: none; } }
+@keyframes act-jab-arm { 0% { transform: rotate(0); } 25% { transform: rotate(-70deg); } 45% { transform: rotate(-12deg); } 60% { transform: rotate(-18deg); } 100% { transform: rotate(0); } }
+@keyframes act-backstab {
+  0% { transform: none; opacity: 1; }
+  10% { transform: translateY(5px) scale(1.07, 0.88); opacity: 1; }
+  17% { transform: translateY(-10px) scale(0.55, 1.25); opacity: 0; }
+  22% { transform: translateX(var(--bx, 420px)) scaleX(-1) scale(0.55, 1.25); opacity: 0; }
+  30% { transform: translateX(var(--bx, 420px)) scaleX(-1) translateY(-6px); opacity: 1; }
+  40% { transform: translateX(var(--bx, 420px)) scaleX(-1) translateY(-14px) rotate(-6deg); opacity: 1; }
+  50% { transform: translateX(var(--bx, 420px)) scaleX(-1) translateY(6px) rotate(9deg) scale(1.04, 0.96); opacity: 1; }
+  64% { transform: translateX(var(--bx, 420px)) scaleX(-1); opacity: 1; }
+  72% { transform: translateX(var(--bx, 420px)) scaleX(-1) scale(0.55, 1.25); opacity: 0; }
+  80% { transform: scale(0.55, 1.25); opacity: 0; }
+  90% { transform: scale(1.05, 0.95); opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+@keyframes act-stab-down { 0%, 28% { transform: rotate(0); } 40% { transform: rotate(-110deg); } 50% { transform: rotate(-15deg); } 58% { transform: rotate(-25deg); } 66%, 100% { transform: rotate(0); } }
+@keyframes act-shadow-blink { 0%, 12% { opacity: 0.55; } 17%, 82% { opacity: 0; } 92%, 100% { opacity: 0.55; } }
+@keyframes act-charge { 0% { transform: none; } 12% { transform: translateX(-16px) scale(1.05, 0.93); } 32% { transform: translateX(var(--cx, 260px)) rotate(9deg) scale(0.98, 1.03); } 42% { transform: translateX(var(--cx, 260px)) rotate(4deg) translateY(4px) scale(1.04, 0.96); } 78% { transform: translateX(var(--cx, 260px)) rotate(2deg); } 92% { transform: translateX(-6px) rotate(-2deg); } 100% { transform: none; } }
+@keyframes act-charge-arm { 0%, 12% { transform: rotate(0); } 30% { transform: rotate(-150deg); } 42% { transform: rotate(-48deg); } 78% { transform: rotate(-40deg); } 94%, 100% { transform: rotate(0); } }
+@keyframes act-charge-blade { 0%, 12% { transform: rotate(0); } 30% { transform: rotate(122deg); } 42% { transform: rotate(150deg); } 78% { transform: rotate(146deg); } 94%, 100% { transform: rotate(0); } }
+@keyframes act-dash { 0% { transform: none; } 16% { transform: translateX(-10px) scale(1.06, 0.9); } 30% { transform: translateX(var(--cx, 260px)) skewX(-14deg) scale(1.1, 0.95); } 42% { transform: translateX(var(--cx, 260px)) rotate(5deg); } 74% { transform: translateX(var(--cx, 260px)); } 86% { transform: translateX(-8px) skewX(10deg); } 100% { transform: none; } }
+@keyframes act-bash-body { 0% { transform: none; } 20% { transform: translateX(-10px) rotate(-4deg) scale(1.03, 0.97); } 38% { transform: translateX(70px) rotate(7deg); } 72% { transform: translateX(60px) rotate(3deg); } 100% { transform: none; } }
+@keyframes act-bash-arm { 0% { transform: rotate(0); } 20% { transform: rotate(14deg); } 38% { transform: rotate(-82deg); } 72% { transform: rotate(-74deg); } 100% { transform: rotate(0); } }
+@keyframes act-bash-back { 0% { transform: rotate(0); } 20% { transform: rotate(-40deg); } 38%, 72% { transform: rotate(-92deg); } 100% { transform: rotate(0); } }
+@keyframes act-bash-blade { 0% { transform: rotate(0); } 20% { transform: rotate(36deg); } 38%, 72% { transform: rotate(82deg); } 100% { transform: rotate(0); } }
+@keyframes act-roar-body { 0% { transform: none; } 20% { transform: translateY(5px) scale(1.07, 0.92); } 40% { transform: translateY(-8px) rotate(-3deg) scale(0.97, 1.06); } 48% { transform: translateY(-6px) rotate(-2deg) translateX(-2px); } 56% { transform: translateY(-6px) rotate(-2deg) translateX(2px); } 64% { transform: translateY(-6px) rotate(-2deg) translateX(-2px); } 80% { transform: translateY(-3px); } 100% { transform: none; } }
+@keyframes act-roar-r { 0%, 15% { transform: rotate(0); } 22% { transform: rotate(12deg); } 40%, 75% { transform: rotate(-162deg); } 100% { transform: rotate(0); } }
+@keyframes act-roar-blade { 0%, 15% { transform: rotate(0); } 40%, 75% { transform: rotate(150deg); } 100% { transform: rotate(0); } }
+@keyframes act-roar-l { 0%, 15% { transform: rotate(0); } 22% { transform: rotate(-10deg); } 40% { transform: rotate(62deg); } 50% { transform: rotate(52deg); } 60% { transform: rotate(62deg); } 75% { transform: rotate(55deg); } 100% { transform: rotate(0); } }
+@keyframes act-roar-head { 0%, 20% { transform: rotate(0); } 40%, 75% { transform: rotate(-9deg) translateY(-3px); } 100% { transform: rotate(0); } }
+@keyframes act-guard-body { 0% { transform: none; } 22% { transform: translateY(10px) scale(1.08, 0.9); } 34% { transform: translateY(7px) scale(1.06, 0.93); } 80% { transform: translateY(7px) scale(1.06, 0.93); } 100% { transform: none; } }
+@keyframes act-guard-l { 0% { transform: rotate(0); } 25%, 80% { transform: rotate(-52deg); } 100% { transform: rotate(0); } }
+@keyframes act-guard-r { 0% { transform: rotate(0); } 25%, 80% { transform: rotate(-24deg); } 100% { transform: rotate(0); } }
+@keyframes act-throw-body { 0% { transform: none; } 25% { transform: translateX(-8px) rotate(-5deg); } 48% { transform: translateX(16px) rotate(6deg); } 100% { transform: none; } }
+@keyframes act-throw-arm { 0% { transform: rotate(0); } 25% { transform: rotate(55deg); } 46% { transform: rotate(-140deg); } 62% { transform: rotate(-95deg); } 100% { transform: rotate(0); } }
+@keyframes act-strum-body { 0%, 100% { transform: none; } 25% { transform: rotate(-2.5deg) translateY(-3px); } 50% { transform: rotate(2deg); } 75% { transform: rotate(-2deg) translateY(-3px); } }
+@keyframes act-strum-arm { 0%, 100% { transform: rotate(0); } 18% { transform: rotate(30deg); } 28% { transform: rotate(36deg); } 38% { transform: rotate(28deg); } 48% { transform: rotate(36deg); } 58% { transform: rotate(28deg); } 68% { transform: rotate(36deg); } 82% { transform: rotate(30deg); } }
+@keyframes act-strum-lute { 0%, 100% { transform: rotate(0); } 18%, 82% { transform: rotate(-110deg); } }
+@keyframes act-strum-lhand { 0%, 100% { transform: rotate(0); } 18%, 82% { transform: rotate(-15deg); } 40% { transform: rotate(-19deg); } 60% { transform: rotate(-13deg); } }
+@keyframes act-harp-r { 0%, 100% { transform: rotate(0); } 18%, 82% { transform: rotate(20deg); } }
+@keyframes act-harp { 0%, 100% { transform: rotate(0); } 18%, 82% { transform: rotate(-20deg); } }
+@keyframes act-harp-l { 0%, 100% { transform: rotate(0); } 18% { transform: rotate(-30deg); } 30% { transform: rotate(-38deg); } 42% { transform: rotate(-26deg); } 54% { transform: rotate(-38deg); } 66% { transform: rotate(-26deg); } 82% { transform: rotate(-30deg); } }
+@keyframes act-flute-r { 0%, 100% { transform: rotate(0); } 20%, 80% { transform: rotate(-118deg); } 40% { transform: rotate(-114deg); } 60% { transform: rotate(-120deg); } }
+@keyframes act-flute { 0%, 100% { transform: rotate(0); } 20%, 80% { transform: rotate(30deg); } }
+@keyframes act-strum-head { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(5deg); } 45% { transform: rotate(-4deg); } 70% { transform: rotate(5deg); } }
+@keyframes act-pray-body { 0% { transform: none; } 20% { transform: translateY(4px) scale(1.04, 0.96); } 45%, 75% { transform: translateY(-10px) scale(0.98, 1.04); } 100% { transform: none; } }
+@keyframes act-pray-r { 0% { transform: rotate(0); } 40%, 78% { transform: rotate(-130deg); } 100% { transform: rotate(0); } }
+@keyframes act-pray-staff { 0% { transform: rotate(0); } 40%, 78% { transform: rotate(115deg); } 100% { transform: rotate(0); } }
+@keyframes act-pray-lgrip { 0% { transform: rotate(0); } 40%, 78% { transform: rotate(-115deg); } 100% { transform: rotate(0); } }
+@keyframes act-pray-l { 0% { transform: rotate(0); } 40%, 78% { transform: rotate(130deg); } 100% { transform: rotate(0); } }
+@keyframes act-leap { 0% { transform: none; } 15% { transform: translateY(6px) scale(1.08, 0.9); } 42% { transform: translateX(-64px) translateY(-58px) rotate(-14deg); } 58% { transform: translateX(-74px) translateY(-40px) rotate(-8deg); } 76% { transform: translateX(-50px) translateY(4px) scale(1.06, 0.92); } 100% { transform: none; } }
+@keyframes act-aim-long { 0% { transform: rotate(0); } 25%, 72% { transform: rotate(-82deg); } 100% { transform: rotate(0); } }
+@keyframes act-draw-long { 0% { transform: rotate(0); } 25% { transform: rotate(-22deg); } 70% { transform: rotate(-28deg); } 76% { transform: rotate(14deg); } 86% { transform: rotate(6deg); } 100% { transform: rotate(0); } }
+@keyframes act-bow-upright-long { 0% { transform: rotate(0); } 25%, 72% { transform: rotate(82deg); } 100% { transform: rotate(0); } }
+@keyframes act-beast-body { 0% { transform: none; } 22% { transform: translateY(10px) rotate(6deg) scale(1.14, 0.86); } 42% { transform: translateX(80px) translateY(-14px) rotate(12deg) scale(1.1, 1.02); } 74% { transform: translateX(70px) rotate(6deg) scale(1.08, 0.97); } 100% { transform: none; } }
+@keyframes act-beast-r { 0% { transform: rotate(0); } 22% { transform: rotate(-150deg); } 48% { transform: rotate(-40deg); } 100% { transform: rotate(0); } }
+@keyframes act-beast-l { 0% { transform: rotate(0); } 22% { transform: rotate(-60deg); } 48% { transform: rotate(-110deg); } 100% { transform: rotate(0); } }
+@keyframes act-lunge { 0% { transform: none; } 20% { transform: translateX(-12px) rotate(-3deg) scale(1.03, 0.96); } 40% { transform: translateX(54px) rotate(6deg) scale(0.97, 1.03); } 58% { transform: translateX(46px) rotate(3deg); } 100% { transform: none; } }
+@keyframes act-swing { 0% { transform: rotate(0); } 24% { transform: rotate(-150deg); } 40% { transform: rotate(-48deg); } 54% { transform: rotate(-38deg); } 78% { transform: rotate(-6deg); } 100% { transform: rotate(0); } }
+@keyframes act-swing-blade { 0% { transform: rotate(0); } 24% { transform: rotate(122deg); } 40% { transform: rotate(150deg); } 54% { transform: rotate(146deg); } 78% { transform: rotate(14deg); } 100% { transform: rotate(0); } }
+@keyframes act-counter { 0% { transform: rotate(0); } 22% { transform: rotate(26deg); } 40% { transform: rotate(-22deg); } 100% { transform: rotate(0); } }
+@keyframes act-head-strike { 0% { transform: rotate(0); } 22% { transform: rotate(-5deg); } 44% { transform: rotate(6deg); } 66% { transform: rotate(-2deg); } 100% { transform: rotate(0); } }
+@keyframes act-drag { 0% { transform: none; } 35% { transform: skewX(-12deg) rotate(-5deg); } 70% { transform: skewX(6deg) rotate(2deg); } 100% { transform: none; } }
+@keyframes act-cast-body { 0% { transform: none; } 22% { transform: translateY(4px) scale(1.03, 0.96); } 46% { transform: translateY(-14px) scale(0.98, 1.03); } 72% { transform: translateY(-9px); } 100% { transform: none; } }
+@keyframes act-raise { 0% { transform: rotate(0); } 22% { transform: rotate(16deg); } 46% { transform: rotate(-80deg); } 74% { transform: rotate(-72deg); } 100% { transform: rotate(0); } }
+@keyframes act-staff-up { 0% { transform: rotate(0); } 22% { transform: rotate(-10deg); } 46% { transform: rotate(68deg); } 74% { transform: rotate(62deg); } 100% { transform: rotate(0); } }
+@keyframes act-open { 0% { transform: rotate(0); } 46%, 74% { transform: rotate(38deg); } 100% { transform: rotate(0); } }
+@keyframes act-head-up { 0% { transform: none; } 22% { transform: rotate(2deg) translateY(2px); } 46% { transform: rotate(-4deg) translateY(-3px); } 100% { transform: none; } }
+@keyframes act-lift { 0% { transform: none; } 40% { transform: translateY(-6px) skewX(4deg) scaleY(0.96); } 75% { transform: translateY(2px) skewX(-2deg); } 100% { transform: none; } }
+@keyframes act-flare { 0% { opacity: 0.6; } 45% { opacity: 1; filter: brightness(1.9); } 100% { opacity: 0.6; } }
+@keyframes act-brace { 0% { transform: none; } 30%, 60% { transform: translateX(-6px) rotate(-2deg); } 66% { transform: translateX(-12px) rotate(-3deg); } 100% { transform: none; } }
+@keyframes act-aim { 0% { transform: rotate(0); } 30%, 64% { transform: rotate(-72deg); } 70% { transform: rotate(-66deg); } 100% { transform: rotate(0); } }
+@keyframes act-draw { 0% { transform: rotate(0); } 30%, 60% { transform: rotate(-22deg); } 66% { transform: rotate(14deg); } 80% { transform: rotate(6deg); } 100% { transform: rotate(0); } }
+@keyframes act-bow-upright { 0% { transform: rotate(0); } 30%, 64% { transform: rotate(72deg); } 70% { transform: rotate(66deg); } 100% { transform: rotate(0); } }
+/* találati villanás: kevés, lépcsős képkocka (a szűrő minden képkockán újrarajzolja az egész alakot – így gyenge gépen is azonnal megjelenik) */
+@keyframes act-flash { 0% { filter: brightness(1.7) saturate(0.7); } 40% { filter: brightness(1.35) sepia(0.3) hue-rotate(-25deg) saturate(1.4); } 100% { filter: none; } }
+@keyframes act-recoil { 0% { transform: none; } 14% { transform: translateX(-22px) rotate(-7deg) scale(0.97, 1.02); } 38% { transform: translateX(-8px) rotate(2deg); } 62% { transform: translateX(2px) rotate(-1deg); } 100% { transform: none; } }
+@keyframes act-head-hit { 0% { transform: none; } 14% { transform: rotate(-11deg); } 40% { transform: rotate(5deg); } 70% { transform: rotate(-2deg); } 100% { transform: none; } }
+@keyframes act-flail-r { 0% { transform: rotate(0); } 14% { transform: rotate(-24deg); } 45% { transform: rotate(8deg); } 100% { transform: rotate(0); } }
+@keyframes act-flail-l { 0% { transform: rotate(0); } 14% { transform: rotate(22deg); } 45% { transform: rotate(-6deg); } 100% { transform: rotate(0); } }
+@keyframes act-dodge { 0% { transform: none; } 16% { transform: translateY(3px) scale(1.04, 0.95); } 42% { transform: translateX(-48px) translateY(-16px) rotate(-9deg); } 66% { transform: translateX(-30px) translateY(0) scale(1.04, 0.95); } 82% { transform: translateX(-10px) scale(0.99, 1.01); } 100% { transform: none; } }
+@keyframes act-jump { 0%, 100% { transform: none; } 14% { transform: translateY(4px) scale(1.05, 0.94); } 42% { transform: translateY(-40px) scale(0.97, 1.04); } 64% { transform: translateY(0) scale(1.06, 0.93); } 80% { transform: scale(0.99, 1.01); } }
+@keyframes act-cheer { 0%, 100% { transform: rotate(0); } 20%, 75% { transform: rotate(-138deg); } 30%, 60% { transform: rotate(-128deg); } }
+@keyframes act-raise-weapon { 0%, 100% { transform: rotate(0); } 20%, 75% { transform: rotate(120deg); } 30%, 60% { transform: rotate(112deg); } }
+@keyframes act-cheer-l { 0%, 100% { transform: rotate(0); } 20%, 75% { transform: rotate(34deg); } }
+@keyframes act-ko { 0% { transform: none; opacity: 1; } 22% { transform: translateY(-6px) rotate(4deg); } 100% { transform: translateY(18px) rotate(-14deg); opacity: 0.35; } }
+@keyframes act-heal-glow { 0% { filter: none; } 30% { filter: drop-shadow(0 0 18px #5fd39a) brightness(1.25); } 100% { filter: none; } }
+@keyframes act-pop { 0% { transform: scale(1); } 35% { transform: scale(1.04, 0.95); } 70% { transform: scale(0.98, 1.03); } 100% { transform: scale(1); } }
+
+/* ---------- szörnyek ---------- */
+svg.mon .m-body { animation: rig-breathe 2.8s ease-in-out infinite; }
+svg.mon .m-float { animation: rig-float 3s ease-in-out infinite; }
+svg.mon .m-eye { transform-box: fill-box; transform-origin: center; animation: rig-blink 4.1s infinite; }
+svg.mon .m-glow { animation: rig-glow 1.8s ease-in-out infinite; }
+/* a támadó előrelendülésnél a szörny kilép a saját dobozából – ne vágja le az SVG széle */
+svg.mon, svg.rig { overflow: visible; }
+svg.mon g { transform-box: view-box; }
+svg.mon .m-p { transform-box: fill-box; animation: rig-rise 3.5s linear infinite; }
+svg.mon .m-wingL { animation: mon-flap-l 1.1s ease-in-out infinite; }
+svg.mon .m-wingR { animation: mon-flap-r 1.1s ease-in-out infinite; }
+svg.mon .m-tail { animation: mon-tail 3.2s ease-in-out infinite; transform-origin: 170px 230px; }
+@keyframes mon-flap-l { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-14deg) scaleY(.92); } }
+@keyframes mon-flap-r { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(14deg) scaleY(.92); } }
+@keyframes mon-tail { 0%, 100% { transform: skewX(0deg); } 50% { transform: skewX(6deg); } }
+svg.mon.act-attack .m-root { animation: mon-lunge 0.55s cubic-bezier(.3, .7, .3, 1); }
+svg.mon.act-special .m-root { animation: mon-special 0.9s cubic-bezier(.3, .7, .3, 1); }
+svg.mon.act-hit { animation: mon-blink 0.36s steps(3, start); } /* átlátszóság-villanás: a videókártya rajzolja, nem kell újrafesteni az alakot → azonnal látszik */
+@keyframes mon-blink { 0% { opacity: 0.45; } 50% { opacity: 1; } 75% { opacity: 0.7; } 100% { opacity: 1; } }
+svg.mon.act-hit .m-root { animation: mon-recoil 0.4s ease-out; }
+svg.mon.act-dodge .m-root { animation: mon-dodge 0.5s ease-out; }
+svg.mon.act-ko .m-root { animation: mon-ko 1s ease-in forwards; }
+svg.mon.act-stun .m-root { animation: mon-stun 0.9s ease-in-out; }
+@keyframes mon-lunge { 0% { transform: translateX(0); } 35% { transform: translateX(-52px) translateY(-6px); } 100% { transform: translateX(0); } }
+@keyframes mon-special { 0% { transform: scale(1); } 30% { transform: scale(1.12) translateY(-10px); } 55% { transform: translateX(-70px) scale(1.05); } 100% { transform: translateX(0) scale(1); } }
+@keyframes mon-recoil { 0% { transform: translateX(0); } 25% { transform: translateX(18px) rotate(3deg); } 60% { transform: translateX(-4px); } 100% { transform: translateX(0); } }
+@keyframes mon-dodge { 0% { transform: translateX(0); opacity: 1; } 40% { transform: translateX(40px); opacity: 0.4; } 100% { transform: translateX(0); opacity: 1; } }
+@keyframes mon-ko { 0% { transform: none; opacity: 1; filter: none; } 100% { transform: translateY(30px) scaleY(0.6); opacity: 0; filter: brightness(3) blur(4px); } }
+@keyframes mon-stun { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-4deg); } 75% { transform: rotate(4deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  svg.rig *, svg.mon *, svg.scene * { animation: none !important; }
+}
+
+/* ---------- tájképek ---------- */
+svg.scene { display: block; width: 100%; height: 100%; }
+.scene .sc-tw { animation: sc-tw 3s ease-in-out infinite; }
+.scene .sc-shoot { animation: sc-shoot 9s linear infinite; transform: translate(1300px, 40px); }
+.scene .sc-halo { transform-box: fill-box; transform-origin: center; animation: sc-halo 6s ease-in-out infinite; }
+.scene .sc-rays { animation: sc-rays 14s ease-in-out infinite; }
+.scene .sc-fog1 { animation: sc-fog 38s linear infinite; }
+.scene .sc-fog2 { animation: sc-fog 26s linear infinite reverse; }
+.scene .sc-fly { transform-box: fill-box; animation: sc-fly 7s ease-in-out infinite; }
+.scene .sc-rune { animation: rig-glow 2.6s ease-in-out infinite; }
+.scene .sc-pulse { transform-box: fill-box; transform-origin: center; animation: rig-aura 4s ease-in-out infinite; }
+.scene .sc-fire { transform-box: fill-box; transform-origin: 50% 100%; animation: flicker 0.9s ease-in-out infinite; }
+.scene .sc-far { animation: sc-drift 30s ease-in-out infinite; }
+.scene .sc-mid { animation: sc-drift 22s ease-in-out infinite reverse; }
+.scene .sc-cloud { animation: sc-cloud 90s linear infinite; }
+.scene .sc-sway { animation: sc-sway 7s ease-in-out infinite; }
+.scene .sc-sway2 { animation: sc-sway 9s ease-in-out infinite reverse; }
+.scene .sc-ember { transform-box: fill-box; animation: sc-ember 3s ease-out infinite; }
+.scene .sc-shimmer { animation: sc-shimmer 2.4s ease-in-out infinite; }
+.scene .sc-wisp { animation: sc-wisp 6s ease-in-out infinite; }
+.scene .sc-float { animation: sc-float 8s ease-in-out infinite; }
+.scene .sc-smoke { transform-box: fill-box; transform-origin: center; animation: sc-smoke 8s ease-in-out infinite; }
+.scene .sc-flag { transform-box: fill-box; transform-origin: 0 50%; animation: sc-flag 1.6s ease-in-out infinite; }
+@keyframes sc-cloud { from { transform: translateX(-80px); } 50% { transform: translateX(80px); } to { transform: translateX(-80px); } }
+@keyframes sc-sway { 0%, 100% { transform: rotate(-1.2deg); } 50% { transform: rotate(1.2deg); } }
+@keyframes sc-ember { 0% { transform: translate(0, 0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translate(14px, -120px); opacity: 0; } }
+@keyframes sc-shimmer { 0%, 100% { opacity: 0.15; transform: translateX(0); } 50% { opacity: 0.55; transform: translateX(6px); } }
+@keyframes sc-wisp { 0%, 100% { transform: translate(0, 0); opacity: 0.7; } 33% { transform: translate(18px, -14px); opacity: 1; } 66% { transform: translate(-12px, -6px); opacity: 0.5; } }
+@keyframes sc-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes sc-smoke { 0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.5; } 50% { transform: translate(16px, -14px) scale(1.12); opacity: 0.75; } }
+@keyframes sc-flag { 0%, 100% { transform: scaleX(1) skewY(0deg); } 50% { transform: scaleX(0.85) skewY(6deg); } }
+@keyframes sc-tw { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+@keyframes sc-shoot { 0%, 82% { transform: translate(1300px, 40px); opacity: 0; } 83% { opacity: 1; } 92% { transform: translate(700px, 240px); opacity: 0; } 100% { transform: translate(700px, 240px); opacity: 0; } }
+@keyframes sc-halo { 0%, 100% { transform: scale(1); opacity: 0.9; } 50% { transform: scale(1.06); opacity: 1; } }
+@keyframes sc-rays { 0%, 100% { transform: rotate(-3deg); opacity: 0.8; } 50% { transform: rotate(3deg); opacity: 1; } }
+@keyframes sc-fog { from { transform: translateX(0); } to { transform: translateX(600px); } }
+@keyframes sc-fly { 0%, 100% { transform: translate(0, 0); opacity: 0.2; } 25% { transform: translate(14px, -18px); opacity: 1; } 50% { transform: translate(-6px, -30px); opacity: 0.5; } 75% { transform: translate(-16px, -10px); opacity: 1; } }
+@keyframes sc-drift { 0%, 100% { transform: translateX(-6px); } 50% { transform: translateX(6px); } }
+@keyframes flicker { 0%, 100% { transform: scale(1, 1); } 40% { transform: scale(.94, 1.06); } 70% { transform: scale(1.04, .96); } }
+
+/* ---------- sebzésszámok és feliratok ---------- */
+.dmg { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 30px; color: #fff; white-space: nowrap;
+  text-shadow: 0 0 3px #1b1238, 0 3px 0 #1b1238, 3px 0 0 #1b1238, -3px 0 0 #1b1238, 0 -3px 0 #1b1238, 2px 2px 0 #1b1238, -2px -2px 0 #1b1238, 0 4px 14px rgba(0, 0, 0, .6); }
+.dmg-crit { font-size: 44px; color: #ffe28a; text-shadow: 0 0 2px #5a2a00, 0 3px 0 #5a2a00, 3px 0 0 #5a2a00, -3px 0 0 #5a2a00, 0 -3px 0 #5a2a00, 0 0 24px rgba(255, 200, 80, .9); }
+.dmg-heal { color: #7dffb4; }
+.dmg-miss { font-size: 30px; color: #9fe6ff; font-style: italic; }
+.dmg-poison { font-size: 24px; color: #9dff7a; }
+.dmg-boss { font-size: 36px; color: #fff0f4; }
+.fx-banner { position: absolute; left: 50%; top: var(--banner-top, 84px); z-index: 50; pointer-events: none; padding: 8px 22px; border-radius: 999px; white-space: nowrap;
+  font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 22px; color: #eef0ff; background: rgba(8, 11, 31, .72); border: 1px solid rgba(207, 216, 255, .6);
+  box-shadow: 0 0 24px rgba(127, 140, 255, .45); }
+.fx-banner-win { font-size: 40px; color: #ffe28a; border-color: rgba(255, 226, 138, .8); box-shadow: 0 0 40px rgba(255, 200, 80, .55); top: 30%; }
+.fx-banner-lose { font-size: 34px; color: #cfd8ff; top: 30%; }
+.fx-banner-mon { left: 58%; color: #ffc1d0; border-color: rgba(255, 122, 154, .6); box-shadow: 0 0 24px rgba(255, 122, 154, .45); }
+
+/* =====================================================================================
+   KÉPESSÉG-MOZDULATOK, 3. változat (független ellenőrzés után). Ezek a szabályok felülírják a fentieket.
+   Elvek: közelharcnál a hős ODAMEGY az ellenfélhez (--cx), a csapás előre irányul, a találat az érintkezés
+   pillanatában villan; lövésnél/varázslatnál a lövedék a kiengedés kulcsképkockáján indul; a fegyver soha nem
+   megy át az arcon/nyakon; minden képességnek saját, a nevéhez illő körvonala van.
+   ===================================================================================== */
+/* --- közelharci alaptámadás: odalép, a fej fölül előre-le csap, visszalép (érintkezés: 44%) --- */
+.rig.act-attack .r-root { animation: v3-attack-body 0.95s cubic-bezier(.4, 0, .3, 1); }
+.rig.act-attack .r-arm-r { animation: v3-attack-arm 0.95s ease-in-out; }
+.rig.act-attack .r-weapon { animation: v3-attack-blade 0.95s ease-in-out; }
+.rig.act-attack .r-arm-l { animation: v3-attack-off 0.95s ease-in-out; }
+.rig.act-attack .r-head { animation: act-head-strike 0.95s ease-out; }
+.rig.act-attack .r-hairback, .rig.act-attack .r-cape { animation: act-drag 1s ease-out; }
+/* lant/hárfa: a nyakánál fogja, így a nehéz teste vezeti az ütést – a hangszert nem kell fordítani */
+.rig.wpn-dalnok0.act-attack .r-weapon, .rig.wpn-dalnok1.act-attack .r-weapon { animation: none; }
+@keyframes v3-attack-body { 0% { transform: none; } 12% { transform: translateX(-10px) scale(1.04, 0.95); } 34% { transform: translateX(var(--cx, 0px)) rotate(7deg) scale(0.98, 1.03); } 46% { transform: translateX(var(--cx, 0px)) rotate(9deg) translateY(4px) scale(1.04, 0.96); } 70% { transform: translateX(var(--cx, 0px)) rotate(3deg); } 90% { transform: translateX(-4px); } 100% { transform: none; } }
+@keyframes v3-attack-arm { 0%, 10% { transform: rotate(0); } 32% { transform: rotate(-150deg); } 44% { transform: rotate(-48deg); } 58% { transform: rotate(-40deg); } 80% { transform: rotate(-12deg); } 100% { transform: rotate(0); } }
+@keyframes v3-attack-blade { 0%, 10% { transform: rotate(0); } 32% { transform: rotate(122deg); } 44% { transform: rotate(150deg); } 58% { transform: rotate(146deg); } 80% { transform: rotate(40deg); } 100% { transform: rotate(0); } }
+@keyframes v3-attack-off { 0%, 10% { transform: rotate(0); } 32% { transform: rotate(-18deg); } 44% { transform: rotate(14deg); } 80% { transform: rotate(10deg); } 100% { transform: rotate(0); } }
+
+/* --- tőrdöfés: odaszökken, előredől, a másik kezét hátrahúzza, fordított fogással döf (érintkezés: 42%) --- */
+.rig.act-jab .r-root { animation: v3-jab-body 0.75s cubic-bezier(.4, 0, .3, 1); }
+.rig.act-jab .r-arm-r { animation: v3-jab-arm 0.75s ease-in-out; }
+.rig.act-jab .r-arm-l { animation: v3-jab-off 0.75s ease-in-out; }
+@keyframes v3-jab-body { 0% { transform: none; } 14% { transform: translateY(5px) scale(1.06, 0.92); } 32% { transform: translateX(var(--cx, 0px)) rotate(10deg); } 46% { transform: translateX(var(--cx, 0px)) rotate(13deg) translateY(4px); } 68% { transform: translateX(var(--cx, 0px)) rotate(6deg); } 88% { transform: translateX(-4px); } 100% { transform: none; } }
+@keyframes v3-jab-arm { 0%, 14% { transform: rotate(0); } 30% { transform: rotate(-120deg); } 42% { transform: rotate(-62deg); } 66% { transform: rotate(-58deg); } 100% { transform: rotate(0); } }
+@keyframes v3-jab-off { 0%, 14% { transform: rotate(0); } 42%, 66% { transform: rotate(14deg); } 100% { transform: rotate(0); } }
+
+/* --- árnyékdöfés: guggolásból előredőlve suhan át (a test a döfés irányába dől, nem hátra) --- */
+.rig.act-dash .r-root { animation: v3-dash-body 0.8s cubic-bezier(.6, 0, .2, 1); }
+.rig.act-dash .r-arm-r { animation: v3-jab-arm 0.8s ease-in-out; }
+.rig.act-dash .r-arm-l { animation: v3-jab-off 0.8s ease-in-out; }
+@keyframes v3-dash-body { 0% { transform: none; } 16% { transform: translateY(8px) rotate(8deg) scale(1.06, 0.9); } 30% { transform: translateX(var(--cx, 0px)) rotate(14deg) skewX(-8deg); } 44% { transform: translateX(var(--cx, 0px)) rotate(12deg); } 72% { transform: translateX(var(--cx, 0px)) rotate(6deg); } 86% { transform: translateX(-6px) rotate(-4deg); } 100% { transform: none; } }
+
+/* --- pajzscsapás: odalép, a pajzsot előre löki, a kard felemelve kint marad az útból (érintkezés: 40%) --- */
+.rig.act-bash .r-root { animation: v3-bash-body 0.85s cubic-bezier(.4, 0, .3, 1); }
+@keyframes v3-bash-body { 0% { transform: none; } 16% { transform: translateX(-8px) rotate(-4deg) scale(1.03, 0.97); } 36% { transform: translateX(var(--cx, 0px)) rotate(8deg); } 44% { transform: translateX(calc(var(--cx, 0px) + 10px)) rotate(10deg); } 72% { transform: translateX(var(--cx, 0px)) rotate(4deg); } 90% { transform: translateX(-4px); } 100% { transform: none; } }
+.rig.act-bash .r-arm-l { animation: v3-bash-arm 0.85s cubic-bezier(.3, .8, .3, 1); }
+.rig.act-bash .r-arm-r { animation: v3-bash-back 0.85s ease-out; }
+.rig.act-bash .r-weapon { animation: v3-bash-blade 0.85s ease-out; }
+@keyframes v3-bash-arm { 0% { transform: rotate(0); } 18% { transform: rotate(14deg); } 40% { transform: rotate(-82deg); } 74% { transform: rotate(-74deg); } 100% { transform: rotate(0); } }
+@keyframes v3-bash-back { 0% { transform: rotate(0); } 18% { transform: rotate(-40deg); } 40%, 74% { transform: rotate(-92deg); } 100% { transform: rotate(0); } }
+@keyframes v3-bash-blade { 0% { transform: rotate(0); } 18% { transform: rotate(36deg); } 40%, 74% { transform: rotate(82deg); } 100% { transform: rotate(0); } }
+
+/* --- harci kiáltás: a kard egyenesen az ég felé, a kéz a fej MELLETT (nem mögötte), nyitott, kiabáló száj --- */
+@keyframes act-roar-r { 0%, 15% { transform: rotate(0); } 22% { transform: rotate(10deg); } 40%, 75% { transform: rotate(-138deg); } 100% { transform: rotate(0); } }
+@keyframes act-roar-blade { 0%, 15% { transform: rotate(0); } 22% { transform: rotate(-10deg); } 40%, 75% { transform: rotate(130deg); } 100% { transform: rotate(0); } }
+.rig .r-shout { opacity: 0; }
+.rig.act-roar .r-shout { animation: v3-shout 1s linear; }
+.rig.act-roar .r-mouth { animation: v3-mouth-off 1s linear; }
+@keyframes v3-shout { 0%, 30% { opacity: 0; } 34%, 82% { opacity: 1; } 86%, 100% { opacity: 0; } }
+@keyframes v3-mouth-off { 0%, 30% { opacity: 1; } 34%, 82% { opacity: 0; } 86%, 100% { opacity: 1; } }
+
+/* --- kitartó állás: leguggol, a pajzs függőlegesen elöl, a kard alacsonyan előre, távol az arctól; sokáig kitart --- */
+.rig.act-guard .r-root { animation: v3-guard-body 1.4s ease-in-out; }
+.rig.act-guard .r-arm-l { animation: v3-guard-l 1.4s ease-in-out; }
+.rig.act-guard .r-arm-r { animation: v3-guard-r 1.4s ease-in-out; }
+.rig.act-guard .r-weapon { animation: v3-guard-blade 1.4s ease-in-out; }
+@keyframes v3-guard-body { 0% { transform: none; } 18% { transform: translateY(12px) scale(1.09, 0.88); } 28%, 86% { transform: translateY(9px) scale(1.07, 0.91); } 100% { transform: none; } }
+@keyframes v3-guard-l { 0% { transform: rotate(0); } 20%, 86% { transform: rotate(-55deg); } 100% { transform: rotate(0); } }
+@keyframes v3-guard-r { 0% { transform: rotate(0); } 20%, 86% { transform: rotate(16deg); } 100% { transform: rotate(0); } }
+@keyframes v3-guard-blade { 0% { transform: rotate(0); } 20%, 86% { transform: rotate(74deg); } 100% { transform: rotate(0); } }
+
+/* --- íjlövés: az íj átkerül a célpont felé nyújtott kézbe (függőlegesen), a másik kéz a mellkashoz húzza a húrt,
+       kiengedés 62%-nál, utána a húzó kéz hátracsapódik. A beillesztett nyíl a húzás alatt látszik. --- */
+.rig .r-bowR { opacity: 0; }
+.rig .r-nock { opacity: 0; }
+.rig.act-shoot .r-bowR, .rig.act-shoot2 .r-bowR, .rig.act-aim .r-bowR, .rig.act-leap .r-bowR { animation: v3-show 0.8s step-end; }
+.rig.act-shoot .r-lgrip, .rig.act-shoot2 .r-lgrip, .rig.act-aim .r-lgrip, .rig.act-leap .r-lgrip { animation: v3-hide 0.8s step-end; }
+.rig.act-shoot2 .r-bowR { animation-duration: 1.15s; } .rig.act-shoot2 .r-lgrip { animation-duration: 1.15s; }
+.rig.act-aim .r-bowR, .rig.act-aim .r-lgrip { animation-duration: 1.35s; }
+.rig.act-leap .r-bowR, .rig.act-leap .r-lgrip { animation-duration: 0.9s; }
+@keyframes v3-show { 0% { opacity: 0; } 8%, 92% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes v3-hide { 0% { opacity: 1; } 8%, 92% { opacity: 0; } 100% { opacity: 1; } }
+.rig.act-shoot .r-root { animation: act-brace 0.8s ease-out; }
+.rig.act-shoot .r-arm-r { animation: v3-bow-arm 0.8s cubic-bezier(.3, .7, .3, 1); }
+.rig.act-shoot .r-weapon { animation: v3-bow-up 0.8s cubic-bezier(.3, .7, .3, 1); }
+.rig.act-shoot .r-arm-l { animation: v3-draw 0.8s cubic-bezier(.3, .7, .3, 1); }
+.rig.act-shoot .r-nock { animation: v3-nock 0.8s step-end; }
+@keyframes v3-bow-arm { 0% { transform: rotate(0); } 22% { transform: rotate(-90deg) scaleY(0.62); } 62% { transform: rotate(-90deg) scaleY(0.62); } 68% { transform: rotate(-86deg) scaleY(0.62); } 86% { transform: rotate(-90deg) scaleY(0.62); } 100% { transform: rotate(0); } }
+@keyframes v3-bow-up { 0% { transform: rotate(0); } 22%, 86% { transform: rotate(90deg); } 100% { transform: rotate(0); } }
+@keyframes v3-draw { 0% { transform: rotate(0); } 22% { transform: rotate(-90deg); } 58% { transform: rotate(-83deg) scaleY(0.8); } 62% { transform: rotate(-83deg) scaleY(0.8); } 68% { transform: rotate(-70deg) scaleY(0.7); } 86% { transform: rotate(-74deg) scaleY(0.75); } 100% { transform: rotate(0); } }
+@keyframes v3-nock { 0%, 20% { opacity: 0; } 22%, 61% { opacity: 1; } 62%, 100% { opacity: 0; } }
+/* kettős lövés: két gyors húzás és kiengedés (35% és 70%) */
+.rig.act-shoot2 .r-root { animation: act-brace 1.15s ease-out; }
+.rig.act-shoot2 .r-arm-r { animation: v3-bow-arm 1.15s cubic-bezier(.3, .7, .3, 1); }
+.rig.act-shoot2 .r-weapon { animation: v3-bow-up 1.15s cubic-bezier(.3, .7, .3, 1); }
+.rig.act-shoot2 .r-arm-l { animation: v3-draw2 1.15s ease-in-out; }
+.rig.act-shoot2 .r-nock { animation: v3-nock2 1.15s step-end; }
+@keyframes v3-draw2 { 0% { transform: rotate(0); } 16% { transform: rotate(-90deg); } 32% { transform: rotate(-83deg) scaleY(0.8); } 36% { transform: rotate(-70deg) scaleY(0.7); } 44% { transform: rotate(-90deg); } 66% { transform: rotate(-83deg) scaleY(0.8); } 70% { transform: rotate(-70deg) scaleY(0.7); } 86% { transform: rotate(-74deg) scaleY(0.75); } 100% { transform: rotate(0); } }
+@keyframes v3-nock2 { 0%, 14% { opacity: 0; } 16%, 35% { opacity: 1; } 36%, 43% { opacity: 0; } 44%, 69% { opacity: 1; } 70%, 100% { opacity: 0; } }
+/* célzott lövés: hosszan kitartott, teljes húzás (a célkereszt közben szűkül), kiengedés 74%-nál, erős hátrarándulás */
+.rig.act-aim .r-root { animation: v3-aim-body 1.35s ease-out; }
+.rig.act-aim .r-arm-r { animation: v3-aim-arm 1.35s cubic-bezier(.3, .7, .3, 1); }
+.rig.act-aim .r-weapon { animation: v3-aim-bow 1.35s cubic-bezier(.3, .7, .3, 1); }
+.rig.act-aim .r-arm-l { animation: v3-aim-draw 1.35s cubic-bezier(.3, .7, .3, 1); }
+.rig.act-aim .r-nock { animation: v3-aim-nock 1.35s step-end; }
+@keyframes v3-aim-body { 0% { transform: none; } 18%, 72% { transform: translateY(3px) scale(1.02, 0.98); } 78% { transform: translateX(-8px) rotate(-3deg); } 100% { transform: none; } }
+@keyframes v3-aim-arm { 0% { transform: rotate(0); } 18% { transform: rotate(-90deg) scaleY(0.62); } 72% { transform: rotate(-91deg) scaleY(0.62); } 78% { transform: rotate(-82deg) scaleY(0.62); } 90% { transform: rotate(-90deg) scaleY(0.62); } 100% { transform: rotate(0); } }
+@keyframes v3-aim-bow { 0% { transform: rotate(0); } 18%, 90% { transform: rotate(90deg); } 100% { transform: rotate(0); } }
+@keyframes v3-aim-draw { 0% { transform: rotate(0); } 18% { transform: rotate(-90deg); } 34%, 72% { transform: rotate(-82deg) scaleY(0.74); } 78% { transform: rotate(-66deg) scaleY(0.66); } 90% { transform: rotate(-72deg) scaleY(0.72); } 100% { transform: rotate(0); } }
+@keyframes v3-aim-nock { 0%, 17% { opacity: 0; } 18%, 73% { opacity: 1; } 74%, 100% { opacity: 0; } }
+/* kitérő ugrás: rövidebb hátraszökkenés behúzott térddel, a csúcson lő (50%) */
+.rig.act-leap .r-root { animation: v3-leap 0.9s cubic-bezier(.3, .7, .3, 1); }
+.rig.act-leap .r-arm-r { animation: v3-leap-arm 0.9s ease-out; }
+.rig.act-leap .r-weapon { animation: v3-leap-bow 0.9s ease-out; }
+.rig.act-leap .r-arm-l { animation: v3-leap-draw 0.9s ease-out; }
+@keyframes v3-leap { 0% { transform: none; } 14% { transform: translateY(6px) scale(1.08, 0.9); } 40% { transform: translateX(-42px) translateY(-46px) scale(1, 0.9); } 56% { transform: translateX(-48px) translateY(-36px) scale(1, 0.92); } 76% { transform: translateX(-34px) translateY(4px) scale(1.06, 0.92); } 100% { transform: none; } }
+@keyframes v3-leap-arm { 0% { transform: rotate(0); } 30% { transform: rotate(-90deg) scaleY(0.62); } 76% { transform: rotate(-88deg) scaleY(0.62); } 100% { transform: rotate(0); } }
+@keyframes v3-leap-bow { 0% { transform: rotate(0); } 30%, 76% { transform: rotate(90deg); } 100% { transform: rotate(0); } }
+@keyframes v3-leap-draw { 0% { transform: rotate(0); } 30% { transform: rotate(-88deg); } 46% { transform: rotate(-82deg) scaleY(0.78); } 52% { transform: rotate(-68deg) scaleY(0.68); } 76% { transform: rotate(-72deg) scaleY(0.72); } 100% { transform: rotate(0); } }
+/* számszeríj: vállhoz emeli, vízszintesen céloz, a bal kéz alátámasztja, lövéskor hátrarúg */
+.rig.wpn-vadasz2.act-shoot .r-arm-r, .rig.wpn-vadasz2.act-aim .r-arm-r, .rig.wpn-vadasz2.act-shoot2 .r-arm-r, .rig.wpn-vadasz2.act-leap .r-arm-r { animation-name: v3-xbow-arm; }
+.rig.wpn-vadasz2.act-shoot .r-weapon, .rig.wpn-vadasz2.act-aim .r-weapon, .rig.wpn-vadasz2.act-shoot2 .r-weapon, .rig.wpn-vadasz2.act-leap .r-weapon { animation-name: v3-xbow; }
+.rig.wpn-vadasz2.act-shoot .r-arm-l, .rig.wpn-vadasz2.act-aim .r-arm-l, .rig.wpn-vadasz2.act-shoot2 .r-arm-l, .rig.wpn-vadasz2.act-leap .r-arm-l { animation-name: v3-xbow-support; }
+@keyframes v3-xbow-arm { 0% { transform: rotate(0); } 22% { transform: rotate(-75deg) scaleY(0.75); } 60% { transform: rotate(-75deg) scaleY(0.75); } 66% { transform: rotate(-66deg) scaleY(0.75); } 86% { transform: rotate(-75deg) scaleY(0.75); } 100% { transform: rotate(0); } }
+@keyframes v3-xbow { 0% { transform: rotate(0); } 22%, 86% { transform: rotate(75deg); } 100% { transform: rotate(0); } }
+@keyframes v3-xbow-support { 0% { transform: rotate(0); } 22%, 86% { transform: rotate(-70deg); } 100% { transform: rotate(0); } }
+
+/* --- csapda: leguggol, és alulról, a talaj mentén előredobja (kiengedés: 50%) --- */
+.rig.act-toss .r-root { animation: v3-toss-body 0.8s ease-in-out; }
+.rig.act-toss .r-arm-r { animation: v3-toss-arm 0.8s cubic-bezier(.3, .8, .3, 1); }
+.rig.act-toss .r-hairback, .rig.act-toss .r-cape { animation: act-drag 0.8s ease-out; }
+@keyframes v3-toss-body { 0% { transform: none; } 25% { transform: translateY(14px) rotate(4deg) scale(1.06, 0.88); } 50% { transform: translateY(10px) rotate(8deg) scale(1.04, 0.9); } 80% { transform: translateY(4px); } 100% { transform: none; } }
+@keyframes v3-toss-arm { 0% { transform: rotate(0); } 25% { transform: rotate(38deg); } 50% { transform: rotate(-62deg); } 66% { transform: rotate(-70deg); } 100% { transform: rotate(0); } }
+
+/* --- füstbomba: nincs penge a dobó kézben – a tőr a ruhaujj mögé bújik, amíg dob --- */
+.rig.act-throw .r-weapon { animation: v3-sheathe 0.75s step-end; }
+@keyframes v3-sheathe { 0% { opacity: 1; } 10%, 70% { opacity: 0; } 100% { opacity: 1; } }
+
+/* --- célra mutató varázslat (bot/jogar/pálca): visszahúzza, majd a célpont felé döfi; a fegyver hegye az ellenfél felé mutat
+       (kiengedés: 42%). Lámpás és könyv nem fordul fejjel lefelé, hanem lóg/áll. --- */
+.rig.act-point .r-root { animation: v3-point-body 0.85s ease-out; }
+.rig.act-point .r-arm-r { animation: v3-point-arm 0.85s cubic-bezier(.3, .8, .3, 1); }
+.rig.act-point .r-weapon { animation: v3-point-staff 0.85s cubic-bezier(.3, .8, .3, 1); }
+.rig.act-point .r-arm-l { animation: v3-point-off 0.85s ease-out; }
+.rig.act-point .r-hairback, .rig.act-point .r-cape { animation: act-drag 0.9s ease-out; }
+.rig.wpn-idezo0.act-point .r-weapon, .rig.wpn-gyogyito1.act-point .r-weapon, .rig.wpn-magus2.act-point .r-weapon, .rig.wpn-idezo1.act-point .r-weapon { animation-name: v3-point-hang; }
+@keyframes v3-point-body { 0% { transform: none; } 22% { transform: translateX(-6px) rotate(-3deg); } 42% { transform: translateX(10px) rotate(5deg); } 70% { transform: translateX(6px) rotate(3deg); } 100% { transform: none; } }
+@keyframes v3-point-arm { 0% { transform: rotate(0); } 22% { transform: rotate(22deg); } 42% { transform: rotate(-85deg); } 72% { transform: rotate(-80deg); } 100% { transform: rotate(0); } }
+@keyframes v3-point-staff { 0% { transform: rotate(0); } 22% { transform: rotate(-18deg); } 42%, 72% { transform: rotate(172deg); } 100% { transform: rotate(0); } }
+@keyframes v3-point-hang { 0% { transform: rotate(0); } 22% { transform: rotate(-22deg); } 42%, 72% { transform: rotate(84deg); } 100% { transform: rotate(0); } }
+@keyframes v3-point-off { 0% { transform: rotate(0); } 22% { transform: rotate(20deg); } 42%, 72% { transform: rotate(48deg); } 100% { transform: rotate(0); } }
+/* láncvillám: ugyanez, de a kéz remeg a kisülésben */
+.rig.act-zap .r-root { animation: v3-zap-body 0.95s linear; }
+.rig.act-zap .r-arm-r { animation: v3-point-arm 0.95s cubic-bezier(.3, .8, .3, 1); }
+.rig.act-zap .r-weapon { animation: v3-point-staff 0.95s cubic-bezier(.3, .8, .3, 1); }
+.rig.act-zap .r-arm-l { animation: v3-point-off 0.95s ease-out; }
+.rig.wpn-idezo0.act-zap .r-weapon, .rig.wpn-gyogyito1.act-zap .r-weapon, .rig.wpn-magus2.act-zap .r-weapon, .rig.wpn-idezo1.act-zap .r-weapon { animation-name: v3-point-hang; }
+@keyframes v3-zap-body { 0% { transform: none; } 20% { transform: translateX(-6px) rotate(-3deg); } 40% { transform: translateX(10px) rotate(5deg); } 46% { transform: translateX(8px) rotate(4deg) translateY(-1px); } 52% { transform: translateX(11px) rotate(5deg) translateY(1px); } 58% { transform: translateX(8px) rotate(4deg); } 64% { transform: translateX(11px) rotate(5deg) translateY(-1px); } 72% { transform: translateX(9px) rotate(4deg); } 100% { transform: none; } }
+/* kétkezes lökés (lélekrobbanás, dermesztő jég): a mellkashoz gyűjti, majd két kézzel előre löki (45%) */
+.rig.act-push .r-root { animation: v3-push-body 0.9s ease-out; }
+.rig.act-push .r-arm-r { animation: v3-push-r 0.9s cubic-bezier(.3, .8, .3, 1); }
+.rig.act-push .r-arm-l { animation: v3-push-l 0.9s cubic-bezier(.3, .8, .3, 1); }
+.rig.act-push .r-weapon { animation: v3-push-w 0.9s cubic-bezier(.3, .8, .3, 1); }
+.rig.act-push .r-hairback, .rig.act-push .r-cape { animation: act-drag 0.9s ease-out; }
+@keyframes v3-push-body { 0% { transform: none; } 25% { transform: translateY(4px) rotate(-4deg) scale(1.04, 0.96); } 45% { transform: translateX(12px) rotate(6deg); } 72% { transform: translateX(8px) rotate(4deg); } 100% { transform: none; } }
+@keyframes v3-push-r { 0% { transform: rotate(0); } 25% { transform: rotate(30deg); } 45%, 72% { transform: rotate(-78deg); } 100% { transform: rotate(0); } }
+@keyframes v3-push-l { 0% { transform: rotate(0); } 25% { transform: rotate(-30deg); } 45%, 72% { transform: rotate(-86deg); } 100% { transform: rotate(0); } }
+@keyframes v3-push-w { 0% { transform: rotate(0); } 25% { transform: rotate(-30deg); } 45%, 72% { transform: rotate(78deg); } 100% { transform: rotate(0); } }
+/* védőburok (varázspajzs, holdfény-pajzs, védőszellem): a botot magasra emeli, a másik tenyerét kifelé tartja */
+.rig.act-ward .r-root { animation: v3-ward-body 1s ease-in-out; }
+.rig.act-ward .r-arm-r { animation: v3-ward-r 1s ease-in-out; }
+.rig.act-ward .r-weapon { animation: v3-ward-w 1s ease-in-out; }
+.rig.act-ward .r-arm-l { animation: v3-ward-l 1s ease-in-out; }
+.rig.act-ward .r-hairback, .rig.act-ward .r-cape { animation: act-lift 1s ease-out; }
+@keyframes v3-ward-body { 0% { transform: none; } 20% { transform: translateY(6px) scale(1.05, 0.94); } 40%, 80% { transform: translateY(-4px); } 100% { transform: none; } }
+@keyframes v3-ward-r { 0% { transform: rotate(0); } 38%, 80% { transform: rotate(-140deg); } 100% { transform: rotate(0); } }
+@keyframes v3-ward-w { 0% { transform: rotate(0); } 38%, 80% { transform: rotate(138deg); } 100% { transform: rotate(0); } }
+@keyframes v3-ward-l { 0% { transform: rotate(0); } 38%, 80% { transform: rotate(100deg); } 100% { transform: rotate(0); } }
+/* áldás: tárt karokkal, felfelé fordított tenyérrel; a bot/jogar felfelé áll */
+.rig.act-bless .r-root { animation: act-pray-body 1.1s ease-in-out; }
+.rig.act-bless .r-arm-r { animation: v3-bless-r 1.1s ease-in-out; }
+.rig.act-bless .r-arm-l { animation: v3-bless-l 1.1s ease-in-out; }
+.rig.act-bless .r-weapon { animation: v3-bless-w 1.1s ease-in-out; }
+.rig.act-bless .r-lgrip { animation: v3-bless-g 1.1s ease-in-out; }
+.rig.act-bless .r-head { animation: act-head-up 1.1s ease-out; }
+.rig.act-bless .r-hairback, .rig.act-bless .r-cape { animation: act-lift 1.1s ease-out; }
+@keyframes v3-bless-r { 0% { transform: rotate(0); } 40%, 78% { transform: rotate(-72deg); } 100% { transform: rotate(0); } }
+@keyframes v3-bless-l { 0% { transform: rotate(0); } 40%, 78% { transform: rotate(72deg); } 100% { transform: rotate(0); } }
+@keyframes v3-bless-w { 0% { transform: rotate(0); } 40%, 78% { transform: rotate(70deg); } 100% { transform: rotate(0); } }
+@keyframes v3-bless-g { 0% { transform: rotate(0); } 40%, 78% { transform: rotate(-70deg); } 100% { transform: rotate(0); } }
+/* tisztító ima: letérdel, összekulcsolt kézzel, lehajtott fejjel imádkozik */
+.rig.act-kneel .r-root { animation: v3-kneel-body 1.2s ease-in-out; }
+.rig.act-kneel .r-arm-r { animation: v3-kneel-r 1.2s ease-in-out; }
+.rig.act-kneel .r-arm-l { animation: v3-kneel-l 1.2s ease-in-out; }
+.rig.act-kneel .r-weapon { animation: v3-kneel-w 1.2s ease-in-out; }
+.rig.act-kneel .r-head { animation: v3-kneel-head 1.2s ease-in-out; }
+@keyframes v3-kneel-body { 0% { transform: none; } 30%, 80% { transform: translateY(20px) scale(1.04, 0.9); } 100% { transform: none; } }
+@keyframes v3-kneel-r { 0% { transform: rotate(0); } 30%, 80% { transform: rotate(30deg); } 100% { transform: rotate(0); } }
+@keyframes v3-kneel-l { 0% { transform: rotate(0); } 30%, 80% { transform: rotate(-30deg); } 100% { transform: rotate(0); } }
+@keyframes v3-kneel-w { 0% { transform: rotate(0); } 30%, 80% { transform: rotate(-30deg); } 100% { transform: rotate(0); } }
+@keyframes v3-kneel-head { 0% { transform: none; } 30%, 80% { transform: translateY(4px) rotate(3deg); } 100% { transform: none; } }
+/* falka: keresztbe tett karokból szélesen kitárja (idézés), előredől */
+.rig.act-sweep .r-root { animation: v3-sweep-body 1s ease-out; }
+.rig.act-sweep .r-arm-r { animation: v3-sweep-r 1s cubic-bezier(.3, .8, .3, 1); }
+.rig.act-sweep .r-arm-l { animation: v3-sweep-l 1s cubic-bezier(.3, .8, .3, 1); }
+.rig.act-sweep .r-weapon { animation: v3-sweep-w 1s cubic-bezier(.3, .8, .3, 1); }
+.rig.act-sweep .r-hairback, .rig.act-sweep .r-cape { animation: act-lift 1s ease-out; }
+@keyframes v3-sweep-body { 0% { transform: none; } 22% { transform: translateY(5px) scale(1.04, 0.95); } 42%, 76% { transform: translateY(-6px) rotate(3deg); } 100% { transform: none; } }
+@keyframes v3-sweep-r { 0% { transform: rotate(0); } 22% { transform: rotate(32deg); } 42%, 76% { transform: rotate(-108deg); } 100% { transform: rotate(0); } }
+@keyframes v3-sweep-l { 0% { transform: rotate(0); } 22% { transform: rotate(-32deg); } 42%, 76% { transform: rotate(108deg); } 100% { transform: rotate(0); } }
+@keyframes v3-sweep-w { 0% { transform: rotate(0); } 22% { transform: rotate(-30deg); } 42%, 76% { transform: rotate(105deg); } 100% { transform: rotate(0); } }
+/* lélekcsere: a lámpást magasba emeli, majd ökölbe szorított kézzel lerántja (robbantás, 55%) */
+.rig.act-clench .r-root { animation: v3-clench-body 1s ease-in-out; }
+.rig.act-clench .r-arm-r { animation: v3-clench-r 1s cubic-bezier(.4, 0, .3, 1); }
+.rig.act-clench .r-weapon { animation: v3-clench-w 1s cubic-bezier(.4, 0, .3, 1); }
+.rig.act-clench .r-arm-l { animation: v3-clench-l 1s ease-in-out; }
+@keyframes v3-clench-body { 0% { transform: none; } 35% { transform: translateY(-6px) scale(0.98, 1.03); } 55% { transform: translateY(8px) scale(1.06, 0.92); } 75% { transform: translateY(4px); } 100% { transform: none; } }
+@keyframes v3-clench-r { 0% { transform: rotate(0); } 35% { transform: rotate(-140deg); } 55%, 75% { transform: rotate(-20deg); } 100% { transform: rotate(0); } }
+@keyframes v3-clench-w { 0% { transform: rotate(0); } 35% { transform: rotate(138deg); } 55%, 75% { transform: rotate(18deg); } 100% { transform: rotate(0); } }
+@keyframes v3-clench-l { 0% { transform: rotate(0); } 35% { transform: rotate(40deg); } 55%, 75% { transform: rotate(20deg); } 100% { transform: rotate(0); } }
+/* gyökérfonat: leguggol, és tenyérrel a földre csap, a gyökerek onnan nőnek ki (50%) */
+.rig.act-slam .r-root { animation: v3-slam-body 0.95s ease-in-out; }
+.rig.act-slam .r-arm-r { animation: v3-slam-r 0.95s cubic-bezier(.4, 0, .3, 1); }
+.rig.act-slam .r-arm-l { animation: v3-slam-l 0.95s cubic-bezier(.4, 0, .3, 1); }
+.rig.act-slam .r-weapon { animation: v3-slam-w 0.95s cubic-bezier(.4, 0, .3, 1); }
+@keyframes v3-slam-body { 0% { transform: none; } 30% { transform: translateY(-8px) scale(0.97, 1.04); } 50%, 76% { transform: translateY(22px) rotate(5deg) scale(1.08, 0.86); } 100% { transform: none; } }
+@keyframes v3-slam-r { 0% { transform: rotate(0); } 30% { transform: rotate(-125deg); } 50%, 76% { transform: rotate(-28deg); } 100% { transform: rotate(0); } }
+@keyframes v3-slam-l { 0% { transform: rotate(0); } 30% { transform: rotate(125deg); } 50%, 76% { transform: rotate(-20deg); } 100% { transform: rotate(0); } }
+@keyframes v3-slam-w { 0% { transform: rotate(0); } 30% { transform: rotate(118deg); } 50%, 76% { transform: rotate(10deg); } 100% { transform: rotate(0); } }
+/* medveforma: széles terpeszben felágaskodik, két karral a magasba (üvölt), odaront, és két kézzel lecsap (50%) */
+.rig.act-maul .r-root { animation: v3-maul-body 1.05s cubic-bezier(.4, 0, .3, 1); }
+.rig.act-maul .r-arm-r { animation: v3-maul-r 1.05s ease-in-out; }
+.rig.act-maul .r-arm-l { animation: v3-maul-l 1.05s ease-in-out; }
+.rig.act-maul .r-lgrip { animation: v3-maul-g 1.05s ease-in-out; }
+.rig.act-maul .r-hairback, .rig.act-maul .r-cape { animation: act-drag 1.05s ease-out; }
+@keyframes v3-maul-body { 0% { transform: none; } 18% { transform: translateY(6px) scale(1.18, 0.88); } 32% { transform: translateY(-14px) scale(1.16, 1.1); } 44% { transform: translateX(var(--cx, 0px)) translateY(-10px) scale(1.16, 1.1); } 52% { transform: translateX(var(--cx, 0px)) translateY(10px) rotate(8deg) scale(1.2, 0.9); } 76% { transform: translateX(var(--cx, 0px)) translateY(4px) scale(1.12, 0.95); } 92% { transform: translateX(-4px); } 100% { transform: none; } }
+@keyframes v3-maul-r { 0% { transform: rotate(0); } 32%, 44% { transform: rotate(-125deg); } 52%, 76% { transform: rotate(-40deg); } 100% { transform: rotate(0); } }
+@keyframes v3-maul-l { 0% { transform: rotate(0); } 32%, 44% { transform: rotate(125deg); } 52%, 76% { transform: rotate(-30deg); } 100% { transform: rotate(0); } }
+@keyframes v3-maul-g { 0% { transform: rotate(0); } 32%, 44% { transform: rotate(0); } 52%, 76% { transform: rotate(0); } 100% { transform: rotate(0); } }
+/* farkasforma: mélyen lekuporodik, alacsonyan, hosszan előreveti magát, és kétszer karmol (45%) */
+.rig.act-pounce .r-root { animation: v3-pounce-body 0.9s cubic-bezier(.4, 0, .3, 1); }
+.rig.act-pounce .r-arm-r { animation: v3-pounce-r 0.9s ease-in-out; }
+.rig.act-pounce .r-arm-l { animation: v3-pounce-l 0.9s ease-in-out; }
+.rig.act-pounce .r-hairback, .rig.act-pounce .r-cape { animation: act-drag 0.9s ease-out; }
+@keyframes v3-pounce-body { 0% { transform: none; } 20% { transform: translateY(20px) rotate(10deg) scale(1.1, 0.8); } 38% { transform: translateX(calc(var(--cx, 0px) * 0.6)) translateY(-18px) rotate(22deg) scale(1.08, 0.86); } 46% { transform: translateX(var(--cx, 0px)) translateY(10px) rotate(14deg) scale(1.06, 0.88); } 74% { transform: translateX(var(--cx, 0px)) translateY(6px) rotate(8deg) scale(1.04, 0.92); } 92% { transform: translateX(-4px); } 100% { transform: none; } }
+@keyframes v3-pounce-r { 0% { transform: rotate(0); } 20% { transform: rotate(-40deg); } 38% { transform: rotate(-100deg); } 46% { transform: rotate(-50deg); } 56% { transform: rotate(-95deg); } 64% { transform: rotate(-45deg); } 100% { transform: rotate(0); } }
+@keyframes v3-pounce-l { 0% { transform: rotate(0); } 20% { transform: rotate(-30deg); } 38% { transform: rotate(-90deg); } 50% { transform: rotate(-60deg); } 60% { transform: rotate(-95deg); } 100% { transform: rotate(0); } }
+/* dalok: lantot/hárfát/furulyát a fenti „strum” karok tartják; a dalok a test és a fej mozgásában különböznek */
+.rig.act-lull, .rig.act-march, .rig.act-taunt, .rig.act-anthem { --sd: 1.2s; }
+.rig.act-lull .r-arm-r, .rig.act-march .r-arm-r, .rig.act-taunt .r-arm-r, .rig.act-anthem .r-arm-r { animation: act-strum-arm 1.2s ease-in-out; }
+.rig.act-lull .r-weapon, .rig.act-march .r-weapon, .rig.act-taunt .r-weapon, .rig.act-anthem .r-weapon { animation: act-strum-lute 1.2s ease-in-out; }
+.rig.act-lull .r-arm-l, .rig.act-march .r-arm-l, .rig.act-taunt .r-arm-l, .rig.act-anthem .r-arm-l { animation: act-strum-lhand 1.2s ease-in-out; }
+.rig.wpn-dalnok1:is(.act-lull, .act-march, .act-taunt, .act-anthem, .act-strum) .r-arm-r { animation: act-harp-r 1.2s ease-in-out; }
+.rig.wpn-dalnok1:is(.act-lull, .act-march, .act-taunt, .act-anthem, .act-strum) .r-weapon { animation: act-harp 1.2s ease-in-out; }
+.rig.wpn-dalnok1:is(.act-lull, .act-march, .act-taunt, .act-anthem, .act-strum) .r-arm-l { animation: act-harp-l 1.2s ease-in-out; }
+.rig.wpn-dalnok2:is(.act-lull, .act-march, .act-taunt, .act-anthem, .act-strum) .r-arm-r { animation: act-flute-r 1.2s ease-in-out; }
+.rig.wpn-dalnok2:is(.act-lull, .act-march, .act-taunt, .act-anthem, .act-strum) .r-weapon { animation: act-flute 1.2s ease-in-out; }
+.rig.wpn-dalnok2:is(.act-lull, .act-march, .act-taunt, .act-anthem, .act-strum) .r-arm-l { animation: none; }
+/* altatódal: lassú ringatás, lehajtott fej */
+.rig.act-lull .r-root { animation: v3-lull-body 1.2s ease-in-out; }
+.rig.act-lull .r-head { animation: v3-lull-head 1.2s ease-in-out; }
+@keyframes v3-lull-body { 0%, 100% { transform: none; } 30% { transform: rotate(-4deg); } 70% { transform: rotate(4deg); } }
+@keyframes v3-lull-head { 0%, 100% { transform: none; } 30% { transform: rotate(-7deg) translateY(2px); } 70% { transform: rotate(6deg) translateY(2px); } }
+/* harci induló: ütemre dobbantó, menetelő ugrálás */
+.rig.act-march .r-root { animation: v3-march-body 1.2s linear; }
+.rig.act-march .r-head { animation: act-strum-head 1.2s ease-in-out; }
+@keyframes v3-march-body { 0%, 100% { transform: none; } 12% { transform: translateY(-10px); } 24% { transform: translateY(2px) scale(1.04, 0.96); } 37% { transform: translateY(-10px); } 50% { transform: translateY(2px) scale(1.04, 0.96); } 62% { transform: translateY(-10px); } 75% { transform: translateY(2px) scale(1.04, 0.96); } 88% { transform: translateY(-6px); } }
+/* gúnydal: az ellenfél felé hajol, fejét csúfolódva billegteti */
+.rig.act-taunt .r-root { animation: v3-taunt-body 1.2s ease-in-out; }
+.rig.act-taunt .r-head { animation: v3-taunt-head 1.2s ease-in-out; }
+@keyframes v3-taunt-body { 0%, 100% { transform: none; } 25%, 75% { transform: translateX(10px) rotate(8deg); } 50% { transform: translateX(12px) rotate(10deg); } }
+@keyframes v3-taunt-head { 0%, 100% { transform: none; } 20% { transform: rotate(9deg); } 35% { transform: rotate(-6deg); } 50% { transform: rotate(9deg); } 65% { transform: rotate(-6deg); } 80% { transform: rotate(6deg); } }
+/* hősének: felemelt áll, kihúzott mellkas, lassan magasodik */
+.rig.act-anthem .r-root { animation: v3-anthem-body 1.2s ease-in-out; }
+.rig.act-anthem .r-head { animation: act-head-up 1.2s ease-out; }
+@keyframes v3-anthem-body { 0% { transform: none; } 30%, 80% { transform: translateY(-8px) scale(0.98, 1.04); } 100% { transform: none; } }
+.rig:is(.act-lull, .act-march, .act-taunt, .act-anthem) .r-hairback, .rig:is(.act-lull, .act-march, .act-taunt, .act-anthem) .r-cape { animation: act-lift 1.2s ease-out; }
+
+/* a bot/jogar gömbje varázslásnál ne égjen ki fehér koronggá: csak nő és fényesedik, az alakja megmarad */
+@keyframes act-flare { 0% { opacity: 0.6; } 45% { opacity: 1; } 100% { opacity: 0.6; } }
+.rig:is(.act-point, .act-zap, .act-push, .act-ward, .act-bless, .act-pray, .act-sweep, .act-clench) .r-glow { animation: act-flare 0.9s ease-out; }
+
+/* dermesztő jég: a szörny egy ideig jéghideg, kékes-fehér, deres */
+svg.mon.frozen { filter: saturate(0.35) brightness(1.25) hue-rotate(160deg) drop-shadow(0 0 8px #9ff6ff); transition: filter 0.2s; }
+
+/* ===== 4. kör (második független ellenőrzés után) ===== */
+/* íj: mindig a jobb (célpont felőli) kézben van – így lövéskor nem ugrik át a másik kézbe */
+.rig.wpn-vadasz0 .r-bowR, .rig.wpn-vadasz1 .r-bowR { opacity: 1 !important; animation: none !important; }
+.rig.wpn-vadasz0 .r-lgrip, .rig.wpn-vadasz1 .r-lgrip { opacity: 0 !important; animation: none !important; }
+.rig .r-vstring { pointer-events: none; }
+/* célzott lövés: mélyebb húzás, szemmagasságba emelt íj, a fej a célra billen */
+@keyframes v3-aim-arm { 0% { transform: rotate(0); } 18% { transform: rotate(-98deg) scaleY(0.62); } 72% { transform: rotate(-99deg) scaleY(0.62); } 78% { transform: rotate(-88deg) scaleY(0.62); } 90% { transform: rotate(-98deg) scaleY(0.62); } 100% { transform: rotate(0); } }
+@keyframes v3-aim-bow { 0% { transform: rotate(0); } 18%, 90% { transform: rotate(98deg); } 100% { transform: rotate(0); } }
+@keyframes v3-aim-draw { 0% { transform: rotate(0); } 18% { transform: rotate(-96deg); } 34%, 72% { transform: rotate(-92deg) scaleY(0.66); } 78% { transform: rotate(-70deg) scaleY(0.62); } 90% { transform: rotate(-76deg) scaleY(0.7); } 100% { transform: rotate(0); } }
+.rig.act-aim .r-head { animation: v4-aim-head 1.35s ease-in-out; }
+@keyframes v4-aim-head { 0%, 100% { transform: none; } 20%, 74% { transform: rotate(5deg) translateY(1px); } }
+/* kitérő ugrás: valódi hátraszökkenés, magasabban */
+@keyframes v3-leap { 0% { transform: none; } 14% { transform: translateY(8px) scale(1.08, 0.9); } 40% { transform: translateX(-70px) translateY(-62px) rotate(-10deg) scale(1, 0.92); } 56% { transform: translateX(-80px) translateY(-48px) rotate(-6deg) scale(1, 0.92); } 76% { transform: translateX(-56px) translateY(4px) scale(1.08, 0.9); } 100% { transform: none; } }
+/* csapda: alsó dobás csípőmagasságból, felfelé lendülő követő mozdulattal */
+@keyframes v3-toss-arm { 0% { transform: rotate(0); } 25% { transform: rotate(40deg); } 50% { transform: rotate(-32deg); } 66% { transform: rotate(-78deg); } 100% { transform: rotate(0); } }
+
+/* pajzscsapás: a pajzs függőlegesen, elöl vezet (a kar fordulását a pajzs visszafordítja), a kard hátul-lent marad */
+.rig.act-bash .r-offhand { animation: v4-bash-shield 0.85s cubic-bezier(.3, .8, .3, 1); transform-origin: 107px 279px; }
+@keyframes v4-bash-shield { 0% { transform: rotate(0); } 18% { transform: rotate(-14deg); } 40% { transform: rotate(82deg); } 74% { transform: rotate(74deg); } 100% { transform: rotate(0); } }
+@keyframes v3-bash-back { 0% { transform: rotate(0); } 18% { transform: rotate(-10deg); } 40%, 74% { transform: rotate(28deg); } 100% { transform: rotate(0); } }
+@keyframes v3-bash-blade { 0% { transform: rotate(0); } 40%, 74% { transform: rotate(-20deg); } 100% { transform: rotate(0); } }
+/* kitartó állás: a pajzs függőlegesen elöl (a kar fordulását visszafordítja), a végén rövid kardszúrás előre */
+.rig.act-guard .r-offhand { animation: v4-guard-shield 1.4s ease-in-out; transform-origin: 107px 279px; }
+@keyframes v4-guard-shield { 0% { transform: rotate(0); } 20%, 86% { transform: rotate(55deg); } 100% { transform: rotate(0); } }
+@keyframes v3-guard-body { 0% { transform: none; } 18% { transform: translateY(8px) scale(1.06, 0.94); } 28%, 86% { transform: translateY(6px) scale(1.05, 0.95); } 100% { transform: none; } }
+@keyframes v3-guard-r { 0% { transform: rotate(0); } 20%, 62% { transform: rotate(16deg); } 72%, 84% { transform: rotate(-78deg); } 100% { transform: rotate(0); } }
+@keyframes v3-guard-blade { 0% { transform: rotate(0); } 20%, 62% { transform: rotate(74deg); } 72%, 84% { transform: rotate(168deg); } 100% { transform: rotate(0); } }
+/* kardcsapás: a kard a fej FÖLÉ, kissé hátra kerül (nem a fül mellé) */
+@keyframes v3-attack-arm { 0%, 10% { transform: rotate(0); } 32% { transform: rotate(-168deg); } 44% { transform: rotate(-48deg); } 58% { transform: rotate(-40deg); } 80% { transform: rotate(-12deg); } 100% { transform: rotate(0); } }
+@keyframes v3-attack-blade { 0%, 10% { transform: rotate(0); } 32% { transform: rotate(150deg); } 44% { transform: rotate(150deg); } 58% { transform: rotate(146deg); } 80% { transform: rotate(40deg); } 100% { transform: rotate(0); } }
+/* lendületes roham: előredőlve, pajzzsal elöl fut, és vízszintes döféssel ér célba (nem a kardcsapás lecsapása) */
+@keyframes act-charge { 0% { transform: none; } 12% { transform: translateX(-16px) scale(1.05, 0.93); } 32% { transform: translateX(var(--cx, 260px)) rotate(14deg) scale(0.98, 1.03); } 42% { transform: translateX(calc(var(--cx, 260px) + 12px)) rotate(16deg); } 78% { transform: translateX(var(--cx, 260px)) rotate(8deg); } 92% { transform: translateX(-6px) rotate(-2deg); } 100% { transform: none; } }
+@keyframes act-charge-arm { 0%, 12% { transform: rotate(0); } 30% { transform: rotate(-30deg); } 42%, 78% { transform: rotate(-96deg); } 94%, 100% { transform: rotate(0); } }
+@keyframes act-charge-blade { 0%, 12% { transform: rotate(0); } 30% { transform: rotate(40deg); } 42%, 78% { transform: rotate(96deg); } 94%, 100% { transform: rotate(0); } }
+.rig.act-charge .r-arm-l { animation: v4-charge-shield-arm 1.05s ease-in-out; }
+.rig.act-charge .r-offhand { animation: v4-charge-shield 1.05s ease-in-out; transform-origin: 107px 279px; }
+@keyframes v4-charge-shield-arm { 0%, 12% { transform: rotate(0); } 30%, 78% { transform: rotate(-35deg); } 100% { transform: rotate(0); } }
+@keyframes v4-charge-shield { 0%, 12% { transform: rotate(0); } 30%, 78% { transform: rotate(35deg); } 100% { transform: rotate(0); } }
+/* harci kiáltás és találat: nyitott száj */
+.rig.act-hit .r-shout { animation: v4-ouch 0.55s linear; }
+.rig.act-hit .r-mouth { animation: v4-ouch-off 0.55s linear; }
+@keyframes v4-ouch { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes v4-ouch-off { 0%, 80% { opacity: 0; } 100% { opacity: 1; } }
+
+/* ----- mágus és gyógyító: minden képességnek saját körvonal ----- */
+/* csillagszilánk: a botot magasra, a célpont felé dönti, a másik kar lent – lehívja a csillagokat */
+.rig.act-skycall .r-root { animation: v3-ward-body 1.1s ease-in-out; }
+.rig.act-skycall .r-arm-r { animation: v4-sky-r 1.1s ease-in-out; }
+.rig.act-skycall .r-weapon { animation: v4-sky-w 1.1s ease-in-out; }
+.rig.act-skycall .r-arm-l { animation: v4-sky-l 1.1s ease-in-out; }
+.rig.act-skycall .r-head { animation: act-head-up 1.1s ease-out; }
+.rig.act-skycall .r-hairback, .rig.act-skycall .r-cape { animation: act-lift 1.1s ease-out; }
+@keyframes v4-sky-r { 0% { transform: rotate(0); } 35%, 80% { transform: rotate(-150deg); } 100% { transform: rotate(0); } }
+@keyframes v4-sky-w { 0% { transform: rotate(0); } 35%, 80% { transform: rotate(168deg); } 100% { transform: rotate(0); } }
+@keyframes v4-sky-l { 0% { transform: rotate(0); } 35%, 80% { transform: rotate(-20deg); } 100% { transform: rotate(0); } }
+/* dermesztő jég: két kézzel, a bot gömbjével előre löki a hideget */
+@keyframes v3-push-r { 0% { transform: rotate(0); } 25% { transform: rotate(30deg); } 45%, 72% { transform: rotate(-84deg); } 100% { transform: rotate(0); } }
+@keyframes v3-push-w { 0% { transform: rotate(0); } 25% { transform: rotate(-30deg); } 45%, 72% { transform: rotate(172deg); } 100% { transform: rotate(0); } }
+@keyframes v3-push-l { 0% { transform: rotate(0); } 25% { transform: rotate(-30deg); } 45%, 72% { transform: rotate(-80deg); } 100% { transform: rotate(0); } }
+.rig.wpn-idezo0.act-push .r-weapon, .rig.wpn-magus2.act-push .r-weapon, .rig.wpn-idezo1.act-push .r-weapon { animation-name: v3-point-hang; }
+/* láncvillám: mindkét kar előre, nyitott tartás, a test hátrarándul a kisüléstől */
+.rig.act-zap .r-arm-l { animation: v4-zap-l 0.95s ease-out; }
+@keyframes v4-zap-l { 0% { transform: rotate(0); } 22% { transform: rotate(20deg); } 40%, 72% { transform: rotate(-70deg); } 100% { transform: rotate(0); } }
+@keyframes v3-zap-body { 0% { transform: none; } 20% { transform: translateX(-6px) rotate(-3deg); } 40% { transform: translateX(8px) rotate(4deg); } 46% { transform: translateX(-4px) rotate(-2deg); } 52% { transform: translateX(6px) rotate(3deg); } 58% { transform: translateX(-4px) rotate(-2deg); } 64% { transform: translateX(6px) rotate(3deg); } 72% { transform: translateX(-2px); } 100% { transform: none; } }
+/* védőburok (varázspajzs): a bot magasan, a végén a célpontra bök – onnan indul a lövedék */
+@keyframes v3-ward-r { 0% { transform: rotate(0); } 34%, 66% { transform: rotate(-140deg); } 76%, 88% { transform: rotate(-86deg); } 100% { transform: rotate(0); } }
+@keyframes v3-ward-w { 0% { transform: rotate(0); } 34%, 66% { transform: rotate(138deg); } 76%, 88% { transform: rotate(174deg); } 100% { transform: rotate(0); } }
+.rig.wpn-idezo0.act-ward .r-weapon, .rig.wpn-gyogyito1.act-ward .r-weapon, .rig.wpn-magus2.act-ward .r-weapon, .rig.wpn-idezo1.act-ward .r-weapon { animation-name: v4-ward-hang; }
+@keyframes v4-ward-hang { 0% { transform: rotate(0); } 34%, 66% { transform: rotate(138deg); } 76%, 88% { transform: rotate(86deg); } 100% { transform: rotate(0); } }
+/* fényszúrás (gyógyító): kitörő lépés előre, a jogart lándzsaként döfi */
+.rig.act-thrust .r-root { animation: v4-thrust-body 0.85s cubic-bezier(.4, 0, .3, 1); }
+.rig.act-thrust .r-arm-r { animation: v4-thrust-r 0.85s cubic-bezier(.4, 0, .3, 1); }
+.rig.act-thrust .r-weapon { animation: v4-thrust-w 0.85s cubic-bezier(.4, 0, .3, 1); }
+.rig.act-thrust .r-arm-l { animation: v3-jab-off 0.85s ease-in-out; }
+.rig.act-thrust .r-hairback, .rig.act-thrust .r-cape { animation: act-drag 0.9s ease-out; }
+@keyframes v4-thrust-body { 0% { transform: none; } 20% { transform: translateX(-8px) rotate(-3deg) scale(1.03, 0.97); } 40% { transform: translateX(34px) rotate(10deg); } 70% { transform: translateX(28px) rotate(7deg); } 100% { transform: none; } }
+@keyframes v4-thrust-r { 0% { transform: rotate(0); } 20% { transform: rotate(-60deg); } 40%, 70% { transform: rotate(-92deg); } 100% { transform: rotate(0); } }
+@keyframes v4-thrust-w { 0% { transform: rotate(0); } 20% { transform: rotate(150deg); } 40%, 70% { transform: rotate(182deg); } 100% { transform: rotate(0); } }
+.rig.wpn-gyogyito1.act-thrust .r-weapon { animation-name: v4-ward-hang; }
+/* szent buzogány: valódi lecsapás fej fölül (nem bökés) */
+.rig.wpn-gyogyito2.act-thrust .r-arm-r { animation: v3-attack-arm 0.85s ease-in-out; }
+.rig.wpn-gyogyito2.act-thrust .r-weapon { animation: v3-attack-blade 0.85s ease-in-out; }
+/* áldás: a jogart magasra emeli, a másik kezét a szívére teszi, fejét lehajtja */
+@keyframes v3-bless-r { 0% { transform: rotate(0); } 40%, 78% { transform: rotate(-125deg); } 100% { transform: rotate(0); } }
+@keyframes v3-bless-w { 0% { transform: rotate(0); } 40%, 78% { transform: rotate(120deg); } 100% { transform: rotate(0); } }
+@keyframes v3-bless-l { 0% { transform: rotate(0); } 40%, 78% { transform: rotate(-52deg); } 100% { transform: rotate(0); } }
+.rig.act-bless .r-head { animation: v4-bow-head 1.1s ease-in-out; }
+@keyframes v4-bow-head { 0%, 100% { transform: none; } 40%, 78% { transform: rotate(5deg) translateY(3px); } }
+/* holdfény-pajzs: a jogart maga elé tűzi, a másik tenyerét védekezőn előre tartja */
+.rig.act-shelter .r-root { animation: v3-ward-body 1s ease-in-out; }
+.rig.act-shelter .r-arm-r { animation: v4-shel-r 1s ease-in-out; }
+.rig.act-shelter .r-weapon { animation: v4-shel-w 1s ease-in-out; }
+.rig.act-shelter .r-arm-l { animation: v4-shel-l 1s ease-in-out; }
+@keyframes v4-shel-r { 0% { transform: rotate(0); } 34%, 66% { transform: rotate(-40deg); } 76%, 88% { transform: rotate(-88deg); } 100% { transform: rotate(0); } }
+@keyframes v4-shel-w { 0% { transform: rotate(0); } 34%, 66% { transform: rotate(40deg); } 76%, 88% { transform: rotate(176deg); } 100% { transform: rotate(0); } }
+@keyframes v4-shel-l { 0% { transform: rotate(0); } 34%, 88% { transform: rotate(-78deg); } 100% { transform: rotate(0); } }
+.rig.wpn-gyogyito1.act-shelter .r-weapon { animation-name: v4-shel-hang; }
+@keyframes v4-shel-hang { 0% { transform: rotate(0); } 34%, 66% { transform: rotate(40deg); } 76%, 88% { transform: rotate(88deg); } 100% { transform: rotate(0); } }
+/* tisztító ima: állva, összekulcsolt kézzel a mellkas előtt, lehajtott fejjel, csukott szemmel; a jogar mellette marad */
+@keyframes v3-kneel-body { 0% { transform: none; } 30%, 80% { transform: translateY(3px) rotate(2deg); } 100% { transform: none; } }
+@keyframes v3-kneel-r { 0% { transform: rotate(0); } 30%, 80% { transform: rotate(10deg); } 100% { transform: rotate(0); } }
+@keyframes v3-kneel-w { 0% { transform: rotate(0); } 30%, 80% { transform: rotate(-10deg); } 100% { transform: rotate(0); } }
+@keyframes v3-kneel-l { 0% { transform: rotate(0); } 30%, 80% { transform: rotate(-62deg); } 100% { transform: rotate(0); } }
+@keyframes v3-kneel-head { 0% { transform: none; } 30%, 80% { transform: translateY(4px) rotate(4deg); } 100% { transform: none; } }
+.rig.act-kneel .r-eye { animation: v4-eyes-closed 1.2s linear; }
+@keyframes v4-eyes-closed { 0%, 26% { transform: scaleY(1); } 30%, 80% { transform: scaleY(0.08); } 84%, 100% { transform: scaleY(1); } }
+
+/* dermesztő jég: valóban jeges (cián-fehér), nem barnás */
+svg.mon.frozen { filter: grayscale(1) sepia(1) hue-rotate(160deg) saturate(2.4) brightness(1.3) !important; }
+/* pajzscsapás: a kard felemelve, a fej fölött vár (nem keresztezi a pajzsot) */
+@keyframes v3-bash-back { 0% { transform: rotate(0); } 18% { transform: rotate(-60deg); } 40%, 74% { transform: rotate(-160deg); } 100% { transform: rotate(0); } }
+@keyframes v3-bash-blade { 0% { transform: rotate(0); } 18% { transform: rotate(50deg); } 40%, 74% { transform: rotate(152deg); } 100% { transform: rotate(0); } }
+/* roham: vízszintes döfés előre (a kard hegye a célpont felé) */
+@keyframes act-charge-blade { 0%, 12% { transform: rotate(0); } 30% { transform: rotate(60deg); } 42%, 78% { transform: rotate(186deg); } 94%, 100% { transform: rotate(0); } }
+/* csapda a vadásznál: a szabad (bal) kézzel dob, az íj a jobb kézben marad */
+.rig.wpn-vadasz0.act-toss .r-arm-r, .rig.wpn-vadasz1.act-toss .r-arm-r { animation: none; }
+.rig.wpn-vadasz0.act-toss .r-arm-l, .rig.wpn-vadasz1.act-toss .r-arm-l { animation: v3-toss-arm 0.8s cubic-bezier(.3, .8, .3, 1); }
+/* láncvillám: magasra emelt, előre dőlő bot, a másik kar is az égbe nyúlik (onnan hívja a villámot) – eltér a holdnyíltól és a jégtől */
+.rig.act-zap .r-arm-r { animation: v4-zap-r 0.95s cubic-bezier(.3, .8, .3, 1); }
+.rig.act-zap .r-weapon { animation: v4-zap-w 0.95s cubic-bezier(.3, .8, .3, 1); }
+.rig.act-zap .r-arm-l { animation: v4-zap-l2 0.95s ease-out; }
+.rig.act-zap .r-head { animation: act-head-up 0.95s ease-out; }
+@keyframes v4-zap-r { 0% { transform: rotate(0); } 22% { transform: rotate(20deg); } 40%, 72% { transform: rotate(-128deg); } 100% { transform: rotate(0); } }
+@keyframes v4-zap-w { 0% { transform: rotate(0); } 22% { transform: rotate(-20deg); } 40%, 72% { transform: rotate(196deg); } 100% { transform: rotate(0); } }
+@keyframes v4-zap-l2 { 0% { transform: rotate(0); } 40%, 72% { transform: rotate(118deg); } 100% { transform: rotate(0); } }
+.rig.wpn-idezo0.act-zap .r-weapon, .rig.wpn-gyogyito1.act-zap .r-weapon, .rig.wpn-magus2.act-zap .r-weapon, .rig.wpn-idezo1.act-zap .r-weapon { animation-name: v4-zap-hang; }
+@keyframes v4-zap-hang { 0% { transform: rotate(0); } 40%, 72% { transform: rotate(128deg); } 100% { transform: rotate(0); } }
+
+/* ===== 5. kör (a második ellenőrzés másik fele után) ===== */
+/* lant: a bal kéz a nyakon (fogólap), a jobb a hangszer testén pengeti */
+@keyframes act-strum-lute { 0%, 100% { transform: rotate(0); } 18%, 82% { transform: rotate(-100deg); } }
+@keyframes act-strum-arm { 0%, 100% { transform: rotate(0); } 18% { transform: rotate(20deg); } 26% { transform: rotate(28deg); } 34% { transform: rotate(18deg); } 42% { transform: rotate(28deg); } 50% { transform: rotate(18deg); } 58% { transform: rotate(28deg); } 66% { transform: rotate(18deg); } 74% { transform: rotate(28deg); } 82% { transform: rotate(20deg); } }
+@keyframes act-strum-lhand { 0%, 100% { transform: rotate(0); } 18%, 82% { transform: rotate(45deg); } 40% { transform: rotate(41deg); } 60% { transform: rotate(48deg); } }
+/* furulya: két kézzel, függőlegesen a szájához tartja */
+@keyframes act-flute-r { 0%, 100% { transform: rotate(0); } 20%, 80% { transform: rotate(60deg) scaleY(0.75); } 45% { transform: rotate(58deg) scaleY(0.75); } 65% { transform: rotate(62deg) scaleY(0.75); } }
+@keyframes act-flute { 0%, 100% { transform: rotate(0); } 20%, 80% { transform: rotate(-80deg) translateY(-26px); } }
+.rig.wpn-dalnok2:is(.act-lull, .act-march, .act-taunt, .act-anthem, .act-strum) .r-arm-l { animation: v5-flute-l 1.2s ease-in-out; }
+@keyframes v5-flute-l { 0%, 100% { transform: rotate(0); } 20%, 80% { transform: rotate(-50deg) scaleY(0.75); } }
+/* a dalok arcban is különböznek: altatódalnál csukott szem, hősénekben és indulóban tátott, éneklő száj */
+.rig.act-lull .r-eye { animation: v5-eyes-lull 1.2s linear; }
+@keyframes v5-eyes-lull { 0%, 16% { transform: scaleY(1); } 22%, 84% { transform: scaleY(0.08); } 90%, 100% { transform: scaleY(1); } }
+.rig:is(.act-anthem, .act-march) .r-shout { animation: v3-shout 1.2s linear; }
+.rig:is(.act-anthem, .act-march) .r-mouth { animation: v3-mouth-off 1.2s linear; }
+@keyframes v3-march-body { 0%, 100% { transform: none; } 12% { transform: translateY(-14px) rotate(-3deg); } 24% { transform: translateY(2px) scale(1.05, 0.95); } 37% { transform: translateY(-14px) rotate(3deg); } 50% { transform: translateY(2px) scale(1.05, 0.95); } 62% { transform: translateY(-14px) rotate(-3deg); } 75% { transform: translateY(2px) scale(1.05, 0.95); } 88% { transform: translateY(-8px); } }
+@keyframes v3-anthem-body { 0% { transform: none; } 30%, 80% { transform: translateY(-14px) scale(0.97, 1.06); } 100% { transform: none; } }
+/* hátbaszúrás: csak a közelebbi kéz döf, felülről lefelé-előre, nem a nyak előtt */
+.rig.act-backstab .r-arm-r { animation: v5-bs-r 1.4s ease-in-out; }
+.rig.act-backstab .r-arm-l { animation: v5-bs-l 1.4s ease-in-out; }
+@keyframes v5-bs-r { 0%, 28% { transform: rotate(0); } 36% { transform: rotate(-150deg); } 44% { transform: rotate(-58deg); } 58% { transform: rotate(-66deg); } 66%, 100% { transform: rotate(0); } }
+@keyframes v5-bs-l { 0%, 30% { transform: rotate(0); } 44%, 58% { transform: rotate(16deg); } 66%, 100% { transform: rotate(0); } }
+/* árnyékdöfés: alacsonyabb, hosszabb kitörés, mint a sima tőrdöfés */
+@keyframes v3-dash-body { 0% { transform: none; } 16% { transform: translateY(12px) rotate(10deg) scale(1.08, 0.88); } 30% { transform: translateX(var(--cx, 0px)) translateY(12px) rotate(20deg) skewX(-10deg); } 44% { transform: translateX(var(--cx, 0px)) translateY(10px) rotate(18deg); } 72% { transform: translateX(var(--cx, 0px)) translateY(6px) rotate(10deg); } 86% { transform: translateX(-6px) rotate(-4deg); } 100% { transform: none; } }
+/* füstbomba: a fej fölül a saját lába elé vágja le a bombát (így a füst rajta van) */
+@keyframes act-throw-arm { 0% { transform: rotate(0); } 25% { transform: rotate(-155deg); } 46% { transform: rotate(-25deg); } 62% { transform: rotate(-15deg); } 100% { transform: rotate(0); } }
+@keyframes act-throw-body { 0% { transform: none; } 25% { transform: translateY(-6px) rotate(-3deg); } 46% { transform: translateY(8px) rotate(5deg) scale(1.04, 0.95); } 100% { transform: none; } }
+/* szellemcsapás és a többi célra mutató varázslat: a szabad kéz hátrahúzva (nem T-póz) */
+@keyframes v3-point-off { 0% { transform: rotate(0); } 22% { transform: rotate(10deg); } 42%, 72% { transform: rotate(14deg); } 100% { transform: rotate(0); } }
+/* medveforma: két kézzel, fej fölül a földig lecsap */
+@keyframes v3-maul-r { 0% { transform: rotate(0); } 32%, 44% { transform: rotate(-130deg); } 52%, 76% { transform: rotate(-50deg); } 100% { transform: rotate(0); } }
+@keyframes v3-maul-l { 0% { transform: rotate(0); } 32%, 44% { transform: rotate(130deg); } 52%, 76% { transform: rotate(-55deg); } 100% { transform: rotate(0); } }
+/* gyökérfonat: két tenyérrel a földre csap (mély guggolás) */
+@keyframes v3-slam-body { 0% { transform: none; } 30% { transform: translateY(-8px) scale(0.97, 1.04); } 50%, 76% { transform: translateY(46px) rotate(6deg) scale(1.1, 0.8); } 100% { transform: none; } }
+@keyframes v3-slam-r { 0% { transform: rotate(0); } 30% { transform: rotate(-125deg); } 50%, 76% { transform: rotate(-12deg); } 100% { transform: rotate(0); } }
+@keyframes v3-slam-l { 0% { transform: rotate(0); } 30% { transform: rotate(125deg); } 50%, 76% { transform: rotate(6deg); } 100% { transform: rotate(0); } }
+/* méregpenge: zölden izzó penge */
+.rig[data-skill="meregpenge"] .r-weapon { filter: drop-shadow(0 0 5px #7dff5a) drop-shadow(0 0 10px #4fd13a) hue-rotate(60deg); }
+/* lant (újramérve): bal kéz a nyakon a kulcsfej alatt, jobb kéz a testen pengeti */
+@keyframes act-strum-lute { 0%, 100% { transform: rotate(0); } 18%, 82% { transform: rotate(-120deg); } }
+@keyframes act-strum-arm { 0%, 100% { transform: rotate(0); } 18% { transform: rotate(55deg); } 26% { transform: rotate(63deg); } 34% { transform: rotate(53deg); } 42% { transform: rotate(63deg); } 50% { transform: rotate(53deg); } 58% { transform: rotate(63deg); } 66% { transform: rotate(53deg); } 74% { transform: rotate(63deg); } 82% { transform: rotate(55deg); } }
+@keyframes act-strum-lhand { 0%, 100% { transform: rotate(0); } 18%, 82% { transform: rotate(36deg); } 40% { transform: rotate(33deg); } 60% { transform: rotate(39deg); } }
+/* íj (6. kör): az ív a vállnál magasabban, a húzó kéz az állig húzza a húrt, elengedés után hátralendül */
+@keyframes v3-bow-arm { 0% { transform: rotate(0); } 22% { transform: rotate(-106deg) scaleY(0.6); } 62% { transform: rotate(-106deg) scaleY(0.6); } 68% { transform: rotate(-101deg) scaleY(0.6); } 86% { transform: rotate(-106deg) scaleY(0.6); } 100% { transform: rotate(0); } }
+@keyframes v3-bow-up { 0% { transform: rotate(0); } 22%, 86% { transform: rotate(106deg); } 100% { transform: rotate(0); } }
+@keyframes v3-draw { 0% { transform: rotate(0); } 22% { transform: rotate(-100deg); } 58%, 62% { transform: rotate(-116deg) scaleY(0.5); } 68% { transform: rotate(-125deg) scaleY(0.42); } 86% { transform: rotate(-121deg) scaleY(0.45); } 100% { transform: rotate(0); } }
+@keyframes v3-draw2 { 0% { transform: rotate(0); } 16% { transform: rotate(-100deg); } 32%, 35% { transform: rotate(-116deg) scaleY(0.5); } 38% { transform: rotate(-125deg) scaleY(0.42); } 44% { transform: rotate(-100deg); } 66%, 69% { transform: rotate(-116deg) scaleY(0.5); } 72% { transform: rotate(-125deg) scaleY(0.42); } 86% { transform: rotate(-121deg) scaleY(0.45); } 100% { transform: rotate(0); } }
+@keyframes v3-aim-arm { 0% { transform: rotate(0); } 18% { transform: rotate(-106deg) scaleY(0.6); } 72% { transform: rotate(-107deg) scaleY(0.6); } 78% { transform: rotate(-100deg) scaleY(0.6); } 90% { transform: rotate(-106deg) scaleY(0.6); } 100% { transform: rotate(0); } }
+@keyframes v3-aim-bow { 0% { transform: rotate(0); } 18%, 90% { transform: rotate(106deg); } 100% { transform: rotate(0); } }
+@keyframes v3-aim-draw { 0% { transform: rotate(0); } 18% { transform: rotate(-100deg); } 34%, 72% { transform: rotate(-116deg) scaleY(0.5); } 78% { transform: rotate(-125deg) scaleY(0.42); } 90% { transform: rotate(-121deg) scaleY(0.45); } 100% { transform: rotate(0); } }
+@keyframes v3-leap-arm { 0% { transform: rotate(0); } 30% { transform: rotate(-106deg) scaleY(0.6); } 76% { transform: rotate(-104deg) scaleY(0.6); } 100% { transform: rotate(0); } }
+@keyframes v3-leap-bow { 0% { transform: rotate(0); } 30%, 76% { transform: rotate(106deg); } 100% { transform: rotate(0); } }
+@keyframes v3-leap-draw { 0% { transform: rotate(0); } 30% { transform: rotate(-100deg); } 46% { transform: rotate(-116deg) scaleY(0.5); } 52% { transform: rotate(-125deg) scaleY(0.42); } 76% { transform: rotate(-121deg) scaleY(0.45); } 100% { transform: rotate(0); } }
+/* kitérő ugrás: eddig nem volt felajzott nyíl – a levegőben húzza ki, és az ugrás tetején lő */
+.rig.act-leap .r-nock { animation: v3-leap-nock 0.9s step-end; }
+@keyframes v3-leap-nock { 0%, 29% { opacity: 0; } 30%, 48% { opacity: 1; } 49%, 100% { opacity: 0; } }
+@keyframes v3-leap-draw { 0% { transform: rotate(0); } 30% { transform: rotate(-100deg); } 44%, 48% { transform: rotate(-116deg) scaleY(0.5); } 53% { transform: rotate(-125deg) scaleY(0.42); } 76% { transform: rotate(-121deg) scaleY(0.45); } 100% { transform: rotate(0); } }
+
+/* ===== szörnyek (ellenőrzés után) ===== */
+/* nyugalmi mozgás: jól látható légzés, farokcsóválás, nyelvöltés, a féreg imbolygása */
+svg.mon .m-body { animation: mon-breathe 2.6s ease-in-out infinite; }
+@keyframes mon-breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.012, 1.03); } }
+svg.mon .m-tail { animation: mon-wag 1.6s ease-in-out infinite; }
+@keyframes mon-wag { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(8deg); } }
+svg.mon .m-tongue { transform-box: fill-box; transform-origin: right center; animation: mon-tongue 2.4s ease-in-out infinite; }
+@keyframes mon-tongue { 0%, 70%, 100% { transform: scaleX(0); } 76%, 88% { transform: scaleX(1); } }
+svgsvg.mon.k-worm .m-body, svg.mon.k-serpent .m-body { animation: mon-sway 3s ease-in-out infinite; }
+@keyframes mon-sway { 0%, 100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
+/* támadás: lendületvétel hátra, odaér a hőshöz (--mx), üt, visszamegy; a találat 52%-nál (≈420 ms) */
+svg.mon.act-attack .m-root { animation: mon-hit-run 0.8s cubic-bezier(.4, 0, .3, 1); }
+@keyframes mon-hit-run { 0% { transform: none; } 28% { transform: translateX(16px) scale(1.04, 0.96); } 50%, 60% { transform: translateX(var(--mx, -60px)); } 100% { transform: none; } }
+svg.mon:is(.k-beast, .k-ram, .k-rider, .k-griffin, .k-drake, .k-frog).act-attack .m-root { animation-name: mon-hit-leap; }
+@keyframes mon-hit-leap { 0% { transform: none; } 26% { transform: translateX(14px) scale(1.06, 0.9); } 40% { transform: translateX(calc(var(--mx, -60px) * 0.6)) translateY(-46px) rotate(-6deg); } 52%, 60% { transform: translateX(var(--mx, -60px)) rotate(4deg); } 100% { transform: none; } }
+svg.mon:is(.k-golem, .k-knight).act-attack .m-root { animation-name: mon-hit-heavy; }
+@keyframes mon-hit-heavy { 0% { transform: none; } 30% { transform: translateX(18px) rotate(5deg); } 52%, 62% { transform: translateX(var(--mx, -60px)) rotate(-7deg) scale(1.03, 0.97); } 100% { transform: none; } }
+svg.mon:is(.k-wisp, .k-swarm, .k-flyer).act-attack .m-root { animation-name: mon-hit-swoop; }
+@keyframes mon-hit-swoop { 0% { transform: none; } 26% { transform: translateX(10px) translateY(-24px); } 52%, 60% { transform: translateX(var(--mx, -60px)) translateY(10px); } 100% { transform: none; } }
+/* különleges támadás: felágaskodik/dobbant (lökéshullám a saját lábától), aztán nekiront */
+svg.mon.act-special .m-root { animation: mon-spec 1.25s cubic-bezier(.4, 0, .3, 1); }
+@keyframes mon-spec { 0% { transform: none; } 20% { transform: translateX(14px) scale(1.06, 1.1); } 27% { transform: scale(1.1, 0.88); } 36% { transform: translateX(12px) scale(1.04, 1); } 53%, 62% { transform: translateX(var(--mx, -60px)) scale(1.06, 0.96); } 100% { transform: none; } }
+/* találat: fehér felvillanás és hátrarándulás, átlátszóság nélkül */
+svg.mon.act-hit { animation: none; }
+svg.mon.act-hit .m-fx { animation: mon-flash 0.34s ease-out; }
+@keyframes mon-flash { 0% { filter: brightness(2.4) saturate(0.3); } 100% { filter: none; } }
+/* kitérés: hátra-felszökken, majd visszaáll */
+@keyframes mon-dodge { 0% { transform: none; } 30% { transform: translateX(34px) translateY(-34px) rotate(6deg); } 55% { transform: translateX(46px) scale(1.06, 0.92); } 100% { transform: none; } }
+
+/* tájak: a nagy, homályosított rétegek nem mozognak (drága lenne újrafesteni őket), csak a kicsi, könnyű elemek */
+.scene .sc-far, .scene .sc-mid, .scene .sc-rays, .scene .sc-halo, .scene .sc-fog1 { animation: none; }
+.scene.sc-static, .scene.sc-frame { pointer-events: none; }
+@media (max-width: 720px) { .scene .sc-fly:nth-child(2n), .scene .sc-tw:nth-child(3n) { animation: none; } }
+
+@media (max-width: 720px) { .fx-banner-mon { left: 50%; } .fx-banner { white-space: normal; max-width: 92%; text-align: center; } }
+svg.mon .m-shadow { transition: opacity .8s ease-in; }
+svg.mon.act-ko .m-shadow { opacity: 0 !important; }
+.fx-banner.has-ic { display: inline-flex; align-items: center; gap: 10px; padding-left: 8px; }
+.fx-banner-ic { width: 40px; height: 40px; flex: none; border-radius: 10px; overflow: hidden; border: 1.5px solid rgba(233, 196, 120, .8); }
+.fx-banner-ic svg { width: 100%; height: 100%; display: block; }
+/* Aréna: az ellenfél hőse tükrözve */
+.mon-box.is-hero > svg { transform: scaleX(-1); }
