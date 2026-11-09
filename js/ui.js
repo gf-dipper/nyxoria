@@ -131,7 +131,7 @@
   function legendIds() { const h = S.save && S.save.hero; if (!h) return {}; const o = {}; D.SLOT_ORDER.map(k => h.equipped[k]).filter(Boolean).concat(h.inventory || []).forEach(it => { if (it.rarity === 'legendas') o[it.id] = it; }); return o; }
   // könnyű műveletek (taktika, képességsorrend, beállítások): azonnal itt hajtjuk végre, a szerver a háttérben követi
   // (nem kell megvárni a hálózatot, így nem „akad” a kattintás; ha a szerver mást mond, az ő mentése az érvényes)
-  const OPTIMISTIC = { tactic: 1, skillMove: 1, settings: 1, tip: 1 };
+  const OPTIMISTIC = { tactic: 1, skillMove: 1, settings: 1, tip: 1, lookPick: 1 };
   let optSeq = 0;
   async function act(action, args, after) {
     if (ONLINE && OPTIMISTIC[action] && !S.busy && S.save) {
@@ -553,7 +553,7 @@
     const stat = (l, v) => `<span><small>${l}</small><b>${v}</b></span>`;
     const ach = (p.topAch || []).map(a => `<li><span>${esc(a.name)}</span><span class="small muted">${a.of}-ből ${a.tier} fokozat</span></li>`).join('');
     const eq = (p.equipped || []).map(it => `<span class="item-ic painted r-${it.rarity}${it.mythic ? ' mythic' : ''}" title="${esc(it.name)}">${NXI ? NXI.item(it) : ''}${it.plus ? `<span class="plus">+${it.plus}</span>` : ''}</span>`).join('');
-    return `<div class="nx-prof"><div class="portrait">${A.heroSvg({ name: p.name, classId: p.classId, rig: p.rig, look: p.look, people: p.people })}</div>
+    return `<div class="nx-prof"><div class="portrait">${A.heroSvg({ name: p.name, classId: p.classId, rig: p.rig, worn: p.worn, look: p.look, people: p.people }, { full: true })}</div>
       <div class="nx-prof-main"><h2>${esc(p.name)}</h2><p class="small muted">${p.level}. szintű ${esc(D.PEOPLES[p.people] ? D.PEOPLES[p.people].name.toLowerCase() : '')} ${esc(cls ? cls.name.toLowerCase() : '')}${p.path ? ' · ' + esc(p.path) : ''}</p>
         ${p.guild ? `<p class="small" style="margin-top:4px">${esc(p.guild.name)} <span class="nx-tag">${esc(p.guild.tag)}</span>${p.guild.stars ? ` <span style="color:var(--fakla-300)">${'★'.repeat(Math.min(10, p.guild.stars))}</span>` : ''}</p>` : ''}
         ${p.motto ? `<p class="small muted">„${esc(p.motto)}”</p>` : ''}${(p.achTitles || []).concat(p.titles || []).length ? `<p class="small" style="color:var(--fakla-300)">${(p.achTitles || []).concat(p.titles || []).map(esc).join(' · ')}</p>` : ''}
@@ -1438,7 +1438,7 @@
     tip('harc');
   }
   const NEW_STAGE = !!(window.NYX.stage && A.isNew);
-  function safeRig(h) { try { return G.migrateLook(h); } catch (e) { return G.cleanRig(null, h.classId); } }
+  function safeRig(h) { try { return G.wornLook ? G.wornLook(h) : G.migrateLook(h); } catch (e) { return G.cleanRig(null, h.classId); } }
   // az új harci színpad: táj, hős, szörny, fejléc (élet, kör); alatta a napló és a gombok
   function renderStage(c, h, r, speed) {
     const hpP = Math.max(0, c.hp / c.heroF.maxHp * 100), mP = Math.max(0, c.mhp / c.mon.maxHp * 100);
@@ -1695,7 +1695,23 @@
           ${loadout || '<p class="small muted">A 3. szinten kapod az első képességet.</p>'}${locked}
           <hr class="divider">${pathsHtml(h)}
         </section>
-      </div>`;
+      </div>${lookPanel(h)}`;
+  }
+  // ---------- kinézet a felszerelésből (gyűjtemény) ----------
+  const SLOT_NAME = { fegyver: 'Fegyver', pancel: 'Páncél', sisak: 'Fejfedő', gyuru: 'Gyűrű', amulett: 'Amulett' };
+  function lookLabel(h, sl, key) { const p = String(key).split('.'), r = D.RARITIES[p[0]], nm = (h.lookNames || {})[sl + ':' + key]; return (nm ? nm + ' · ' : '') + (r ? r.name : p[0]) + (p[2] === 'm' ? ', mitikus' : '') + (G.lookVisible(sl, key) ? '' : ' (még nem látszik)'); }
+  function lookPanel(h) {
+    if (!G.wornLook) return '';
+    const own = h.looks || {}, pick = h.lookPick || {};
+    const rows = D.SLOT_ORDER.map(sl => {
+      const cur = pick[sl] || 'auto', it = h.equipped[sl];
+      const ik = it && G.lookKey(it), vis = ik && G.lookVisible(sl, ik);
+      const opts = [['auto', it ? `A viselt tárgy (${D.RARITIES[it.rarity].name}${vis ? '' : ', még nem látszik rajtad'})` : 'A viselt tárgy (nincs)'], ['alap', sl === 'sisak' ? 'Nem látszik (amit a hőskészítőben választottál)' : 'Amit a hőskészítőben választottál']].concat((own[sl] || []).map(k => [k, lookLabel(h, sl, k)]));
+      return `<label class="lk-row"><span>${SLOT_NAME[sl]}</span><select data-act="look-pick" data-v="${sl}">${opts.map(([k, l]) => `<option value="${esc(k)}"${k === cur ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
+    }).join('');
+    const n = Object.keys(own).reduce((t, k) => t + own[k].length, 0);
+    return `<section class="panel lk-panel" style="margin-top:12px"><div class="panel-title"><div><h2>Ruhatár</h2><p class="small muted">A hősöd úgy néz ki, ahogy a felszerelése: minél ritkább egy tárgy, annál díszesebb. A szürke kezdő holmi még a hőskészítőben választott ruhádat mutatja; a gyűrű a kéktől, az amulett a lilától látszik. Amit egyszer már viseltél, a ruhatáradba kerül (${n} darab), és bármikor magadra öltheted. Az arcodat és a hajadat a Kinézet menüben alakíthatod.</p></div></div>
+      <div class="lk-grid"><div class="lk-fig">${A.heroSvg(h, { full: true })}</div><div class="lk-rows">${rows}</div></div></section>`;
   }
 
   // ---------- táska ----------
@@ -1708,11 +1724,17 @@
       const sv = Math.min(room, E.salvageValue(it)), rf = E.refundValue(it), better = sv >= E.salvageValue(it) * 0.5 ? 'salvage' : 'sell';
       return `<div class="inv-item">${itemHtml(it, { delta: true })}<div class="actions">
       <button class="btn primary sm" data-act="equip" data-v="${it.id}">Felveszem</button>
+      <button class="btn ghost sm" data-act="try-on" data-v="${it.id}">${S.tryOn === it.id ? 'Bezárom' : 'Felpróbálom'}</button>
       <button class="btn ${better === 'salvage' ? '' : 'ghost '}sm" data-act="salvage" data-v="${it.id}">${I.dust}Szétszedés (+${fmt(sv + rf)})</button>
       <button class="btn ${better === 'sell' ? '' : 'ghost '}sm" data-act="sell" data-v="${it.id}">${I.silver}Eladás (+${fmt(E.sellValue(it))}${rf ? ` · ${I.dust}+${fmt(rf)}` : ''})</button></div></div>`;
     }).join('');
     const weak = h.inventory.filter(it => !it.mythic && (it.rarity === 'szurke' || it.rarity === 'zold') && !E.isUpgrade(h, it)).length;
-    return `<section class="panel"><div class="panel-title"><div><h1>Táska</h1><p class="small muted">${h.inventory.length} / ${E.INVENTORY_MAX} hely · a zöld nyíl azt jelzi, hogy a tárgy erősebb a mostaninál</p></div></div>
+    const tryIt = S.tryOn && h.inventory.filter(x => x.id === S.tryOn)[0];
+    const tryHtml = tryIt ? (() => { const t = JSON.parse(JSON.stringify(h)); t.equipped[tryIt.slot] = tryIt; if (t.lookPick) delete t.lookPick[tryIt.slot];
+      return `<section class="panel try-on"><div class="panel-title"><h2>Próbafülke: ${esc(tryIt.name)}</h2><button class="btn ghost sm" data-act="try-on" data-v="${tryIt.id}">Bezárom</button></div>
+        ${JSON.stringify(G.wornLook(h)) === JSON.stringify(G.wornLook(t)) ? '<p class="small muted" style="margin-bottom:8px">Ez a tárgy nem változtat a kinézeteden (a szürke ruha a sajátodat mutatja, a gyűrű a kéktől, az amulett a lilától látszik).</p>' : ''}
+        <div class="try-grid"><figure><div class="try-fig">${A.heroSvg(h, { full: true })}</div><figcaption>Most</figcaption></figure><span class="hf-arrow">→</span><figure><div class="try-fig">${A.heroSvg(t, { full: true })}</div><figcaption>Ebben</figcaption></figure></div></section>`; })() : '';
+    return tryHtml + `<section class="panel"><div class="panel-title"><div><h1>Táska</h1><p class="small muted">${h.inventory.length} / ${E.INVENTORY_MAX} hely · a zöld nyíl azt jelzi, hogy a tárgy erősebb a mostaninál</p></div></div>
       <p class="small" style="margin-bottom:10px">${room > 0 ? `A heti Csillagpor-keretből még <b>${fmt(room)}</b> fér bele: amíg van hely, a szétszedés éri meg jobban.` : 'A heti Csillagpor-keret betelt (hétfőn nyílik újra): most az <b>eladás</b> éri meg jobban.'} A fejlesztett tárgyakba tett por 70%-a mindkét esetben visszajár, a kereten felül.</p>
       <div class="row wrap between"><label class="row small" style="cursor:pointer;gap:10px"><input type="checkbox" data-act="autosalvage" ${S.save.settings.autoSalvage ? 'checked' : ''} style="width:18px;height:18px"> A gyengébb szürke és zöld tárgyak automatikus szétszedése</label>
       ${weak ? `<button class="btn sm" data-act="salvage-weak">Gyengébbek szétszedése (${weak})</button>` : ''}</div></section>
@@ -2037,6 +2059,8 @@
     'help-open'() { if (D.HELP) { S.screen = 'sugo'; S.helpQ = ''; render(); scrollTop(); } else actions.info('sugo'); },
     'help-jump'(v, t) { const id = t && t.value; if (id) actions['help-go'](id); },
     'help-go'(v) { const el = document.getElementById('hp-' + v); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
+    'look-pick'(v, t) { act('lookPick', { slot: v, key: t ? t.value : 'auto' }); },
+    'try-on'(v) { S.tryOn = S.tryOn === v ? null : v; render(); },
     'story-choice'(v) { act('storyChoice', { v: v }); },
     'story-fight'() { S.storyRes = null; act('storyFight', {}, r => { const i = r.out.chapter - 1; startCombat('story', r.fight, { out: r.out, region: r.out.region, special: (X.storyChapters()[i] || { boss: {} }).boss.special, after: () => { S.storyRes = { i: i, win: r.out.win, out: r.out }; render(); scrollTop(); } }); scrollTop(); }); },
     'tower-fight'() { act('towerFight', {}, r => { startCombat('tower', r.fight, { out: r.out, region: r.out.region, after: afterChallenge('tower') }); scrollTop(); }); },

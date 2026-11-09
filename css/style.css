@@ -1107,3 +1107,16 @@ html { scrollbar-width: thin; scrollbar-color: rgba(127, 140, 255, .35) transpar
 .hf-rec { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); padding: 1px 6px; border-radius: 999px; background: var(--hold-300); color: #141a45; font-size: 9px; font-weight: 800; letter-spacing: .4px; white-space: nowrap; }
 .hf.nowrap .hf-offer b { font-size: 17px; }
 .hf.nowrap .diff-pill { font-size: 10.5px; padding: 2px 6px; }
+
+/* kinézet a felszerelésből */
+.lk-grid { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 14px; align-items: center; }
+.lk-fig { height: 250px; }
+.lk-fig img, .lk-fig svg, .try-fig img, .try-fig svg { width: 100%; height: 100%; object-fit: contain; display: block; }
+.lk-rows { display: grid; gap: 7px; min-width: 0; }
+.lk-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 3px; font-weight: 700; font-size: 12.5px; color: var(--hold-300); }
+.lk-row select { width: 100%; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--ej-600); background: var(--ej-900); color: var(--hold-100); font: inherit; font-weight: 600; }
+.try-grid { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.try-grid figure { margin: 0; text-align: center; font-weight: 700; }
+.try-fig { width: 180px; height: 240px; }
+@media (max-width: 600px) { .lk-grid { grid-template-columns: 1fr; } .lk-fig { height: 240px; } .lk-row { grid-template-columns: 1fr; gap: 4px; } .try-fig { width: 130px; height: 180px; } }
+.nx-prof .portrait { height: 250px; width: 180px; }

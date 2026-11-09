@@ -321,7 +321,7 @@
     return h;
   }
   function snap(hero, uid, rating) {
-    return { uid: uid || null, name: hero.name, classId: hero.classId, level: hero.level, power: E.power(E.heroStats(hero)), rating: rating || 1000, rig: hero.rig || null, look: hero.look || null, people: hero.people, bot: !!hero.bot };
+    return { uid: uid || null, name: hero.name, classId: hero.classId, level: hero.level, power: E.power(E.heroStats(hero)), rating: rating || 1000, rig: hero.equipped && !Array.isArray(hero.equipped) ? G.wornLook(hero) : (hero.rig || null), look: hero.look || null, people: hero.people, bot: !!hero.bot };
   }
 
   // ===================== Aréna =====================
@@ -462,7 +462,7 @@
   function profileOf(save) {
     const h = save.hero, st = h.stats || {}, ach = achList(save);
     return {
-      name: h.name, classId: h.classId, people: h.people, level: h.level, rig: h.rig || null, look: h.look || null,
+      name: h.name, classId: h.classId, people: h.people, level: h.level, rig: h.rig || null, look: h.look || null, worn: G.wornLook(h),
       path: h.path != null && D.PATHS[h.classId] ? D.PATHS[h.classId][h.path].name : null, origin: h.origin, trait: h.trait, motto: h.motto || '',
       power: E.power(E.heroStats(h)), wins: st.wins || 0, expeditions: st.expeditions || 0, mythics: st.mythics || 0, legendaries: st.legendaries || 0, achTitles: (save.achTitles || []).slice(-3),
       towerMax: st.towerMax || 0, arena: save.arena ? save.arena.rating : 1000, arenaWins: save.arena ? save.arena.wins : 0,
@@ -680,12 +680,13 @@
     return { fight: { log: f.log, win: f.win, timeout: f.timeout, rounds: f.rounds, heroF: heroF, mon: mon }, out: out };
   };
 
-  ['gift', 'pathPick', 'shopOpen', 'shopReroll', 'shopBuy', 'towerFight', 'towerRush', 'storyChoice', 'storyFight', 'questClaim', 'questDrop', 'questView', 'arenaFind', 'arenaFight', 'teamFind', 'teamFight', 'eventFight', 'eventClaim', 'achClaim'].forEach(n => G.FREE_DURING_EXPEDITION.push(n));
+  ['gift', 'pathPick', 'shopOpen', 'shopReroll', 'shopBuy', 'towerFight', 'towerRush', 'storyChoice', 'storyFight', 'lookPick', 'questClaim', 'questDrop', 'questView', 'arenaFind', 'arenaFight', 'teamFind', 'teamFight', 'eventFight', 'eventClaim', 'achClaim'].forEach(n => G.FREE_DURING_EXPEDITION.push(n));
   const run0 = G.run;
   G.run = function (save, action, args, ctx) {
     try { if (save.hero && ctx && ctx.now) save.quests = questState(save, ctx.now); } catch (e) { /* a megbízások sosem akaszthatják meg a játékot */ }
     const r = run0(save, action, args, ctx);
     try { albumNote(save); } catch (e) { /* az album sosem akaszthatja meg a játékot */ }
+    try { G.unlockLooks(save.hero); } catch (e) { /* a kinézet-gyűjtemény sem */ }
     return r;
   };
 

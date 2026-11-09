@@ -191,7 +191,7 @@ async function myBossRows(userId, boss) {
 // a pihenő hősök rövid adatai (a hősválasztóhoz)
 async function heroSlots(userId) {
   const rows = await sql`select slot, save from hero_slots where user_id = ${userId} order by slot`;
-  return rows.map(r => { const h = r.save.hero; return { slot: r.slot, name: h.name, classId: h.classId, people: h.people, level: h.level, rig: h.rig || null, look: h.look || null, path: h.path }; });
+  return rows.map(r => { const h = r.save.hero; return { slot: r.slot, name: h.name, classId: h.classId, people: h.people, level: h.level, rig: G.wornLook(h), look: h.look || null, path: h.path }; });
 }
 const MAX_HEROES = 3;
 async function nameTaken(tx, name) {
@@ -423,7 +423,7 @@ async function admin(user, player, args) {
     const adm = await sql`select at, action, info from admin_log where target = ${uid} order by id desc limit 20`;
     const [cnt] = await sql`select count(*) filter (where at > now() - interval '1 day')::int as d1, count(*)::int as total from action_log where user_id = ${uid}`;
     let hero = null;
-    if (h) { const x = h.save.hero; hero = { name: x.name, classId: x.classId, people: x.people, level: x.level, xp: x.xp, silver: x.silver, dust: x.dust, rig: x.rig || null, look: x.look || null,
+    if (h) { const x = h.save.hero; hero = { name: x.name, classId: x.classId, people: x.people, level: x.level, xp: x.xp, silver: x.silver, dust: x.dust, rig: G.wornLook(x), look: x.look || null,
       power: E.power(E.heroStats(x)), path: x.path, torches: h.save.torches ? h.save.torches.count : null, stats: x.stats || {}, equipped: D.SLOT_ORDER.map(k => x.equipped[k]).filter(Boolean),
       inventory: (x.inventory || []).length, arena: h.save.arena ? h.save.arena.rating : 1000, tower: x.stats && x.stats.towerMax || 0, created: new Date(h.created_at).getTime(), active: new Date(h.active_at).getTime() }; }
     return { player: { uid: uid, discord: p.discord_name, discordId: p.discord_id, avatar: p.avatar_url, banned: p.banned, banReason: p.ban_reason, admin: p.is_admin, joined: new Date(p.created_at).getTime() },
@@ -758,7 +758,7 @@ async function guildAction(user, action, args) {
   }
   if (action === 'guildInfo') {
     if (!me) return { guild: null };
-    const members = await sql`select h.name, h.class_id, h.level, h.save->'hero'->'rig' as rig, h.save->'hero'->'look' as look, m.role, m.user_id,
+    const members = await sql`select h.name, h.class_id, h.level, h.save->'hero' as hx, h.save->'hero'->'look' as look, m.role, m.user_id,
                               case when m.week = ${weekNow()} then m.week_wins else 0 end as wins
                               from guild_members m join heroes h on h.user_id = m.user_id where m.guild_id = ${me.id} order by wins desc, h.level desc`;
     const log = await sql`select created_at, html from guild_log where guild_id = ${me.id} order by id desc limit 20`;
@@ -770,7 +770,7 @@ async function guildAction(user, action, args) {
       last.eligible = !!(mw && mw.wins > 0) && Date.parse(me.joined_at) <= Date.parse(prevWeek() + 'T00:00:00Z') + 3 * DAY; last.claimed = !!(await sql`select 1 from guild_claims where user_id = ${user.id} and week = ${prevWeek()} and goal = 100`).length; }
     return { guild: Object.assign(guildPublic(me), { stars: me.stars || 0 }), war: war, lastWar: last, warReward: WAR_REWARD, role: me.role, owner: me.owner === user.id, progress: pr, goals: GUILD_GOALS.map((g, i) => ({ w: goalFor(g, pr.members), i: i, silverM: g.silver, dust: g.dust })),
       claimed: (await sql`select goal from guild_claims where user_id = ${user.id} and week = ${weekNow()}`).map(r => r.goal), max: GUILD_MAX,
-      members: members.map(m => ({ name: m.name, classId: m.class_id, level: m.level, rig: m.rig, look: m.look, role: m.role, wins: m.wins, me: m.user_id === user.id, uid: m.user_id })),
+      members: members.map(m => ({ name: m.name, classId: m.class_id, level: m.level, rig: G.wornLook(m.hx), look: m.look, role: m.role, wins: m.wins, me: m.user_id === user.id, uid: m.user_id })),
       log: log.map(l => ({ t: new Date(l.created_at).getTime(), html: l.html })) };
   }
   if (action === 'guildCreate') {

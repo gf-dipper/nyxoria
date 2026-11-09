@@ -302,7 +302,11 @@
   }
   function rigOf(hero) {
     var G = root.NYX.game;
-    try { return G && G.migrateLook ? G.migrateLook(hero) : (hero.rig || {}); }
+    try {
+      if (hero && hero.worn) return G.cleanRig(hero.worn, hero.classId); // a szerver számolta ki (profil); itt is szűrjük
+      if (G && G.wornLook && hero && hero.equipped && !Array.isArray(hero.equipped)) return G.wornLook(hero); // a felszerelés kinézete
+      return G && G.migrateLook ? G.migrateLook(hero) : (hero.rig || {});
+    }
     catch (e) { return G && G.cleanRig ? G.cleanRig(null, hero && hero.classId) : {}; }
   }
   function regionOfScene(sceneId) {

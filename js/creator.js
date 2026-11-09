@@ -63,11 +63,11 @@
       groups: [['opt', 'hairStyle'], ['color', 'hair'], ['color', 'tip', true], ['opt', 'beard']] },
     { id: 'fej', name: 'Fej', desc: 'Fül, szarv és ékszerek: ettől lesz igazán egyedi.', zoom: 'face', keys: ['ears', 'horns', 'hornColor', 'headwear', 'earring'],
       groups: [['opt', 'ears'], ['opt', 'horns'], ['color', 'hornColor'], ['opt', 'headwear'], ['opt', 'earring']] },
-    { id: 'ruha', name: 'Öltözet', desc: 'Ruha, színek, fémdíszek és köpeny. A kaszt határozza meg, mi közül választhatsz.', zoom: 'full', keys: ['outfit', 'c1', 'c2', 'metal', 'cape'],
+    { id: 'ruha', name: 'Öltözet', desc: 'Ez a kezdő ruhád. Később a felvett páncél dönti el, mit viselsz: minél ritkább, annál díszesebb. Ezt a ruhát a Ruhatárban bármikor visszaveheted.', zoom: 'full', keys: ['outfit', 'c1', 'c2', 'metal', 'cape'],
       groups: [['opt', 'outfit'], ['color', 'c1'], ['color', 'c2'], ['metal'], ['opt', 'cape']] },
-    { id: 'fegyver', name: 'Fegyver', desc: 'Minden kasztnak három saját fegyvere van. Harc közben is ezt látod majd.', zoom: 'full', keys: ['weapon'],
+    { id: 'fegyver', name: 'Fegyver', desc: 'A kezdő fegyvered. Ha jobb fegyvert szerzel, az látszik majd a kezedben; ezt a Ruhatárban visszaválaszthatod.', zoom: 'full', keys: ['weapon'],
       groups: [['opt', 'weapon']] },
-    { id: 'varazs', name: 'Varázs', desc: 'Aura, szárny és farok: a hab a tortán.', zoom: 'full', keys: ['aura', 'wings', 'tail'],
+    { id: 'varazs', name: 'Varázs', desc: 'A farok a tiéd marad. Az aura és a szárny a ritka amulettekből és a mitikus tárgyakból jön; amit itt választasz, az a Ruhatárban, az amulettnél választható.', zoom: 'full', keys: ['aura', 'wings', 'tail'],
       groups: [['opt', 'aura'], ['opt', 'wings'], ['opt', 'tail']] },
     RESTYLE ? { id: 'nev', name: 'Összegzés', desc: 'Nézd át, mit raktál össze, és mentsd el.', zoom: 'full', keys: [], groups: [['summary']] }
       : { id: 'nev', name: 'Név', desc: 'Adj nevet a hősödnek, mondd el, honnan jött, és nézd át, mit raktál össze.', zoom: 'full', keys: [], groups: [['name'], ['story'], ['summary']] }
