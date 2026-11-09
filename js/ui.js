@@ -563,7 +563,7 @@
     remote('admin', Object.assign({ op: op }, args || {})).then(r => { if (done) done(r); render(); }).catch(e => { toast(e.message || 'Hiba történt.'); render(); });
   }
   const ago = t => { if (!t) return '–'; const m = Math.round((Date.now() - t) / 60000); return m < 60 ? `${Math.max(1, m)} perce` : m < 1440 ? `${Math.round(m / 60)} órája` : `${Math.round(m / 1440)} napja`; };
-  const ADMIN_ACT = { ban: 'kitiltás', unban: 'visszaengedés', grant: 'ajándék / levonás', rename: 'átnevezés', notice: 'bejelentés', giftAll: 'ajándék mindenkinek', bossReset: 'heti szörny újraindítása', guildRename: 'céh átnevezése', guildDisband: 'céh feloszlatása', setAdmin: 'admin jog' };
+  const ADMIN_ACT = { ban: 'kitiltás', unban: 'visszaengedés', grant: 'ajándék / levonás', rename: 'átnevezés', notice: 'bejelentés', giftAll: 'ajándék mindenkinek', bossReset: 'heti szörny újraindítása', guildRename: 'céh átnevezése', guildDisband: 'céh feloszlatása', setAdmin: 'admin jog', resources: 'erőforrások', itemCreate: 'tárgy készítése', itemEdit: 'tárgy módosítása', itemRemove: 'tárgy törlése', heroSet: 'hős adatai', resetDaily: 'napi keretek' };
   function renderAdmin() {
     const A2 = S.admin = S.admin || { tab: 'attekintes' }, tab = A2.tab;
     const tabs = [['attekintes', 'Áttekintés'], ['jatekosok', 'Játékosok'], ['kozles', 'Bejelentés és ajándék'], ['vilag', 'Világ']];
@@ -610,29 +610,80 @@
     return `<section class="panel nx-admin">${head}${body}</section>`;
   }
   function adminDetail(d) {
-    const p = d.player, h = d.hero;
-    const rar = D.RARITY_ORDER.map(r => `<option value="${r}">${D.RARITIES[r].name}</option>`).join(''), slots = D.SLOT_ORDER.map(s => `<option value="${s}">${D.SLOTS[s].name}</option>`).join('');
-    return `<div class="nx-admdetail">
-      <div class="row" style="gap:12px;align-items:center">${h ? `<div class="portrait" style="width:72px;height:84px;margin:0">${A.heroSvg(h)}</div>` : ''}<div style="min-width:0"><h2>${esc(h ? h.name : '(nincs hőse)')}</h2>
-        <p class="small muted">Discord: ${esc(p.discord || '')} · azonosító: ${esc(p.discordId || '')} · csatlakozott: ${new Date(p.joined).toLocaleDateString('hu-HU')}</p>
-        <p class="small">${p.banned ? `<b style="color:var(--veszely-400)">KITILTVA</b>${p.banReason ? ` (${esc(p.banReason)})` : ''} · ` : ''}${p.admin ? 'admin · ' : ''}${d.guild ? `céh: ${esc(d.guild.name)} [${esc(d.guild.tag)}]` : 'nincs céhe'}</p></div></div>
-      ${h ? `<div class="nx-ch-stats" style="margin-top:10px">${[['Szint', h.level], ['Harcerő', fmt(h.power)], ['Holdezüst', fmt(h.silver)], ['Csillagpor', fmt(h.dust)], ['Fáklya', h.torches], ['Aréna', h.arena], ['Győzelem', fmt(h.stats.wins || 0)], ['Legendás', h.stats.legendaries || 0]].map(([l, v]) => `<span><small>${l}</small><b>${v}</b></span>`).join('')}</div>
-        <p class="small muted" style="margin-top:6px">${D.CLASSES[h.classId] ? D.CLASSES[h.classId].name : ''} · aktív: ${ago(h.active)} · táska: ${h.inventory} tárgy · műveletek ma: ${d.counts.d1}, összesen: ${d.counts.total}</p>
-        <div class="nx-prof-eq">${h.equipped.map(it => `<span title="${esc(it.name)}">${itemIcon(it)}</span>`).join('')}</div>` : ''}
-      ${d.slots.length ? `<p class="small" style="margin-top:8px">Pihenő hősei: ${d.slots.map(s => `${esc(s.name)} (${s.level}.)`).join(', ')}</p>` : ''}
-      <div class="nx-admbox"><h3>Ajándék vagy levonás</h3><p class="small muted">Negatív szám levon. A játékos krónikájában megjelenik.</p>
-        <div class="row wrap" style="gap:8px;margin-top:6px"><label class="small">Holdezüst <input class="input" id="adm-s" type="number" value="0" style="height:36px;width:110px"></label><label class="small">Csillagpor <input class="input" id="adm-d" type="number" value="0" style="height:36px;width:110px"></label><label class="small">Fáklya <input class="input" id="adm-t" type="number" value="0" style="height:36px;width:80px"></label></div>
-        <div class="row wrap" style="gap:8px;margin-top:6px"><label class="small">Tárgy <select class="input" id="adm-ir" style="height:36px"><option value="">nincs</option>${rar}</select></label><label class="small">Hely <select class="input" id="adm-is" style="height:36px"><option value="">véletlen</option>${slots}</select></label></div>
-        <input class="input" id="adm-n" maxlength="200" placeholder="Megjegyzés (a játékos is látja)" style="height:36px;margin-top:6px">
-        <button class="btn fakla sm" style="margin-top:8px" data-act="admin-grant" data-v="${p.uid}">Küldés</button></div>
-      <div class="nx-admbox"><h3>Kezelés</h3>
-        <div class="row wrap" style="gap:8px"><input class="input" id="adm-rn" placeholder="Új hősnév" style="height:36px;max-width:200px"><button class="btn sm" data-act="admin-rename" data-v="${p.uid}">Átnevezés</button></div>
+    const p = d.player, A2 = S.admin, hs = A2.hslot || 0, hd = A2.hd && A2.hd.uid === p.uid && A2.hd.hslot === hs ? A2.hd.data : null;
+    if (!hd && !A2.hdLoading && (d.hero || hs)) { A2.hdLoading = true; adminCall('heroData', { uid: p.uid, hslot: hs }, r => { A2.hd = { uid: p.uid, hslot: hs, data: r.hero }; A2.hdLoading = false; }); }
+    const heroes = (d.hero ? [{ slot: 0, name: d.hero.name, level: d.hero.level, classId: d.hero.classId, active: true }] : []).concat(d.slots.map(s => ({ slot: s.slot, name: s.name, level: s.level, classId: s.classId })));
+    const sec = A2.sec || 'eroforras';
+    const secs = [['eroforras', 'Erőforrások'], ['targy', 'Tárgy készítése'], ['taska', 'Táska és felszerelés'], ['hos', 'Hős'], ['napi', 'Napi keretek'], ['fiok', 'Fiók']];
+    const field = (id, label, val, w) => `<label class="small">${label}<input class="input" id="${id}" type="number" value="${val == null ? 0 : val}" style="height:36px;width:${w || 110}px"></label>`;
+    let body = '<p class="small muted" style="margin-top:10px">Betöltés…</p>';
+    if (sec === 'fiok') body = `<div class="nx-admbox"><h3>Fiók</h3>
+        <div class="row wrap" style="gap:8px"><input class="input" id="adm-rn" placeholder="Új név a most játszott hősnek" style="height:36px;max-width:240px"><button class="btn sm" data-act="admin-rename" data-v="${p.uid}">Átnevezés</button></div>
         <div class="row wrap" style="gap:8px;margin-top:8px">${p.banned ? `<button class="btn sm" data-act="admin-unban" data-v="${p.uid}">Visszaengedés</button>` : `<input class="input" id="adm-br" placeholder="Kitiltás indoka (a játékos látja)" style="height:36px;max-width:260px"><button class="btn sm danger" data-act="admin-ban" data-v="${p.uid}">Kitiltás</button>`}
-          <button class="btn sm ghost" data-act="admin-setadmin" data-v="${p.uid}" data-on="${p.admin ? '0' : '1'}">${p.admin ? 'Admin jog elvétele' : 'Admin jog adása'}</button></div></div>
-      <h3 class="nx-h3" style="margin-top:14px">Legutóbbi műveletei</h3>${d.actions.length ? `<div class="chron" style="max-height:260px">${d.actions.map(a => `<div class="chron-item"><span class="dot"></span><div><time>${new Date(a.at).toLocaleString('hu-HU')}</time>${esc(a.action)} <span class="small muted">${esc(JSON.stringify(a.info || {})).slice(0, 160)}</span></div></div>`).join('')}</div>` : '<p class="small muted">Még nincs.</p>'}
+          <button class="btn sm ghost" data-act="admin-setadmin" data-v="${p.uid}" data-on="${p.admin ? '0' : '1'}">${p.admin ? 'Admin jog elvétele' : 'Admin jog adása'}</button></div></div>`;
+    else if (hd) {
+      if (sec === 'eroforras') body = `<div class="nx-admbox"><h3>Erőforrások</h3><p class="small muted">Most: ${fmt(hd.silver)} Holdezüst · ${fmt(hd.dust)} Csillagpor · ${hd.torches}/${E.TORCH.max} fáklya · ${hd.rested} Frissesség · ${fmt(hd.xp)}/${fmt(hd.xpNeed)} TP. Írd be, mennyit adsz hozzá; negatív szám levon.</p>
+          <div class="row wrap" style="gap:8px;margin-top:8px">${field('adm-s', 'Holdezüst')}${field('adm-d', 'Csillagpor')}${field('adm-t', 'Fáklya', 0, 80)}${field('adm-r', 'Frissesség', 0, 90)}${field('adm-x', 'Tapasztalat (TP)')}</div>
+          <div class="row wrap" style="gap:6px;margin-top:8px"><button class="btn sm ghost" data-act="admin-quick" data-v="torch">Fáklyák tele</button><button class="btn sm ghost" data-act="admin-quick" data-v="rested">Frissesség tele</button><button class="btn sm ghost" data-act="admin-quick" data-v="level">+1 szintnyi TP</button></div>
+          <input class="input" id="adm-n" maxlength="200" placeholder="Megjegyzés (a játékos is látja a krónikájában)" style="height:36px;margin-top:8px">
+          <button class="btn fakla sm" style="margin-top:8px" data-act="admin-res" data-v="${p.uid}">Küldés</button></div>`;
+      if (sec === 'targy') {
+        const ib = A2.ib = A2.ib || { rarity: 'lila', slot: 'fegyver', level: hd.level, plus: 0, name: '', line: '', mythic: false, affixes: [], auto: true };
+        const opt = (list, cur) => list.map(([v, n]) => `<option value="${v}"${String(cur) === String(v) ? ' selected' : ''}>${n}</option>`).join('');
+        const affRow = i => { const a = ib.affixes[i] || {}; return `<div class="row" style="gap:6px"><select class="input" data-act="admin-ib" id="adm-ia${i}" style="height:34px">${opt([['', '— nincs —']].concat(D.AFFIXES.map(x => [x.id, x.text.replace('+{v}', '+X')])), a.id || '')}</select><input class="input" data-act="admin-ib" id="adm-iv${i}" type="number" min="1" max="100" value="${a.v || ''}" placeholder="érték" style="height:34px;width:80px"></div>`; };
+        body = `<div class="nx-admbox"><h3>Tárgy készítése</h3><p class="small muted">Bármilyen tárgyat összeállíthatsz. Ha a tulajdonságokat üresen hagyod, a ritkaságnak megfelelően sorsolódnak.</p>
+          <div class="nx-ib"><div class="nx-ib-form">
+            <div class="row wrap" style="gap:8px"><label class="small">Ritkaság<select class="input" data-act="admin-ib" id="adm-irar" style="height:36px">${opt(D.RARITY_ORDER.map(r => [r, D.RARITIES[r].name]), ib.rarity)}</select></label>
+              <label class="small">Hely<select class="input" data-act="admin-ib" id="adm-islot" style="height:36px">${opt(D.SLOT_ORDER.map(x => [x, D.SLOTS[x].name]), ib.slot)}</select></label>
+              <label class="small">Szint<input class="input" data-act="admin-ib" id="adm-ilvl" type="number" min="1" max="99" value="${ib.level}" style="height:36px;width:80px"></label>
+              <label class="small">Fejlesztés<input class="input" data-act="admin-ib" id="adm-iplus" type="number" min="0" max="12" value="${ib.plus}" style="height:36px;width:80px"></label></div>
+            <label class="small" style="display:flex;margin-top:8px">Név (üresen: a játék ad nevet)<input class="input" data-act="admin-ib" id="adm-iname" maxlength="40" value="${esc(ib.name)}" style="height:36px"></label>
+            <label class="small" style="display:flex;margin-top:6px">Rövid leírás (nem kötelező)<input class="input" data-act="admin-ib" id="adm-iline" maxlength="120" value="${esc(ib.line)}" style="height:36px"></label>
+            <label class="row small" style="gap:8px;margin-top:8px"><input type="checkbox" data-act="admin-ib" id="adm-imyth"${ib.mythic ? ' checked' : ''}> Mitikus (egyedi ragyogás)</label>
+            <p class="small" style="margin-top:8px"><b>Tulajdonságok</b> <span class="muted">(legfeljebb 4)</span></p><div class="stack" style="gap:6px;margin-top:4px">${[0, 1, 2, 3].map(affRow).join('')}</div>
+          </div><div><p class="small muted">Előnézet</p><div id="adm-ipre" class="nx-ib-pre">${adminItemPreview()}</div>
+            <button class="btn fakla sm" style="margin-top:10px" data-act="admin-icreate" data-v="${p.uid}">Odaadom ${esc(hd.name)} hősnek</button></div></div></div>`;
+      }
+      if (sec === 'taska') {
+        const row = (it, where) => `<div class="nx-admitem">${itemHtml(it)}<div class="row wrap" style="gap:6px"><span class="small muted">${where}</span><button class="btn sm ghost" data-act="admin-iplus" data-v="${it.id}">+1 fejlesztés</button><button class="btn sm ghost" data-act="admin-iminus" data-v="${it.id}">−1</button><button class="btn sm danger" data-act="admin-idel" data-v="${it.id}">Törlés</button></div></div>`;
+        const eq = D.SLOT_ORDER.map(k => hd.equipped[k]).filter(Boolean);
+        body = `<div class="nx-admbox"><h3>Felszerelés (${eq.length})</h3>${eq.length ? eq.map(it => row(it, 'rajta van')).join('') : '<p class="small muted">Semmi.</p>'}</div>
+          <div class="nx-admbox"><h3>Táska (${hd.inventory.length} / ${E.INVENTORY_MAX})</h3>${hd.inventory.length ? hd.inventory.map(it => row(it, 'táskában')).join('') : '<p class="small muted">Üres.</p>'}</div>`;
+      }
+      if (sec === 'hos') {
+        const paths = D.PATHS[hd.classId] || [];
+        body = `<div class="nx-admbox"><h3>Hős adatai</h3><p class="small muted">${esc(hd.name)} · ${D.CLASSES[hd.classId] ? D.CLASSES[hd.classId].name : ''} · harcerő ${fmt(hd.power)}</p>
+          <div class="row wrap" style="gap:8px;margin-top:8px">${field('adm-hl', 'Szint', hd.level, 80)}${field('adm-ha', 'Aréna-pontszám', hd.arena)}${field('adm-ht', 'Torony legjobb emelet', hd.towerBest)}
+            <label class="small">Ösvény<select class="input" id="adm-hp" style="height:36px"><option value="">nincs</option>${paths.map((x, i) => `<option value="${i}"${hd.path === i ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label></div>
+          <p class="small muted" style="margin-top:6px">Szintállításkor a tapasztalat nullázódik, a képességek a szinthez igazodnak. Ösvény a ${D.PATH_LEVEL}. szinttől adható.</p>
+          <button class="btn sm primary" style="margin-top:8px" data-act="admin-heroset" data-v="${p.uid}">Mentés</button></div>`;
+      }
+      if (sec === 'napi') {
+        const opts = [['gift', 'Napi ajándék (még egyszer átveheti, a sorozat megmarad)'], ['arena', 'Aréna: napi párbajok'], ['team', 'Csapatküldetések'], ['tower', 'Holdtorony: napi vereségkeret'], ['event', 'Heti esemény: napi harcok'], ['patrol', 'Őrjárat (újra mehet; a futót megszakítja)'], ['shop', 'Vándorkereskedő: új áru'], ['expedition', 'Félbehagyott kaland törlése (ha beragadt)']];
+        body = `<div class="nx-admbox"><h3>Napi keretek visszaállítása</h3><p class="small muted">Jelöld be, mit kapjon vissza ma.</p><div class="stack" style="gap:6px;margin-top:8px">${opts.map(([k, n]) => `<label class="row small" style="gap:8px"><input type="checkbox" class="adm-rd" value="${k}"> ${n}</label>`).join('')}</div>
+          <button class="btn sm primary" style="margin-top:10px" data-act="admin-reset" data-v="${p.uid}">Visszaállítás</button></div>`;
+      }
+    }
+    return `<div class="nx-admdetail">
+      <div class="row" style="gap:12px;align-items:center">${d.hero ? `<div class="portrait" style="width:64px;height:76px;margin:0">${A.heroSvg(d.hero)}</div>` : ''}<div style="min-width:0"><h2>${esc(p.discord || '?')}</h2>
+        <p class="small muted">Discord-azonosító: ${esc(p.discordId || '')} · csatlakozott: ${new Date(p.joined).toLocaleDateString('hu-HU')} · ma ${d.counts.d1} művelet</p>
+        <p class="small">${p.banned ? `<b style="color:var(--veszely-400)">KITILTVA</b>${p.banReason ? ` (${esc(p.banReason)})` : ''} · ` : ''}${p.admin ? 'admin · ' : ''}${d.guild ? `céh: ${esc(d.guild.name)} [${esc(d.guild.tag)}]` : 'nincs céhe'}</p></div></div>
+      ${heroes.length ? `<p class="small" style="margin-top:10px"><b>Melyik hősön dolgozol?</b></p><div class="row wrap" style="gap:6px;margin-top:4px">${heroes.map(x => `<button class="chip" data-act="admin-hslot" data-v="${x.slot}" aria-pressed="${hs === x.slot}">${esc(x.name)} · ${x.level}. szint${x.active ? ' (most ezzel játszik)' : ''}</button>`).join('')}</div>` : ''}
+      <div class="seg nx-admtabs nx-admsec" style="margin-top:10px">${secs.map(([k, n]) => `<button data-act="admin-sec" data-v="${k}" aria-selected="${sec === k}">${n}</button>`).join('')}</div>
+      ${body}
+      <h3 class="nx-h3" style="margin-top:14px">Legutóbbi műveletei</h3>${d.actions.length ? `<div class="chron" style="max-height:220px">${d.actions.map(a => `<div class="chron-item"><span class="dot"></span><div><time>${new Date(a.at).toLocaleString('hu-HU')}</time>${esc(a.action)} <span class="small muted">${esc(JSON.stringify(a.info || {})).slice(0, 160)}</span></div></div>`).join('')}</div>` : '<p class="small muted">Még nincs.</p>'}
       ${d.adminLog.length ? `<h3 class="nx-h3" style="margin-top:14px">Admin-műveletek vele</h3><div class="chron" style="max-height:200px">${d.adminLog.map(a => `<div class="chron-item"><span class="dot"></span><div><time>${new Date(a.at).toLocaleString('hu-HU')}</time>${esc(ADMIN_ACT[a.action] || a.action)} <span class="small muted">${esc(JSON.stringify(a.info || {}))}</span></div></div>`).join('')}</div>` : ''}
     </div>`;
   }
+  // a tárgykészítő előnézete: ugyanúgy rajzolja, ahogy a játékos látni fogja
+  function adminItemPreview() {
+    const ib = S.admin && S.admin.ib; if (!ib) return '';
+    const it = { id: 'preview', rarity: ib.rarity, slot: ib.slot, level: Math.max(1, ib.level | 0), plus: Math.max(0, Math.min(12, ib.plus | 0)), name: ib.name || `(${D.RARITIES[ib.rarity].name} ${D.SLOTS[ib.slot].name.toLowerCase()}, véletlen név)`, affixes: ib.affixes.filter(a => a.id && a.v), mythic: ib.mythic };
+    if (ib.line) it.line = ib.line;
+    const auto = !it.affixes.length && D.RARITIES[ib.rarity].affixes ? `<p class="small muted" style="margin-top:6px">${D.RARITIES[ib.rarity].affixes} tulajdonság sorsolódik hozzá.</p>` : '';
+    return itemHtml(it) + auto;
+  }
+  function adminFindItem(id) { const hd = S.admin.hd && S.admin.hd.data; if (!hd) return null; return D.SLOT_ORDER.map(k => hd.equipped[k]).filter(Boolean).concat(hd.inventory).filter(x => x.id === id)[0] || null; }
   function renderHeroes() {
     const h = hero(), list = heroList(), free = MAX_HEROES - 1 - list.length;
     const card = (x, active) => `<div class="nx-hcard${active ? ' on' : ''}"><div class="portrait">${A.heroSvg(x)}</div><div style="min-width:0"><b>${esc(x.name)}</b>
@@ -905,7 +956,8 @@
           ? `<div class="nx-herotop"><div class="nx-herostack l">${heroCard(true)}${torchPanel()}${eq.replace('<section class="panel"', '<section class="panel nx-eqp"')}</div><div class="nx-herostack r">${main.slice(0, k)}${statsPanel()}${sk.replace('<section class="panel"', '<section class="panel nx-skp"')}</div></div>`
           : `<div class="nx-herotop"><div class="nx-herostack l">${heroCard(true)}${torchPanel()}</div><div class="nx-herostack r">${main.slice(0, k)}${statsPanel()}</div></div>` + rest;
       }
-      app.innerHTML = newTopbar() + `<div class="layout nx-layout">${railHtml()}<main class="main" id="main">${main}</main>${rightPanel()}</div>` +
+      const wide = S.screen === 'admin'; // az admin felületnek kell a hely: ott nincs jobb oldali sáv
+      app.innerHTML = newTopbar() + `<div class="layout nx-layout${wide ? ' nx-wide' : ''}">${railHtml()}<main class="main" id="main">${main}</main>${wide ? '' : rightPanel()}</div>` +
         newBottomnav() + modalHtml() + owlHtml() + devbar();
     } else app.innerHTML = topbar() + `<div class="layout${showLeft ? ' show-left' : ''}">${heroPanel()}<main class="main" id="main">${main}</main>${rightPanel()}</div>` +
       bottomnav() + modalHtml() + owlHtml() + devbar();
@@ -1759,7 +1811,30 @@
     'admin-tab'(v) { S.admin.tab = v; render(); },
     'admin-refresh'() { const t = S.admin ? S.admin.tab : 'attekintes', sel = S.admin && S.admin.sel; S.admin = { tab: t, q: S.admin && S.admin.q, sel: sel }; if (sel) actions['admin-open'](sel); else render(); },
     'admin-search'() { S.admin.q = (el('adm-q') || {}).value || ''; S.admin.players = null; render(); },
-    'admin-open'(v) { const A2 = S.admin; A2.sel = v; if (A2.tab !== 'jatekosok') { A2.tab = 'jatekosok'; } adminCall('player', { uid: v }, r => { A2.detail = r; }); render(); },
+    'admin-open'(v) { const A2 = S.admin; if (A2.sel !== v) { A2.hslot = 0; A2.hd = null; A2.ib = null; } A2.sel = v; if (A2.tab !== 'jatekosok') { A2.tab = 'jatekosok'; } adminCall('player', { uid: v }, r => { A2.detail = r; }); render(); },
+    'admin-hslot'(v) { S.admin.hslot = +v; S.admin.hd = null; render(); },
+    'admin-sec'(v) { S.admin.sec = v; render(); },
+    'admin-ib'() { const ib = S.admin.ib, g = id => el(id); if (!ib) return;
+      ib.rarity = g('adm-irar').value; ib.slot = g('adm-islot').value; ib.level = +g('adm-ilvl').value || 1; ib.plus = +g('adm-iplus').value || 0; ib.name = g('adm-iname').value.trim(); ib.line = g('adm-iline').value.trim(); ib.mythic = g('adm-imyth').checked;
+      ib.affixes = [0, 1, 2, 3].map(i => ({ id: g('adm-ia' + i).value, v: +g('adm-iv' + i).value || 0 })).filter(a => a.id);
+      const pre = el('adm-ipre'); if (pre) pre.innerHTML = adminItemPreview(); },
+    'admin-icreate'(v) { actions['admin-ib'](); const ib = S.admin.ib; if (ib.affixes.some(a => !a.v)) { toast('Adj értéket minden kiválasztott tulajdonságnak.'); return; }
+      adminCall('itemCreate', { uid: v, hslot: S.admin.hslot || 0, item: { rarity: ib.rarity, slot: ib.slot, level: ib.level, plus: ib.plus, name: ib.name, line: ib.line, mythic: ib.mythic, affixes: ib.affixes.length ? ib.affixes : null } }, r => { toast(`Odaadva: ${r.item}`); S.admin.hd = null; }); },
+    'admin-res'(v) { const val = id => Number((el(id) || {}).value) || 0, a = { uid: v, hslot: S.admin.hslot || 0, silver: val('adm-s'), dust: val('adm-d'), torches: val('adm-t'), rested: val('adm-r'), xp: val('adm-x'), note: (el('adm-n') || {}).value || '' };
+      if (!a.silver && !a.dust && !a.torches && !a.rested && !a.xp) { toast('Nincs mit küldeni.'); return; }
+      adminCall('resources', a, r => { toast(`Elküldve${r.levelUps ? ` · ${r.levelUps} szintlépés` : ''}.`); S.admin.hd = null; }); },
+    'admin-quick'(v) { const hd = S.admin.hd && S.admin.hd.data; if (!hd) return; const a = { uid: S.admin.sel, hslot: S.admin.hslot || 0 };
+      if (v === 'torch') a.torches = E.TORCH.max - hd.torches; if (v === 'rested') a.rested = E.TORCH.restedMax - hd.rested; if (v === 'level') a.xp = Math.max(1, hd.xpNeed - hd.xp);
+      adminCall('resources', a, () => { toast('Kész.'); S.admin.hd = null; }); },
+    'admin-iplus'(v) { const it = adminFindItem(v); if (!it) return; adminCall('itemEdit', { uid: S.admin.sel, hslot: S.admin.hslot || 0, itemId: v, plus: Math.min(12, (it.plus || 0) + 1) }, () => { S.admin.hd = null; }); },
+    'admin-iminus'(v) { const it = adminFindItem(v); if (!it) return; adminCall('itemEdit', { uid: S.admin.sel, hslot: S.admin.hslot || 0, itemId: v, plus: Math.max(0, (it.plus || 0) - 1) }, () => { S.admin.hd = null; }); },
+    'admin-idel'(v) { const it = adminFindItem(v); if (!it || !confirm(`Biztosan törlöd: ${it.name}? Nem vonható vissza.`)) return; adminCall('itemRemove', { uid: S.admin.sel, hslot: S.admin.hslot || 0, itemId: v }, () => { toast('Törölve.'); S.admin.hd = null; }); },
+    'admin-heroset'(v) { const g = id => (el(id) || {}).value, hd = S.admin.hd.data, a = { uid: v, hslot: S.admin.hslot || 0 };
+      if (+g('adm-hl') !== hd.level) a.level = +g('adm-hl'); if (+g('adm-ha') !== hd.arena) a.arena = +g('adm-ha'); if (+g('adm-ht') !== hd.towerBest) a.towerBest = +g('adm-ht');
+      const pv = g('adm-hp'), pn = pv === '' ? null : +pv; if (pn !== (hd.path == null ? null : hd.path)) a.path = pn;
+      if (Object.keys(a).length <= 2) { toast('Nincs változás.'); return; } adminCall('heroSet', a, () => { toast('Elmentve.'); S.admin.hd = null; S.admin.players = null; }); },
+    'admin-reset'(v) { const what = [...document.querySelectorAll('.adm-rd:checked')].map(x => x.value); if (!what.length) { toast('Jelölj be legalább egyet.'); return; }
+      adminCall('resetDaily', { uid: v, hslot: S.admin.hslot || 0, what: what }, r => { toast(`Visszaállítva: ${r.done.join(', ')}.`); S.admin.hd = null; }); },
     'admin-grant'(v) { const val = id => Number((el(id) || {}).value) || 0, ir = (el('adm-ir') || {}).value, is = (el('adm-is') || {}).value;
       const a = { uid: v, silver: val('adm-s'), dust: val('adm-d'), torches: val('adm-t'), item: ir ? { rarity: ir, slot: is || null } : null, note: (el('adm-n') || {}).value || '' };
       if (!a.silver && !a.dust && !a.torches && !a.item) { toast('Nincs mit küldeni.'); return; }
@@ -1896,13 +1971,13 @@
     // a tájékoztató ablak a háttérre kattintva is bezárul (a szintlépés-ablak nem, azt el kell olvasni)
     if (ev.target.classList && ev.target.classList.contains('modal-back') && S.modal && S.modal.type === 'info') { actions['modal-close'](); return; }
     const t = ev.target.closest('[data-act]');
-    if (!t || t.tagName === 'INPUT' || t.disabled) return;
+    if (!t || t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.disabled) return;
     const fn = actions[t.dataset.act];
     if (fn) { ev.preventDefault(); fn(t.dataset.v, t); }
   });
   document.addEventListener('change', ev => {
     const t = ev.target;
-    if (t.matches && t.matches('input[data-act]')) { const fn = actions[t.dataset.act]; if (fn) fn(t.dataset.v, t); }
+    if (t.matches && t.matches('input[data-act], select[data-act]')) { const fn = actions[t.dataset.act]; if (fn) fn(t.dataset.v, t); }
   });
   document.addEventListener('keydown', ev => {
     if (ev.key === 'Enter' && ev.target.id === 'c-name') actions['c-next']();

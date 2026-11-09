@@ -2612,6 +2612,107 @@ async function admin(user, player, args) {
     await alog(uid, 'rename', { from: old, to: name });
     return { ok: true };
   }
+  // ---- bármelyik hős (a játszott vagy egy pihenő) részletes kezelése ----
+  // hslot: 0 = a most játszott hős, 1–2 = pihenő hős. Minden módosítás a hős mentésén történik, zárolva.
+  const withHero = async (fn) => {
+    const uid = await uidOf(), hs = Number(args.hslot) | 0;
+    return sql.begin(async tx => {
+      let save;
+      if (hs === 0) save = await loadHero(tx, uid, true);
+      else { const [r] = await tx`select save from hero_slots where user_id = ${uid} and slot = ${hs} for update`; save = r && r.save; }
+      if (!save) throw new GameError('arg', 'Ezen a helyen nincs hős.');
+      const now = Date.now(), out = fn(save, save.hero, now) || {};
+      if (hs === 0) await storeHero(tx, uid, save);
+      else { const sm = G.summary(save); await tx`update hero_slots set save = ${tx.json(save)}, name = ${save.hero.name}, level = ${sm.level}, xp = ${sm.xp}, power = ${sm.power}, mythics = ${sm.mythics}, legendaries = ${sm.legendaries} where user_id = ${uid} and slot = ${hs}`; }
+      return { uid: uid, out: out, hero: save.hero.name };
+    });
+  };
+  const num = (v, lo, hi) => { const n = Math.round(Number(v) || 0); if (n < lo || n > hi) throw new GameError('arg', 'Túl nagy érték.'); return n; };
+  if (args.op === 'heroData') { // egy hős teljes adatai (táska és felszerelés is) az admin felülethez
+    const r = await withHero((save, h, now) => { E.torchState(save, now); return { hero: { name: h.name, classId: h.classId, people: h.people, level: h.level, xp: h.xp, xpNeed: E.xpNeeded(h.level), silver: h.silver, dust: h.dust, rig: h.rig || null, look: h.look || null, path: h.path,
+      torches: save.torches.count, rested: save.torches.rested, arena: save.arena ? save.arena.rating : 1000, towerBest: (save.tower && save.tower.best) || 0, equipped: h.equipped, inventory: h.inventory, stats: h.stats || {}, power: E.power(E.heroStats(h)) } }; });
+    return r.out;
+  }
+  if (args.op === 'resources') { // erőforrások hozzáadása vagy levonása (negatív szám levon)
+    const d = { silver: num(args.silver, -1e7, 1e7), dust: num(args.dust, -1e6, 1e6), torches: num(args.torches, -50, 50), rested: num(args.rested, -50, 50), xp: num(args.xp, -1e7, 1e7) }, note = String(args.note || '').slice(0, 200);
+    const r = await withHero((save, h, now) => {
+      E.torchState(save, now);
+      h.silver = Math.max(0, h.silver + d.silver); h.dust = Math.max(0, h.dust + d.dust);
+      save.torches.count = Math.max(0, Math.min(E.TORCH.max, save.torches.count + d.torches)); save.torches.rested = Math.max(0, Math.min(E.TORCH.restedMax, save.torches.rested + d.rested));
+      let ups = [];
+      if (d.xp > 0) ups = E.addXp(h, d.xp); else if (d.xp < 0) h.xp = Math.max(0, h.xp + d.xp);
+      const parts = [d.silver && `${d.silver > 0 ? '+' : ''}${d.silver} Holdezüst`, d.dust && `${d.dust > 0 ? '+' : ''}${d.dust} Csillagpor`, d.torches && `${d.torches > 0 ? '+' : ''}${d.torches} fáklya`, d.rested && `${d.rested > 0 ? '+' : ''}${d.rested} Frissesség`, d.xp && `${d.xp > 0 ? '+' : ''}${d.xp} TP`].filter(Boolean);
+      if (parts.length) G.personal(save, now, `Az adminoktól: ${parts.join(', ')}${note ? ` – ${G.esc(note)}` : ''}.`, 'loot');
+      save.offers = null; G.refreshOffers(save);
+      return { levelUps: ups.length };
+    });
+    await alog(r.uid, 'resources', Object.assign({ hero: r.hero, note: note }, d));
+    return r.out;
+  }
+  if (args.op === 'itemCreate') { // bármilyen tárgy: ritkaság, hely, szint, név, tulajdonságok, fejlesztés, mitikus
+    const it0 = args.item || {};
+    if (!D.RARITIES[it0.rarity]) throw new GameError('arg', 'Ismeretlen ritkaság.');
+    const slot = D.SLOTS[it0.slot] ? it0.slot : null, lvl = num(it0.level || 1, 1, 99), plus = num(it0.plus || 0, 0, 12);
+    const name = String(it0.name || '').trim().slice(0, 40), line = String(it0.line || '').trim().slice(0, 120);
+    const ids = D.AFFIXES.map(a => a.id), affixes = Array.isArray(it0.affixes) ? it0.affixes.filter(a => a && ids.indexOf(a.id) >= 0).slice(0, 4).map(a => ({ id: a.id, v: num(a.v, 1, 100) })) : null;
+    const r = await withHero((save, h, now) => {
+      const it = E.makeItem(E.mulberry32(E.newSeed()), { rarity: it0.rarity, slot: slot || undefined, level: lvl, classId: h.classId, hero: h, name: name || undefined, line: line || undefined, mythic: !!it0.mythic });
+      if (affixes) { const seen = {}; it.affixes = affixes.filter(a => !seen[a.id] && (seen[a.id] = 1)); }
+      if (plus) { it.plus = plus; it.spent = 0; }
+      const res = E.addItem(save, h, it, now);
+      G.personal(save, now, `Az adminoktól kaptál egy tárgyat: <span class="r-${it.rarity}">${G.esc(it.name)}</span>.`, 'loot');
+      return { item: it.name, full: !!(res && res.full) };
+    });
+    if (r.out.full) throw new GameError('state', 'A hős táskája tele van, a tárgy nem fért el (szét lett szedve). Előbb szabadíts fel helyet.');
+    await alog(r.uid, 'itemCreate', { hero: r.hero, item: r.out.item, rarity: it0.rarity, level: lvl, plus: plus });
+    return r.out;
+  }
+  if (args.op === 'itemEdit' || args.op === 'itemRemove') {
+    const id = String(args.itemId || '');
+    const r = await withHero((save, h) => {
+      let it = null, where = null;
+      D.SLOT_ORDER.forEach(k => { if (h.equipped[k] && h.equipped[k].id === id) { it = h.equipped[k]; where = k; } });
+      if (!it) { const i = h.inventory.findIndex(x => x.id === id); if (i >= 0) { it = h.inventory[i]; where = i; } }
+      if (!it) throw new GameError('arg', 'Nincs ilyen tárgy.');
+      if (args.op === 'itemRemove') { if (typeof where === 'string') delete h.equipped[where]; else h.inventory.splice(where, 1); return { removed: it.name }; }
+      if (args.plus != null) it.plus = num(args.plus, 0, 12);
+      if (args.name) it.name = String(args.name).trim().slice(0, 40);
+      if (args.level != null) it.level = num(args.level, 1, 99);
+      return { edited: it.name };
+    });
+    await alog(r.uid, args.op, Object.assign({ hero: r.hero }, r.out));
+    return r.out;
+  }
+  if (args.op === 'heroSet') { // szint, ösvény, aréna-pontszám, torony-legjobb
+    const r = await withHero((save, h, now) => {
+      const ch = {};
+      if (args.level != null) { const L = num(args.level, 1, E.MAX_LEVEL || 99); h.level = L; h.xp = 0; const un = E.unlockedSkills(h).slice(1); h.loadout = h.loadout.filter(x => un.indexOf(x) >= 0).concat(un.filter(x => h.loadout.indexOf(x) < 0)); ch.level = L; }
+      if (args.path !== undefined) { const p = args.path === null || args.path === '' ? null : num(args.path, 0, 2); if (p != null && h.level < D.PATH_LEVEL) throw new GameError('arg', `Ösvény a ${D.PATH_LEVEL}. szinttől adható.`); h.path = p; ch.path = p; }
+      if (args.arena != null) { const a = X.arenaState(save, now); a.rating = num(args.arena, 0, 5000); save.arena = a; ch.arena = a.rating; }
+      if (args.towerBest != null) { const t = X.towerState(save, now); t.best = num(args.towerBest, 0, 500); save.tower = t; h.stats = h.stats || {}; h.stats.towerMax = Math.max(h.stats.towerMax || 0, t.best); ch.towerBest = t.best; }
+      save.offers = null; G.refreshOffers(save);
+      return ch;
+    });
+    await alog(r.uid, 'heroSet', Object.assign({ hero: r.hero }, r.out));
+    return r.out;
+  }
+  if (args.op === 'resetDaily') { // napi keretek visszaállítása (újra mehet)
+    const what = Array.isArray(args.what) ? args.what : [];
+    const r = await withHero((save, h, now) => {
+      const today = X.day(now), done = [];
+      if (what.indexOf('gift') >= 0 && save.gift) { save.gift.day = new Date(Date.parse(today + 'T12:00:00Z') - 864e5).toISOString().slice(0, 10); done.push('ajándék'); }
+      if (what.indexOf('arena') >= 0) { const a = X.arenaState(save, now); a.fights = 0; a.rerolls = 0; save.arena = a; done.push('aréna'); }
+      if (what.indexOf('team') >= 0) { const t = X.teamState(save, now); t.runs = 0; save.team = t; done.push('csapat'); }
+      if (what.indexOf('tower') >= 0) { const t = X.towerState(save, now); t.tries = 0; save.tower = t; done.push('torony'); }
+      if (what.indexOf('event') >= 0 && save.event) { save.event.tries = 0; done.push('esemény'); }
+      if (what.indexOf('patrol') >= 0) { save.patrolDay = null; save.patrol = null; done.push('őrjárat'); }
+      if (what.indexOf('shop') >= 0) { save.shop = null; done.push('vándorkereskedő'); }
+      if (what.indexOf('expedition') >= 0) { save.expedition = null; save.pendingResult = null; save.offers = null; G.refreshOffers(save); done.push('félbehagyott kaland'); }
+      return { done: done };
+    });
+    await alog(r.uid, 'resetDaily', { hero: r.hero, what: r.out.done });
+    return r.out;
+  }
   // ---- bejelentés és ajándék mindenkinek ----
   if (args.op === 'notice') {
     const text = String(args.text || '').trim().slice(0, 400);

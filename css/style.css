@@ -935,3 +935,21 @@ html { scrollbar-width: thin; scrollbar-color: rgba(127, 140, 255, .35) transpar
   .nx-ach > svg.nxi { width: 40px; height: 40px; }
   .nx-ach > :last-child { grid-column: 1 / -1; justify-self: stretch; }
 }
+.nx-ib { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 14px; margin-top: 10px; align-items: start; }
+.nx-ib-form label.small { display: inline-flex; flex-direction: column; gap: 4px; }
+.nx-ib-pre { padding: 10px; border-radius: 12px; background: rgba(8, 11, 31, .5); border: 1px solid var(--ej-600); margin-top: 4px; }
+.nx-admitem { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--ej-600); }
+.nx-admitem:last-child { border-bottom: 0; }
+.nx-admsec button { font-size: 13px; }
+@media (max-width: 760px) { .nx-ib { grid-template-columns: minmax(0, 1fr); } }
+.nx-ib { grid-template-columns: minmax(0, 1fr); }
+.nx-ib-form label.small.row { flex-direction: row; align-items: center; }
+.nx-ib-form .stack .row select { flex: 1 1 auto; min-width: 0; }
+.nx-adm2 { grid-template-columns: minmax(200px, 260px) minmax(0, 1fr); }
+.layout.nx-layout.nx-wide { grid-template-columns: 232px minmax(0, 1fr); }
+@media (max-width: 1180px) { .layout.nx-layout.nx-wide { grid-template-columns: 220px minmax(0, 1fr); } }
+@media (max-width: 760px) { .layout.nx-layout.nx-wide { grid-template-columns: minmax(0, 1fr); } }
+@media (min-width: 1100px) { .nx-ib { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); } }
+.nx-admbox label.small.row { display: flex; flex-direction: row; align-items: center; gap: 8px; }
+.nx-admbox .stack { display: flex; flex-direction: column; }
+.nx-admbox input[type="checkbox"] { width: 18px; height: 18px; flex: none; }
