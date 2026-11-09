@@ -386,7 +386,7 @@
   }
   function railHtml() {
     return `<nav class="nx-rail col-left" aria-label="Főmenü"><div class="nx-rail-scroll">${menuGroups().map((g, i) => `<section class="nx-grp" aria-labelledby="nxg-${i}"><h2 id="nxg-${i}">${g.name}</h2><ul>${g.items.map(it => navBtn(it)).join('')}</ul></section>`).join('')}</div>
-      <div class="nx-rail-foot"><button class="icon-btn" data-act="info" data-v="sugo" aria-label="Súgó" title="Súgó">${ni('sugo')}<small>Súgó</small></button><button class="icon-btn" data-act="info" data-v="hiba" aria-label="Hiba bejelentése" title="Hiba bejelentése">${ni('hiba')}<small>Hiba</small></button><button class="icon-btn" data-act="info" data-v="discord" aria-label="Discord-szerver" title="Discord-szerver">${ni('discord')}<small>Discord</small></button><button class="icon-btn" data-act="screen" data-v="beallitas" aria-label="Beállítások" title="Beállítások"${S.screen === 'beallitas' ? ' aria-current="page"' : ''}>${ni('beallitas')}<small>Beállítás</small></button>${ONLINE && S.me && S.me.admin ? `<button class="icon-btn" data-act="screen" data-v="admin" aria-label="Admin" title="Admin"${S.screen === 'admin' ? ' aria-current="page"' : ''}>${ni('karakter')}<small>Admin</small></button>` : ''}</div></nav>`;
+      <div class="nx-rail-foot"><button class="icon-btn" data-act="info" data-v="sugo" aria-label="Súgó" title="Súgó">${ni('sugo')}<small>Súgó</small></button><button class="icon-btn" data-act="info" data-v="hiba" aria-label="Hiba bejelentése" title="Hiba bejelentése">${ni('hiba')}<small>Hiba</small></button><button class="icon-btn" data-act="info" data-v="discord" aria-label="Discord-szerver" title="Discord-szerver">${ni('discord')}<small>Discord</small></button><button class="icon-btn" data-act="screen" data-v="beallitas" aria-label="Beállítások" title="Beállítások"${S.screen === 'beallitas' ? ' aria-current="page"' : ''}>${ni('beallitas')}<small>Beállítás</small></button></div></nav>`;
   }
   function newTopbar() {
     const h = hero(), t = E.torchState(S.save, now()), need = E.xpNeeded ? E.xpNeeded(h.level) : 0, xpP = need ? Math.min(100, Math.round(h.xp / need * 100)) : 0;
@@ -400,6 +400,7 @@
         ${coin(' opt2', icx('misc', 'holdezust-bare', I.silver), fmt(h.silver), 'Holdezüst', `Holdezüst: ${fmt(h.silver)}`)}
         ${coin(' opt3', icx('misc', 'csillagpor-bare', I.dust), fmt(h.dust), 'Csillagpor', `Csillagpor: ${fmt(h.dust)}`)}
       </div>
+      ${ONLINE && S.me && S.me.admin ? `<button class="btn sm nx-admbtn" data-act="screen" data-v="admin"${S.screen === 'admin' ? ' aria-current="page"' : ''}>${ni('karakter')}Admin</button>` : ''}
       <button class="icon-btn nx-gear" data-act="screen" data-v="beallitas" aria-label="Beállítások"${S.screen === 'beallitas' ? ' aria-current="page"' : ''}>${S.me && S.me.avatar ? `<img src="${esc(S.me.avatar)}" alt="" width="28" height="28" style="border-radius:50%">` : ni('beallitas')}</button>
     </header>`;
   }

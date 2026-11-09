@@ -913,3 +913,11 @@ html { scrollbar-width: thin; scrollbar-color: rgba(127, 140, 255, .35) transpar
   .nx-rail { max-height: calc(100vh - var(--topbar) - 24px); }
   .nx-rail-foot .icon-btn { padding: 4px; }
 }
+.nx-admbtn { height: 40px; gap: 6px; }
+.nx-admbtn[aria-current="page"] { background: var(--hold-300); color: #141a45; }
+@media (max-width: 760px) { .nx-admbtn { display: none; } }
+.nx-rail-foot .icon-btn { min-width: 0; }
+.nx-rail-foot .icon-btn small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-rail-foot { gap: 4px; }
+.nx-rail-foot .icon-btn { padding: 4px 1px; }
+.nx-rail-foot .icon-btn small { font-size: 9.5px; letter-spacing: -.1px; text-overflow: clip; }
