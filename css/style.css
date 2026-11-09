@@ -1135,3 +1135,12 @@ html { scrollbar-width: thin; scrollbar-color: rgba(127, 140, 255, .35) transpar
 .lk-ach li.ok { border-color: rgba(120,220,160,.5); }
 .lk-ach li.ok > span:last-child { color: var(--jo-400); }
 .lk-row select { font-size: 13px; text-overflow: ellipsis; }
+/* harcképernyő: az aréna és a napló a képernyő magasságához igazodik, hogy a Tovább gomb görgetés nélkül látsszon */
+@media (min-width: 761px) {
+  .combat-log { --clog: clamp(110px, calc(100svh - 690px), 220px); max-height: var(--clog); }
+  .nx-arena { width: 100%; max-height: calc(100svh - 480px + 220px - clamp(110px, calc(100svh - 690px), 220px)); min-height: 240px; }
+}
+@media (max-width: 760px) {
+  .combat-log { max-height: clamp(84px, calc(100svh - 690px), 160px); }
+  .nx-arena { height: min(420px, calc(100svh - 304px - clamp(84px, calc(100svh - 690px), 160px))); min-height: 190px; }
+}
