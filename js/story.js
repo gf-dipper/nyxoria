@@ -186,7 +186,7 @@
           special: 'eltakarja előled a holdat' },
         win: 'Ozsvát visszaengedi a Csillagszív fényét az égre, és a hold újra telin ragyog. Csilla kilép a sötétből, igazi lányként, nem hangként. Valakinek őriznie kell a katlant. Ozsvát marad. – Hét évig te őrizted. Most én jövök.',
         lose: 'Ozsvát fényt vet köréd a lámpásával, és visszaránt a fekete hold elől. – Most senkit sem hagyok itt. Senkit többé. Szedd össze magad, {nev}, újra megpróbáljuk.',
-        reward: 'Ozsvát rád bízza a lámpását. A Krónika új sora: „A hold túloldalán valaki kopog.”' }
+        reward: 'Ozsvát a lámpása utolsó fényét egy tárgyba zárja, és neked adja. A Krónika új sora: „A hold túloldalán valaki kopog.”' }
     ]
   };
 })(typeof window !== 'undefined' ? window : globalThis);

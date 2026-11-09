@@ -254,7 +254,7 @@
   var ITEM_NAMES = {
     fegyver: { kard: ['kard', 'pallos', 'szablya'], 'íj': ['íj', 'hosszúíj', 'számszeríj'], bot: ['bot', 'pálca', 'varázsbot'],
                jogar: ['jogar', 'szent bot', 'fénypálca'], 'tőr': ['tőr', 'penge', 'kés'], 'lámpás': ['lámpás', 'szellemlámpás', 'idézőkönyv'],
-               lant: ['lant', 'hárfa', 'furulya'], karmok: ['karmok', 'agyarnyaklánc', 'vadonbot'] },
+               lant: ['lant', 'hárfa', 'furulya'], karmok: ['karmok', 'agyarbuzogány', 'vadonbot'] },
     pancel:  ['köpeny', 'mellvért', 'köntös', 'zeke', 'páncéling'],
     sisak:   ['csuklya', 'sisak', 'fejpánt', 'kalap', 'korona'],
     gyuru:   ['gyűrű', 'pecsétgyűrű', 'karika'],

@@ -1,4 +1,4 @@
-/* Nyxoria – ikonok (w2): tőr, penge, kés, lámpás, szellemlámpás, idézőkönyv, lant, hárfa, furulya, karmok, agyarnyaklánc, vadonbot.
+/* Nyxoria – ikonok (w2): tőr, penge, kés, lámpás, szellemlámpás, idézőkönyv, lant, hárfa, furulya, karmok, agyarbuzogány, vadonbot.
    A rajzolás szabályai a js/icons.js fejlécében. */
 (function (root) {
   'use strict';
@@ -255,26 +255,33 @@
       `</g>` + k.spark(53, 12, 3.4);
   });
 
-  // agyarnyaklánc: bőrzsinór, rajta ívben lógó agyarak és középen faragott gyöngy
-  I.def('item', 'agyarnyaklánc', k => {
+  // agyarbuzogány: göcsörtös, átlós fabunkó; a fején körben kiálló, csontszínű agyarak, bőrrel tekert markolat
+  I.def('item', 'agyarbuzogány', k => {
     const bone = k.mat('bone', 'h');
-    // agyar a (x,y) pontból lefelé, rot fokkal elfordítva
+    // agyar a fej szélén (x,y), rot fokkal kifelé fordítva
     const fang = (x, y, rot, s) => `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${s})">` +
-      k.p('M-4 0 L4 0 C4.4 6 2.6 11 -2.4 15 C-0.4 10 -4.6 6 -4 0 Z', bone, { sw: 2 / s }) +
-      k.f('M-2.6 1 L0 1 C0 6 -0.6 9 -1.6 11.6 C-1.6 8 -3.2 5 -2.6 1 Z', '#fff', 0.6) +
-      k.p('M-4.6 -1.6 L4.6 -1.6 L4.6 1.6 L-4.6 1.6 Z', k.mat('leather', 'v'), { sw: 1.4 / s }) + `</g>`;
-    return k.shadow(32, 59, 16, 3) +
-      // zsinór
-      k.s('M10 5 C8 26 18 40 32 41 C46 40 56 26 54 5', k.INK, 5) +
-      k.s('M10 5 C8 26 18 40 32 41 C46 40 56 26 54 5', k.mat('leather'), 2.6) +
-      k.s('M9.6 10 C9.4 20 13 29 19 34.6', '#ffd8a8', 0.9, 0.6) +
-      fang(14.6, 27, 38, 0.82) + fang(49.4, 27, -38, 0.82) +
-      fang(21.4, 35.6, 22, 0.95) + fang(42.6, 35.6, -22, 0.95) +
-      fang(32, 46, 0, 1.12) +
-      // gyöngy
-      k.gem(32, 42, 4.6, '#e8503a') +
-      k.c(25.6, 39.8, 2, k.mat('#5ab0d0'), { sw: 1.4 }) + k.c(38.4, 39.8, 2, k.mat('#5ab0d0'), { sw: 1.4 }) +
-      k.spark(48, 50, 2.8, '#fffbea');
+      k.p('M-3.4 0 L3.4 0 C3.6 -5 2 -9.6 -1.8 -13 C-0.6 -8.6 -3.8 -5 -3.4 0 Z', bone, { sw: 1.8 / s }) +
+      k.f('M-2.2 -1 L0 -1 C0 -5 -0.4 -7.6 -1.2 -10 C-1.4 -7 -2.6 -4.4 -2.2 -1 Z', '#fff', 0.65) + `</g>`;
+    return k.shadow(30, 59, 18, 3.2) +
+      k.glow(40, 22, 16, '#ffb070', 0.35) +
+      // nyél (átlósan, bal lent → jobb fent)
+      k.p('M11 58 L15.6 61.4 L33.6 36.6 L29 33 Z', k.mat('wood', 'h')) +
+      k.f('M12.4 57.6 L14 58.8 L31.8 34.6 L30.2 33.4 Z', '#fff', 0.3) +
+      // bőr markolat és szíjak
+      k.p('M12.4 52.6 L18.4 57 L24.6 48.6 L18.6 44.2 Z', k.mat('leather', 'v')) +
+      k.s('M14.4 52.4 L19.6 56 M16.6 49.4 L21.8 53 M18.8 46.4 L24 50', '#f3d8a8', 1.1, 0.55) +
+      k.c(13.2, 58.6, 3, k.mat('bronze'), { sw: 1.8 }) +
+      // agyarak a fej körül (a fej mögött)
+      fang(38, 10, -10, 1) + fang(50, 14, 40, 0.95) + fang(55, 26, 85, 0.9) + fang(26, 17, -62, 0.9) + fang(49, 36, 130, 0.85) + fang(31, 10, -35, 0.8) +
+      // a bunkó feje: göcsörtös fa
+      k.p('M27 32 C22 26 24 15 32 11 C40 7 50 11 53 19 C56 27 51 36 43 38.6 C37 40.6 31 37 27 32 Z', k.mat('wood')) +
+      k.f('M30 28 C28 21 31 15 37 13 C34 17 32.6 22 33.6 28 Z', '#fff', 0.3) +
+      // erezet és egy göcs (nem arc: hosszú, ívelt csíkok a fej formáját követik)
+      k.s('M31 17 C35 13 43 12 48 16 M30 25 C34 19 43 17 50 21 M33 33 C39 30 46 30 51 26', k.INK, 1, 0.35) +
+      k.c(44.6, 28.6, 2.2, k.mat('dark'), { sw: 1.2 }) +
+      // bronz pánt a fej tövén
+      k.p('M26.4 31 L33.8 37.8 L31.6 40 L24.2 33.2 Z', k.mat('bronze', 'v'), { sw: 1.6 }) +
+      k.spark(55, 9, 3.2, '#fffbea');
   });
 
   // vadonbot: göcsörtös fabot, a tetején ágakból font fészekben izzó zöld mag, levelek

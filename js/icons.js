@@ -128,13 +128,14 @@
     // mitikus: a saját ikonja, ha a helye illik a nevéhez (régebbi mentésben más helyen is lehet: ott a hely ikonja)
     if (item.mythic && D && D.MYTHIC_NAMES) { const i = D.MYTHIC_NAMES.indexOf(item.name); if (i >= 0 && REG.item['mitikus' + i] && (!D.MYTHIC_SLOTS || D.MYTHIC_SLOTS[i] === item.slot)) return 'mitikus' + i; if (i >= 0 && REG.item['slot-' + item.slot]) return 'slot-' + item.slot; }
     const nm = String(item.name || '').toLowerCase();
+    if (item.slot === 'fegyver' && nm.endsWith('agyarnyaklánc') && REG.item['agyarbuzogány']) return 'agyarbuzogány'; // régi név
     let nouns = [];
     if (D && D.ITEM_NAMES) {
       if (item.slot === 'fegyver') Object.keys(D.ITEM_NAMES.fegyver).forEach(t => { nouns = nouns.concat(D.ITEM_NAMES.fegyver[t]); });
       else nouns = (D.ITEM_NAMES[item.slot] || []).slice();
     }
     nouns.sort((a, b) => b.length - a.length);
-    const hit = nouns.find(w => nm.endsWith(' ' + w) || nm === w);
+    const hit = nouns.find(w => nm.endsWith(' ' + w) || nm.endsWith('-' + w) || nm === w);
     if (hit && REG.item[hit]) return hit;
     return REG.item['slot-' + item.slot] ? 'slot-' + item.slot : null;
   }

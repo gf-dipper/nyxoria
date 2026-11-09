@@ -166,8 +166,8 @@
   // Minden héten más esemény, saját szörnnyel. Naponta 3 harc; győzelem 10 pont, vereség 3.
   // A pontokért járó jutalmak közül a legfelső tárgy csak az adott esemény hetében szerezhető meg.
   const EVENTS = [
-    { id: 'verhold', name: 'Vérhold-vadászat', monster: 'Vérholdas fenevad', region: 'ejkatlan', prize: { name: 'Vérhold-agyar', slot: 'amulett' },
-      line: 'Vörösen kel a hold, és vele ébred a fenevad. Aki sokszor szembeszáll vele, megkapja az agyarát.' },
+    { id: 'verhold', name: 'Vérhold-vadászat', monster: 'Vérholdas fenevad', region: 'ejkatlan', prize: { name: 'Vérhold-medál', slot: 'amulett' },
+      line: 'Vörösen kel a hold, és vele ébred a fenevad. Aki sokszor szembeszáll vele, megkapja az agyarából faragott medált.' },
     { id: 'kodkiraly', name: 'A Ködkirály udvara', monster: 'A Ködkirály lovagja', region: 'kodlap', prize: { name: 'Ködkirály-sisak', slot: 'sisak' },
       line: 'A lápból lovagok lépnek elő. A legkitartóbbak a Ködkirály sisakját nyerhetik el.' },
     { id: 'csillageso', name: 'Csillageső', monster: 'Hulló csillagszellem', region: 'szirtek', prize: { name: 'Csillageső-gyűrű', slot: 'gyuru' },
@@ -618,7 +618,9 @@
   const STORY_TRIES = 3;
   const STORY_RARITY = ['zold', 'kek', 'kek', 'kek', 'lila', 'kek', 'lila', 'kek', 'lila', 'legendas'];
   // a finálé jutalma egyedi, névvel ellátott legendás tárgy
-  const STORY_FINAL = { name: 'Csillagszív-lámpás', line: 'Ozsvát lámpása. A fénye már nem lopott: a holdé, és most a tiéd is.' };
+  // a hely a szokásos legendás sorsolásból jön, a név pedig a helyhez (fegyvernél a kaszt fegyveréhez) illik
+  const STORY_FINAL_LINE = 'Ozsvát lámpásának fénye van benne. Már nem lopott fény: a holdé, és most a tiéd is.';
+  const storyFinalName = G.storyFinalName;
   // a főellenfelek ereje (független ellenőrzéssel kalibrálva, minden kaszt átlaga): a fejezet szintjén, reálisan fejlesztett
   // felszereléssel kb. 60–72% győzelmi esély, lemaradt felszereléssel 31–56%; az 1. fejezet barátságos (~78%).
   // a hosszabb, képességdúsabb harcokhoz újramérve: ugyanaz a győzelmi esély (78–94%), mint korábban
@@ -673,7 +675,8 @@
       h.silver += rw.silver; out.silver = rw.silver;
       out.dust = E.addDust(save, h, rw.dust, ctx.now);
       // a fejezet tárgya sosem bomlik szét automatikusan (a táska helyét a harc előtt ellenőriztük)
-      const it = E.makeItem(rng, Object.assign({ rarity: rw.item, level: h.level, classId: h.classId, hero: h }, i === storyChapters().length - 1 && rw.item === 'legendas' ? STORY_FINAL : {}));
+      const it = E.makeItem(rng, { rarity: rw.item, level: h.level, classId: h.classId, hero: h });
+      if (i === storyChapters().length - 1 && rw.item === 'legendas') { it.name = storyFinalName(it.slot, h.classId); it.line = STORY_FINAL_LINE; }
       h.inventory.push(it); G.itemEvent(save, it, ctx, `Holdkrónika, ${i + 1}. fejezet`); out.item = it;
       killNote(save, ch.boss.name);
       G.personal(save, ctx.now, `<b>${G.esc(h.name)}</b> befejezte a Holdkrónika ${i + 1}. fejezetét: ${G.esc(ch.title)}.`, 'win');

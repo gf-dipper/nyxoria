@@ -535,7 +535,7 @@
 
   // tárgyak átállítása az új rendszerre (legendás fokozat, fejlesztés-visszatérítés): egyszer, minden régi mentésen
   function migrateItems(save) {
-    if (!save || !save.hero || save.itemsV >= 2) return;
+    if (!save || !save.hero || save.itemsV >= 2) return migrateItems3(save);
     const h = save.hero, all = D.SLOT_ORDER.map(s => h.equipped[s]).filter(Boolean).concat(h.inventory || []);
     all.forEach(it => {
       // a régi fejlesztések ára (20 × t × (1 + szint/10)) visszamenőleg is számít a visszatérítésbe
@@ -550,6 +550,41 @@
     });
     if (h.pityLegend == null) h.pityLegend = 0;
     save.itemsV = 2;
+    migrateItems3(save);
+  }
+  // a Holdkrónika finálé-tárgya: a neve a helyéhez (fegyvernél a kaszt fegyveréhez) illik
+  const FINAL_NOUN = { pancel: 'köpeny', sisak: 'korona', gyuru: 'gyűrű', amulett: 'medál' };
+  function storyFinalName(slot, classId) {
+    const c = D.CLASSES[classId];
+    return 'Csillagszív-' + (slot === 'fegyver' ? ((c && c.weapon) || 'kard') : (FINAL_NOUN[slot] || 'medál'));
+  }
+  // az alakváltó „agyarnyaklánc” fegyvere nyakláncnak látszott: agyarbuzogány lett belőle (név, gyűjtemény, bolt)
+  const OLD_NOUN = /agyarnyaklánc$/i;
+  function renameNoun(n) { return String(n).replace(/Agyarnyaklánc$/, 'Agyarbuzogány').replace(/agyarnyaklánc$/, 'agyarbuzogány'); }
+  function migrateItems3(save) {
+    if (!save || !save.hero || save.itemsV >= 3) return migrateItems4(save);
+    const h = save.hero, fix = it => { if (it && it.slot === 'fegyver' && OLD_NOUN.test(it.name || '')) it.name = renameNoun(it.name); };
+    D.SLOT_ORDER.forEach(s => fix(h.equipped[s])); (h.inventory || []).forEach(fix);
+    if (save.shop && save.shop.items) save.shop.items.forEach(x => fix(x && x.item ? x.item : x));
+    const al = save.album && save.album.items;
+    if (al) Object.keys(al).forEach(n => { if (OLD_NOUN.test(n) && al[n].slot === 'fegyver') { const nn = renameNoun(n); if (!al[nn]) al[nn] = al[n]; delete al[n]; } });
+    save.itemsV = 3;
+    migrateItems4(save);
+  }
+  // v4: a régi „Csillagszív-lámpás” bármelyik helyre eshetett (lámpásként gyűrű, sisak…); a nevet a helyéhez igazítjuk.
+  // A „Vérhold-agyar” amulett pedig fegyvernek hangzott: Vérhold-medál lett.
+  function migrateItems4(save) {
+    if (!save || !save.hero || save.itemsV >= 4) return;
+    const h = save.hero, ren = {};
+    const fix = it => {
+      if (!it) return;
+      if (it.name === 'Csillagszív-lámpás') { const nn = storyFinalName(it.slot, h.classId); if (nn !== it.name) { ren[it.name + '|' + it.slot] = nn; it.name = nn; } }
+      else if (it.name === 'Vérhold-agyar' && it.slot === 'amulett') { ren['Vérhold-agyar|amulett'] = 'Vérhold-medál'; it.name = 'Vérhold-medál'; }
+    };
+    D.SLOT_ORDER.forEach(s => fix(h.equipped[s])); (h.inventory || []).forEach(fix);
+    const al = save.album && save.album.items;
+    if (al) Object.keys(al).forEach(n => { const nn = ren[n + '|' + al[n].slot] || (n === 'Vérhold-agyar' ? 'Vérhold-medál' : n === 'Csillagszív-lámpás' ? storyFinalName(al[n].slot, h.classId) : n); if (nn !== n) { if (!al[nn]) al[nn] = al[n]; delete al[n]; } });
+    save.itemsV = 4;
   }
   function run(save, action, args, ctx) {
     const fn = A[action];
@@ -575,7 +610,7 @@
   }
 
   root.NYX.game = {
-    run: run, actions: A, createSave: createSave, refreshOffers: refreshOffers, offersKey: offersKey, sanitize: sanitize, summary: summary,
+    run: run, migrateItems: migrateItems, storyFinalName: storyFinalName, actions: A, createSave: createSave, refreshOffers: refreshOffers, offersKey: offersKey, sanitize: sanitize, summary: summary,
     wind: wind, xpBonus: xpBonus, patrolReward: patrolReward, PATROL_HOURS: PATROL_HOURS, budapestDate: budapestDate, validName: validName,
     cleanRig: cleanRig, cleanWorn: cleanWorn, migrateLook: migrateLook, wornLook: wornLook, lookVisible: lookVisible, lookName: lookName, cosmeticList: cosmeticList, unlockCosmetics: unlockCosmetics, DYES: DYES, DYE_COST: DYE_COST, SET_NAME: SET_NAME, lookKey: lookKey, lookPiece: lookPiece, unlockLooks: unlockLooks,
     esc: esc, az: az, fmt: fmt, personal: personal, itemEvent: itemEvent, levelEvents: levelEvents, FREE_DURING_EXPEDITION: FREE_DURING_EXPEDITION

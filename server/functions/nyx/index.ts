@@ -259,7 +259,7 @@ import postgres from 'npm:postgres@3.4.9';
   var ITEM_NAMES = {
     fegyver: { kard: ['kard', 'pallos', 'szablya'], 'íj': ['íj', 'hosszúíj', 'számszeríj'], bot: ['bot', 'pálca', 'varázsbot'],
                jogar: ['jogar', 'szent bot', 'fénypálca'], 'tőr': ['tőr', 'penge', 'kés'], 'lámpás': ['lámpás', 'szellemlámpás', 'idézőkönyv'],
-               lant: ['lant', 'hárfa', 'furulya'], karmok: ['karmok', 'agyarnyaklánc', 'vadonbot'] },
+               lant: ['lant', 'hárfa', 'furulya'], karmok: ['karmok', 'agyarbuzogány', 'vadonbot'] },
     pancel:  ['köpeny', 'mellvért', 'köntös', 'zeke', 'páncéling'],
     sisak:   ['csuklya', 'sisak', 'fejpánt', 'kalap', 'korona'],
     gyuru:   ['gyűrű', 'pecsétgyűrű', 'karika'],
@@ -1211,7 +1211,7 @@ import postgres from 'npm:postgres@3.4.9';
           special: 'eltakarja előled a holdat' },
         win: 'Ozsvát visszaengedi a Csillagszív fényét az égre, és a hold újra telin ragyog. Csilla kilép a sötétből, igazi lányként, nem hangként. Valakinek őriznie kell a katlant. Ozsvát marad. – Hét évig te őrizted. Most én jövök.',
         lose: 'Ozsvát fényt vet köréd a lámpásával, és visszaránt a fekete hold elől. – Most senkit sem hagyok itt. Senkit többé. Szedd össze magad, {nev}, újra megpróbáljuk.',
-        reward: 'Ozsvát rád bízza a lámpását. A Krónika új sora: „A hold túloldalán valaki kopog.”' }
+        reward: 'Ozsvát a lámpása utolsó fényét egy tárgyba zárja, és neked adja. A Krónika új sora: „A hold túloldalán valaki kopog.”' }
     ]
   };
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -3085,7 +3085,7 @@ import postgres from 'npm:postgres@3.4.9';
 
   // tárgyak átállítása az új rendszerre (legendás fokozat, fejlesztés-visszatérítés): egyszer, minden régi mentésen
   function migrateItems(save) {
-    if (!save || !save.hero || save.itemsV >= 2) return;
+    if (!save || !save.hero || save.itemsV >= 2) return migrateItems3(save);
     const h = save.hero, all = D.SLOT_ORDER.map(s => h.equipped[s]).filter(Boolean).concat(h.inventory || []);
     all.forEach(it => {
       // a régi fejlesztések ára (20 × t × (1 + szint/10)) visszamenőleg is számít a visszatérítésbe
@@ -3100,6 +3100,41 @@ import postgres from 'npm:postgres@3.4.9';
     });
     if (h.pityLegend == null) h.pityLegend = 0;
     save.itemsV = 2;
+    migrateItems3(save);
+  }
+  // a Holdkrónika finálé-tárgya: a neve a helyéhez (fegyvernél a kaszt fegyveréhez) illik
+  const FINAL_NOUN = { pancel: 'köpeny', sisak: 'korona', gyuru: 'gyűrű', amulett: 'medál' };
+  function storyFinalName(slot, classId) {
+    const c = D.CLASSES[classId];
+    return 'Csillagszív-' + (slot === 'fegyver' ? ((c && c.weapon) || 'kard') : (FINAL_NOUN[slot] || 'medál'));
+  }
+  // az alakváltó „agyarnyaklánc” fegyvere nyakláncnak látszott: agyarbuzogány lett belőle (név, gyűjtemény, bolt)
+  const OLD_NOUN = /agyarnyaklánc$/i;
+  function renameNoun(n) { return String(n).replace(/Agyarnyaklánc$/, 'Agyarbuzogány').replace(/agyarnyaklánc$/, 'agyarbuzogány'); }
+  function migrateItems3(save) {
+    if (!save || !save.hero || save.itemsV >= 3) return migrateItems4(save);
+    const h = save.hero, fix = it => { if (it && it.slot === 'fegyver' && OLD_NOUN.test(it.name || '')) it.name = renameNoun(it.name); };
+    D.SLOT_ORDER.forEach(s => fix(h.equipped[s])); (h.inventory || []).forEach(fix);
+    if (save.shop && save.shop.items) save.shop.items.forEach(x => fix(x && x.item ? x.item : x));
+    const al = save.album && save.album.items;
+    if (al) Object.keys(al).forEach(n => { if (OLD_NOUN.test(n) && al[n].slot === 'fegyver') { const nn = renameNoun(n); if (!al[nn]) al[nn] = al[n]; delete al[n]; } });
+    save.itemsV = 3;
+    migrateItems4(save);
+  }
+  // v4: a régi „Csillagszív-lámpás” bármelyik helyre eshetett (lámpásként gyűrű, sisak…); a nevet a helyéhez igazítjuk.
+  // A „Vérhold-agyar” amulett pedig fegyvernek hangzott: Vérhold-medál lett.
+  function migrateItems4(save) {
+    if (!save || !save.hero || save.itemsV >= 4) return;
+    const h = save.hero, ren = {};
+    const fix = it => {
+      if (!it) return;
+      if (it.name === 'Csillagszív-lámpás') { const nn = storyFinalName(it.slot, h.classId); if (nn !== it.name) { ren[it.name + '|' + it.slot] = nn; it.name = nn; } }
+      else if (it.name === 'Vérhold-agyar' && it.slot === 'amulett') { ren['Vérhold-agyar|amulett'] = 'Vérhold-medál'; it.name = 'Vérhold-medál'; }
+    };
+    D.SLOT_ORDER.forEach(s => fix(h.equipped[s])); (h.inventory || []).forEach(fix);
+    const al = save.album && save.album.items;
+    if (al) Object.keys(al).forEach(n => { const nn = ren[n + '|' + al[n].slot] || (n === 'Vérhold-agyar' ? 'Vérhold-medál' : n === 'Csillagszív-lámpás' ? storyFinalName(al[n].slot, h.classId) : n); if (nn !== n) { if (!al[nn]) al[nn] = al[n]; delete al[n]; } });
+    save.itemsV = 4;
   }
   function run(save, action, args, ctx) {
     const fn = A[action];
@@ -3125,7 +3160,7 @@ import postgres from 'npm:postgres@3.4.9';
   }
 
   root.NYX.game = {
-    run: run, actions: A, createSave: createSave, refreshOffers: refreshOffers, offersKey: offersKey, sanitize: sanitize, summary: summary,
+    run: run, migrateItems: migrateItems, storyFinalName: storyFinalName, actions: A, createSave: createSave, refreshOffers: refreshOffers, offersKey: offersKey, sanitize: sanitize, summary: summary,
     wind: wind, xpBonus: xpBonus, patrolReward: patrolReward, PATROL_HOURS: PATROL_HOURS, budapestDate: budapestDate, validName: validName,
     cleanRig: cleanRig, cleanWorn: cleanWorn, migrateLook: migrateLook, wornLook: wornLook, lookVisible: lookVisible, lookName: lookName, cosmeticList: cosmeticList, unlockCosmetics: unlockCosmetics, DYES: DYES, DYE_COST: DYE_COST, SET_NAME: SET_NAME, lookKey: lookKey, lookPiece: lookPiece, unlockLooks: unlockLooks,
     esc: esc, az: az, fmt: fmt, personal: personal, itemEvent: itemEvent, levelEvents: levelEvents, FREE_DURING_EXPEDITION: FREE_DURING_EXPEDITION
@@ -3301,8 +3336,8 @@ import postgres from 'npm:postgres@3.4.9';
   // Minden héten más esemény, saját szörnnyel. Naponta 3 harc; győzelem 10 pont, vereség 3.
   // A pontokért járó jutalmak közül a legfelső tárgy csak az adott esemény hetében szerezhető meg.
   const EVENTS = [
-    { id: 'verhold', name: 'Vérhold-vadászat', monster: 'Vérholdas fenevad', region: 'ejkatlan', prize: { name: 'Vérhold-agyar', slot: 'amulett' },
-      line: 'Vörösen kel a hold, és vele ébred a fenevad. Aki sokszor szembeszáll vele, megkapja az agyarát.' },
+    { id: 'verhold', name: 'Vérhold-vadászat', monster: 'Vérholdas fenevad', region: 'ejkatlan', prize: { name: 'Vérhold-medál', slot: 'amulett' },
+      line: 'Vörösen kel a hold, és vele ébred a fenevad. Aki sokszor szembeszáll vele, megkapja az agyarából faragott medált.' },
     { id: 'kodkiraly', name: 'A Ködkirály udvara', monster: 'A Ködkirály lovagja', region: 'kodlap', prize: { name: 'Ködkirály-sisak', slot: 'sisak' },
       line: 'A lápból lovagok lépnek elő. A legkitartóbbak a Ködkirály sisakját nyerhetik el.' },
     { id: 'csillageso', name: 'Csillageső', monster: 'Hulló csillagszellem', region: 'szirtek', prize: { name: 'Csillageső-gyűrű', slot: 'gyuru' },
@@ -3753,7 +3788,9 @@ import postgres from 'npm:postgres@3.4.9';
   const STORY_TRIES = 3;
   const STORY_RARITY = ['zold', 'kek', 'kek', 'kek', 'lila', 'kek', 'lila', 'kek', 'lila', 'legendas'];
   // a finálé jutalma egyedi, névvel ellátott legendás tárgy
-  const STORY_FINAL = { name: 'Csillagszív-lámpás', line: 'Ozsvát lámpása. A fénye már nem lopott: a holdé, és most a tiéd is.' };
+  // a hely a szokásos legendás sorsolásból jön, a név pedig a helyhez (fegyvernél a kaszt fegyveréhez) illik
+  const STORY_FINAL_LINE = 'Ozsvát lámpásának fénye van benne. Már nem lopott fény: a holdé, és most a tiéd is.';
+  const storyFinalName = G.storyFinalName;
   // a főellenfelek ereje (független ellenőrzéssel kalibrálva, minden kaszt átlaga): a fejezet szintjén, reálisan fejlesztett
   // felszereléssel kb. 60–72% győzelmi esély, lemaradt felszereléssel 31–56%; az 1. fejezet barátságos (~78%).
   // a hosszabb, képességdúsabb harcokhoz újramérve: ugyanaz a győzelmi esély (78–94%), mint korábban
@@ -3808,7 +3845,8 @@ import postgres from 'npm:postgres@3.4.9';
       h.silver += rw.silver; out.silver = rw.silver;
       out.dust = E.addDust(save, h, rw.dust, ctx.now);
       // a fejezet tárgya sosem bomlik szét automatikusan (a táska helyét a harc előtt ellenőriztük)
-      const it = E.makeItem(rng, Object.assign({ rarity: rw.item, level: h.level, classId: h.classId, hero: h }, i === storyChapters().length - 1 && rw.item === 'legendas' ? STORY_FINAL : {}));
+      const it = E.makeItem(rng, { rarity: rw.item, level: h.level, classId: h.classId, hero: h });
+      if (i === storyChapters().length - 1 && rw.item === 'legendas') { it.name = storyFinalName(it.slot, h.classId); it.line = STORY_FINAL_LINE; }
       h.inventory.push(it); G.itemEvent(save, it, ctx, `Holdkrónika, ${i + 1}. fejezet`); out.item = it;
       killNote(save, ch.boss.name);
       G.personal(save, ctx.now, `<b>${G.esc(h.name)}</b> befejezte a Holdkrónika ${i + 1}. fejezetét: ${G.esc(ch.title)}.`, 'win');

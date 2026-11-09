@@ -1033,6 +1033,7 @@
   // ---------- fő rajzolás ----------
   let lastModal = null, beforeModal = null;
   function render() {
+    if (S.save && G.migrateItems) { try { G.migrateItems(S.save); } catch (e) { /* régi mentés: a következő műveletnél úgyis átalakul */ } }
     const fa = document.activeElement, sel = fa && fa !== document.body && fa.dataset && fa.dataset.act ? `[data-act="${fa.dataset.act}"]${fa.dataset.v != null ? `[data-v="${CSS.escape(fa.dataset.v)}"]` : ''}` : (fa && fa.id ? '#' + CSS.escape(fa.id) : null);
     // ugyanaz a gomb több helyen is lehet (oldalsáv, fülsáv): a sorszámát is megjegyezzük, hogy pontosan oda térjen vissza a fókusz
     let selIdx = 0;
