@@ -183,7 +183,7 @@
   const WEAPON_NAMES = {
     harcos: ['Kard és pajzs', 'Pallos és kerek pajzs', 'Csatabárd'], vadasz: ['Hosszúíj', 'Vadászíj', 'Számszeríj'],
     magus: ['Csillagbot', 'Holdsarló-bot', 'Varázskönyv'], gyogyito: ['Napjogar', 'Fénylámpás', 'Szent buzogány'],
-    orgyilkos: ['Két tőr', 'Görbe pengék', 'Méregtüske'], idezo: ['Szellemlámpás', 'Rúnakönyv', 'Csontpálca'],
+    orgyilkos: ['Két tőr', 'Görbe pengék', 'Két méregtüske'], idezo: ['Szellemlámpás', 'Rúnakönyv', 'Csontpálca'],
     dalnok: ['Lant', 'Hárfa', 'Furulya'], alakvalto: ['Karmok', 'Vadonbot', 'Agyarkés']
   };
   const OUTFIT_NAMES = {
