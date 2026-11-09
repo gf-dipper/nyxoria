@@ -129,7 +129,19 @@
   // Gombnyomásból indított művelet: zárolás, hibaüzenet, újrarajzolás
   // a hős összes legendás tárgyának azonosítója (a látványos felfedéshez: mi érkezett újonnan)
   function legendIds() { const h = S.save && S.save.hero; if (!h) return {}; const o = {}; D.SLOT_ORDER.map(k => h.equipped[k]).filter(Boolean).concat(h.inventory || []).forEach(it => { if (it.rarity === 'legendas') o[it.id] = it; }); return o; }
+  // könnyű műveletek (taktika, képességsorrend, beállítások): azonnal itt hajtjuk végre, a szerver a háttérben követi
+  // (nem kell megvárni a hálózatot, így nem „akad” a kattintás; ha a szerver mást mond, az ő mentése az érvényes)
+  const OPTIMISTIC = { tactic: 1, skillMove: 1, settings: 1, tip: 1 };
+  let optSeq = 0;
   async function act(action, args, after) {
+    if (ONLINE && OPTIMISTIC[action] && !S.busy && S.save) {
+      try { G.run(S.save, action, args || {}, { now: now(), median: 0 }); } catch (e) { handleError(e); render(); return; }
+      render();
+      const my = ++optSeq;
+      try { const j = await remote(action, args); if (my === optSeq && j.save && !S.busy) { S.save = j.save; render(); } if (after) await after(j.result || {}); }
+      catch (e) { handleError(e); if (ONLINE) refreshState().then(render).catch(() => {}); }
+      return;
+    }
     if (S.busy) return;
     S.busy = true; document.body.classList.add('busy');
     const before = legendIds();
@@ -358,9 +370,7 @@
       ] },
       { name: 'Közösség', items: [
         { id: 'kozosseg', name: ONLINE ? 'Ranglista és krónika' : 'Krónika', ic: ONLINE ? 'ranglista' : 'kronika', sub: ONLINE ? 'Ki hol tart a szerveren' : 'A hősöd története', go: ['screen', 'kozosseg'] },
-        { id: 'discord', name: 'Discord-szerver', ic: 'discord', sub: 'Csevegés, bejelentések, segítség', go: ['info', 'discord'] },
-        SOON.length ? { id: 'keszulo', name: 'Készülő funkciók', ic: 'keszulo', sub: 'Ami hamarosan érkezik', go: ['info', 'keszulo'], badge: null } : null,
-        ONLINE && S.me && S.me.admin ? { id: 'admin', name: 'Admin', ic: 'beallitas', sub: 'Játékosok, bejelentések, világ', go: ['screen', 'admin'] } : null
+        SOON.length ? { id: 'keszulo', name: 'Készülő funkciók', ic: 'keszulo', sub: 'Ami hamarosan érkezik', go: ['info', 'keszulo'], badge: null } : null
       ] }
     ];
     g.forEach(x => { x.items = x.items.filter(Boolean); });
@@ -376,7 +386,7 @@
   }
   function railHtml() {
     return `<nav class="nx-rail col-left" aria-label="Főmenü"><div class="nx-rail-scroll">${menuGroups().map((g, i) => `<section class="nx-grp" aria-labelledby="nxg-${i}"><h2 id="nxg-${i}">${g.name}</h2><ul>${g.items.map(it => navBtn(it)).join('')}</ul></section>`).join('')}</div>
-      <div class="nx-rail-foot"><button class="icon-btn" data-act="info" data-v="sugo" aria-label="Súgó" title="Súgó">${ni('sugo')}<small>Súgó</small></button><button class="icon-btn" data-act="info" data-v="hiba" aria-label="Hiba bejelentése" title="Hiba bejelentése">${ni('hiba')}<small>Hiba</small></button><button class="icon-btn" data-act="screen" data-v="beallitas" aria-label="Beállítások" title="Beállítások"${S.screen === 'beallitas' ? ' aria-current="page"' : ''}>${ni('beallitas')}<small>Beállítás</small></button></div></nav>`;
+      <div class="nx-rail-foot"><button class="icon-btn" data-act="info" data-v="sugo" aria-label="Súgó" title="Súgó">${ni('sugo')}<small>Súgó</small></button><button class="icon-btn" data-act="info" data-v="hiba" aria-label="Hiba bejelentése" title="Hiba bejelentése">${ni('hiba')}<small>Hiba</small></button><button class="icon-btn" data-act="info" data-v="discord" aria-label="Discord-szerver" title="Discord-szerver">${ni('discord')}<small>Discord</small></button><button class="icon-btn" data-act="screen" data-v="beallitas" aria-label="Beállítások" title="Beállítások"${S.screen === 'beallitas' ? ' aria-current="page"' : ''}>${ni('beallitas')}<small>Beállítás</small></button>${ONLINE && S.me && S.me.admin ? `<button class="icon-btn" data-act="screen" data-v="admin" aria-label="Admin" title="Admin"${S.screen === 'admin' ? ' aria-current="page"' : ''}>${ni('karakter')}<small>Admin</small></button>` : ''}</div></nav>`;
   }
   function newTopbar() {
     const h = hero(), t = E.torchState(S.save, now()), need = E.xpNeeded ? E.xpNeeded(h.level) : 0, xpP = need ? Math.min(100, Math.round(h.xp / need * 100)) : 0;
@@ -470,7 +480,7 @@
       <h3 class="nx-h3">A legutóbbi frissítésben</h3><ul class="nx-list">${li('Ösvények, profil, céhháború', 'A 15. szinttől ösvényt választhatsz, a hősöd profilját mások is megnézhetik, a céhek pedig hetente megmérkőznek egymással.')}${li('Új grafika', 'Új hősök, szörnyek és tájak, minden mozdul.')}${li('Új harc', 'A hős és a szörny odamegy egymáshoz, minden képességnek saját látványa van.')}${li('Új karakterkészítő', 'Forgatható hős, rengeteg választás, és a kinézetet bármikor átszabhatod.')}</ul>`,
       `<button class="btn block" data-act="owl-reset">Bubó tippjei elölről</button>${close}`);
     if (kind === 'menu') return wrap('Menü', 'Minden, ami a táborban elérhető', menuGroups().map(g => `<section class="nx-grp sheet"><h3>${g.name}</h3><ul>${g.items.map(it => navBtn(it, true)).join('')}</ul></section>`).join('') +
-      `<section class="nx-grp sheet"><h3>Egyéb</h3><ul>${[{ name: 'Súgó', ic: 'sugo', sub: 'Bubó elmagyarázza', go: ['info', 'sugo'] }, { name: 'Hiba bejelentése', ic: 'hiba', sub: 'Zárt teszt: minden észrevétel számít', go: ['info', 'hiba'] }, { name: 'Beállítások', ic: 'beallitas', sub: 'Harc sebessége, Bubó, fiók', go: ['screen', 'beallitas'] }].map(it => navBtn(it, true)).join('')}</ul></section>`, ' ');
+      `<section class="nx-grp sheet"><h3>Egyéb</h3><ul>${[{ name: 'Súgó', ic: 'sugo', sub: 'Bubó elmagyarázza', go: ['info', 'sugo'] }, { name: 'Hiba bejelentése', ic: 'hiba', sub: 'Zárt teszt: minden észrevétel számít', go: ['info', 'hiba'] }, { name: 'Discord-szerver', ic: 'discord', sub: 'Csevegés, bejelentések, segítség', go: ['info', 'discord'] }, { name: 'Beállítások', ic: 'beallitas', sub: 'Harc sebessége, Bubó, fiók', go: ['screen', 'beallitas'] }].concat(ONLINE && S.me && S.me.admin ? [{ name: 'Admin', ic: 'karakter', sub: 'Játékosok, bejelentések, világ', go: ['screen', 'admin'] }] : []).map(it => navBtn(it, true)).join('')}</ul></section>`, ' ');
     return '';
   }
   // címképernyő: munkamenetenként egyszer, a játék indulásakor
@@ -821,7 +831,10 @@
     if (sel) { const all = app.querySelectorAll(sel); for (let i = 0; i < all.length; i++) if (all[i] === fa) { selIdx = i; break; } }
     // a legendás tárgy felfedése: a harc lejátszása után, ha éppen nincs más ablak nyitva
     if (S.legendQueue && S.legendQueue.length && !S.combat && !S.modal) S.modal = { type: 'legend', item: S.legendQueue.shift() };
+    // a menü (és a belső görgethető listák) görgetése ne ugorjon vissza a tetejére újrarajzoláskor
+    const keep = {}; ['.nx-rail-scroll', '.nx-admlist', '.c-body', '.chron'].forEach(q => { const e = app.querySelector(q); if (e && e.scrollTop) keep[q] = e.scrollTop; });
     renderInner();
+    Object.keys(keep).forEach(q => { const e = app.querySelector(q); if (e) e.scrollTop = keep[q]; });
     const modal = app.querySelector('.modal');
     if (modal && S.modal !== lastModal) { beforeModal = sel ? { sel: sel, idx: selIdx } : null; const f = modal.querySelector('button, [href], input, select, textarea'); if (f) f.focus({ preventScroll: true }); }
     else if (!modal && lastModal && beforeModal) { const all = app.querySelectorAll(beforeModal.sel), e = all[beforeModal.idx] || all[0]; if (e) e.focus({ preventScroll: true }); }

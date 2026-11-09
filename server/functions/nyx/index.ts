@@ -858,12 +858,17 @@ import postgres from 'npm:postgres@3.4.9';
       var guards = region.guards.filter(function (g) { return !used[g]; });
       var guard = pick(rng, guards.length ? guards : region.guards); used[guard] = 1;
       var mon = monsterFighter(Lm, { power: moon.power, name: guard });
-      var chance = winChance(heroF, mon, hero.tactic, 500, newSeed(rng));
+      var chance = winChance(heroF, mon, hero.tactic, 500, 4242); // rögzített próbaharcok: ugyanarra a helyzetre mindig ugyanazt az esélyt mutatja
       return { diff: d, lm: Lm, level: mon.level, region: region.id, guard: guard, moon: moonId || 'ujhold',
                chance: chance, seed: newSeed(rng), rewards: expeditionRewardsPreview(hero, d, Lm, moonId) };
     });
   }
 
+  // taktikaváltáskor nem jön új kaland, csak az esélyek számolódnak újra ugyanazokra az őrzőkre
+  function offerChance(hero, o) {
+    var moon = MOONS[o.moon] || MOONS.ujhold;
+    return winChance(fighterFromHero(hero), monsterFighter(o.lm, { power: moon.power, name: o.guard }), hero.tactic, 500, 4242);
+  }
   function expeditionRewardsPreview(hero, d, Lm, moonId) {
     var D2 = DIFF[d];
     var mo = MOONS[moonId || 'ujhold'] || MOONS.ujhold;
@@ -1222,7 +1227,7 @@ import postgres from 'npm:postgres@3.4.9';
     itemStats: itemStats, makeItem: makeItem, affixText: affixText, salvageValue: salvageValue, sellValue: sellValue, upgradeCost: upgradeCost,
     newHero: newHero, unlockedSkills: unlockedSkills, nextSkillUnlock: nextSkillUnlock, heroStats: heroStats, power: power, powerRaw: powerRaw, lootLevel: lootLevel,
     fighterFromHero: fighterFromHero, monsterFighter: monsterFighter, simulateFight: simulateFight, winChance: winChance,
-    findMonsterLevel: findMonsterLevel, regionFor: regionFor, makeOffers: makeOffers, offerTarget: offerTarget,
+    findMonsterLevel: findMonsterLevel, regionFor: regionFor, makeOffers: makeOffers, offerTarget: offerTarget, offerChance: offerChance,
     startExpedition: startExpedition, resolveCard: resolveCard, guardPreview: guardPreview, fightGuard: fightGuard,
     finishExpedition: finishExpedition, applyChoice: applyChoice, lossAdvice: lossAdvice,
     torchState: torchState, spendTorch: spendTorch, dustRoom: dustRoom, dustCap: dustCap, weekOf: weekOf, addDust: addDust, addXp: addXp,
@@ -1325,14 +1330,17 @@ import postgres from 'npm:postgres@3.4.9';
   function offersKey(save) {
     const h = save.hero;
     const eq = D.SLOT_ORDER.map(s => h.equipped[s] ? h.equipped[s].id + ':' + (h.equipped[s].plus || 0) + ':' + (h.equipped[s].rerolls || 0) : '').join(',');
-    return [h.level, h.tactic, h.loadout.join('.'), save.settings.moon, eq, h.path == null ? '' : h.path].join('|');
+    return [h.level, h.loadout.join('.'), save.settings.moon, eq, h.path == null ? '' : h.path].join('|'); // a taktika nem hoz új kalandot, csak az esélyt számolja újra
   }
   function refreshOffers(save) {
     if (save.expedition) return;
     const key = offersKey(save);
     if (!save.offers || save.offersKey !== key) {
       save.offers = E.makeOffers(save.hero, save.settings.moon, E.newSeed());
-      save.offersKey = key;
+      save.offersKey = key; save.offersTactic = save.hero.tactic;
+    } else if (save.offersTactic !== save.hero.tactic) {
+      save.offers.forEach(o => { o.chance = E.offerChance(save.hero, o); });
+      save.offersTactic = save.hero.tactic;
     }
   }
 
