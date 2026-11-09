@@ -154,7 +154,7 @@
   }
   async function refreshState() {
     const j = await remote('state');
-    S.me = j.me; S.world = j.world; S.boss = j.boss; S.guild = j.guild || null; S.heroes = j.heroes || []; S.bossMine = j.bossMine || []; S.titles = j.titles || []; S.chronicle = j.chronicle || [];
+    S.me = j.me; S.world = j.world; S.boss = j.boss; S.guild = j.guild || null; S.heroes = j.heroes || []; S.notice = j.notice || null; S.bossMine = j.bossMine || []; S.titles = j.titles || []; S.chronicle = j.chronicle || [];
     if (!S.combat && !S.busy) S.save = j.save;
     return j;
   }
@@ -359,7 +359,8 @@
       { name: 'Közösség', items: [
         { id: 'kozosseg', name: ONLINE ? 'Ranglista és krónika' : 'Krónika', ic: ONLINE ? 'ranglista' : 'kronika', sub: ONLINE ? 'Ki hol tart a szerveren' : 'A hősöd története', go: ['screen', 'kozosseg'] },
         { id: 'discord', name: 'Discord-szerver', ic: 'discord', sub: 'Csevegés, bejelentések, segítség', go: ['info', 'discord'] },
-        SOON.length ? { id: 'keszulo', name: 'Készülő funkciók', ic: 'keszulo', sub: 'Ami hamarosan érkezik', go: ['info', 'keszulo'], badge: null } : null
+        SOON.length ? { id: 'keszulo', name: 'Készülő funkciók', ic: 'keszulo', sub: 'Ami hamarosan érkezik', go: ['info', 'keszulo'], badge: null } : null,
+        ONLINE && S.me && S.me.admin ? { id: 'admin', name: 'Admin', ic: 'beallitas', sub: 'Játékosok, bejelentések, világ', go: ['screen', 'admin'] } : null
       ] }
     ];
     g.forEach(x => { x.items = x.items.filter(Boolean); });
@@ -545,6 +546,81 @@
         ${p.motto ? `<p class="small muted">„${esc(p.motto)}”</p>` : ''}${(p.achTitles || []).concat(p.titles || []).length ? `<p class="small" style="color:var(--fakla-300)">${(p.achTitles || []).concat(p.titles || []).map(esc).join(' · ')}</p>` : ''}
         <div class="nx-ch-stats" style="margin-top:10px">${stat('Harcerő', fmt(p.power))}${stat('Győzelem', fmt(p.wins))}${stat('Aréna', fmt(p.arena))}${stat('Holdtorony', p.towerMax ? p.towerMax + '. emelet' : '–')}${stat('Legendás tárgy', p.legendaries || 0)}${stat('Mitikus tárgy', p.mythics)}${stat('Trófea', p.trophies + ' / ' + p.trophyMax)}${stat('Album', p.album + ' lap')}</div>
         ${eq ? `<div class="nx-prof-eq">${eq}</div>` : ''}${ach ? `<ul class="nx-pach">${ach}</ul>` : ''}</div></div>`;
+  }
+  // ---------- admin ----------
+  function adminCall(op, args, done) {
+    remote('admin', Object.assign({ op: op }, args || {})).then(r => { if (done) done(r); render(); }).catch(e => { toast(e.message || 'Hiba történt.'); render(); });
+  }
+  const ago = t => { if (!t) return '–'; const m = Math.round((Date.now() - t) / 60000); return m < 60 ? `${Math.max(1, m)} perce` : m < 1440 ? `${Math.round(m / 60)} órája` : `${Math.round(m / 1440)} napja`; };
+  const ADMIN_ACT = { ban: 'kitiltás', unban: 'visszaengedés', grant: 'ajándék / levonás', rename: 'átnevezés', notice: 'bejelentés', giftAll: 'ajándék mindenkinek', bossReset: 'heti szörny újraindítása', guildRename: 'céh átnevezése', guildDisband: 'céh feloszlatása', setAdmin: 'admin jog' };
+  function renderAdmin() {
+    const A2 = S.admin = S.admin || { tab: 'attekintes' }, tab = A2.tab;
+    const tabs = [['attekintes', 'Áttekintés'], ['jatekosok', 'Játékosok'], ['kozles', 'Bejelentés és ajándék'], ['vilag', 'Világ']];
+    if (tab === 'attekintes' && !A2.stats && !A2.loading1) { A2.loading1 = true; adminCall('stats', {}, r => { A2.stats = r; A2.loading1 = false; }); adminCall('world', {}, r => { A2.world = r; }); }
+    if (tab === 'vilag' && !A2.world && !A2.loading2) { A2.loading2 = true; adminCall('world', {}, r => { A2.world = r; A2.loading2 = false; }); }
+    if (tab === 'jatekosok' && !A2.players && !A2.loading3) { A2.loading3 = true; adminCall('players', { q: A2.q || '' }, r => { A2.players = r.players; A2.loading3 = false; }); }
+    const head = `<div class="row between wrap" style="gap:8px"><h1>Admin</h1><button class="btn sm" data-act="admin-refresh">Frissítés</button></div>
+      <div class="seg nx-admtabs" role="tablist" style="margin-top:10px">${tabs.map(([k, n]) => `<button role="tab" aria-selected="${tab === k}" data-act="admin-tab" data-v="${k}">${n}</button>`).join('')}</div>`;
+    let body = '<p class="muted" style="margin-top:12px">Betöltés…</p>';
+    const logList = (rows, mapper) => rows && rows.length ? `<div class="chron" style="margin-top:8px;max-height:320px">${rows.map(mapper).join('')}</div>` : '<p class="small muted" style="margin-top:6px">Még nincs bejegyzés.</p>';
+    if (tab === 'attekintes' && A2.stats) {
+      const s = A2.stats.stats, w = A2.world;
+      body = `<div class="nx-ch-stats" style="margin-top:12px">${[['Játékos', s.players], ['Hős', s.heroes], ['Ma aktív', s.active1], ['14 napon belül', s.active14], ['Kitiltva', s.banned], ['Legmagasabb szint', s.maxlevel]].map(([l, v]) => `<span><small>${l}</small><b>${fmt(v)}</b></span>`).join('')}</div>
+        ${w && w.flagged.length ? `<h3 class="nx-h3" style="margin-top:16px">Gyanús aktivitás</h3><ul class="nx-glog">${w.flagged.map(f => `<li><button class="nx-lnk" data-act="admin-open" data-v="${f.uid}">${esc(f.hero || f.discord || '?')}</button> <span class="small muted">(${esc(f.discord || '')})</span> – ${f.why.map(esc).join(', ')}</li>`).join('')}</ul>` : ''}
+        <h3 class="nx-h3" style="margin-top:16px">Legutóbbi játékos-műveletek</h3>${logList(A2.stats.recent, r => `<div class="chron-item"><span class="dot"></span><div><time>${new Date(r.at).toLocaleString('hu-HU')}</time>${esc(r.name || '?')}: ${esc(r.action)}</div></div>`)}
+        ${w ? `<h3 class="nx-h3" style="margin-top:16px">Admin-napló</h3>${logList(w.adminLog, a => `<div class="chron-item"><span class="dot"></span><div><time>${new Date(a.at).toLocaleString('hu-HU')}</time><b>${esc(a.admin || '?')}</b>: ${esc(ADMIN_ACT[a.action] || a.action)}${a.target ? ` – ${esc(a.target)}` : ''} <span class="small muted">${esc(JSON.stringify(a.info || {}))}</span></div></div>`)}` : ''}`;
+    }
+    if (tab === 'jatekosok') {
+      const list = A2.players ? (A2.players.length ? `<div class="nx-admlist">${A2.players.map(p => `<button class="nx-admrow${A2.sel === p.uid ? ' on' : ''}" data-act="admin-open" data-v="${p.uid}">
+          <b>${esc(p.hero || '(nincs hőse)')}</b><span class="small muted">${esc(p.discord || '')}${p.slots ? ` · +${p.slots} hős` : ''}</span>
+          <span class="small">${p.level ? `${p.level}. szint · ${D.CLASSES[p.classId] ? D.CLASSES[p.classId].name : ''}` : ''}${p.guild ? ` · ${esc(p.guild)}` : ''}</span>
+          <span class="small muted">${p.banned ? '<b style="color:var(--veszely-400)">KITILTVA</b> · ' : ''}${p.admin ? 'admin · ' : ''}aktív: ${ago(p.active)}</span></button>`).join('')}</div>` : '<p class="muted" style="margin-top:10px">Nincs találat.</p>') : '<p class="muted" style="margin-top:10px">Betöltés…</p>';
+      body = `<div class="row" style="gap:8px;margin-top:12px"><input class="input" id="adm-q" placeholder="Keresés: Discord-név vagy hősnév" value="${esc(A2.q || '')}" style="height:40px"><button class="btn sm" data-act="admin-search">Keresés</button></div>
+        <div class="nx-adm2">${list}<div>${A2.detail ? adminDetail(A2.detail) : '<p class="small muted" style="margin-top:12px">Válassz egy játékost a listából.</p>'}</div></div>`;
+    }
+    if (tab === 'kozles') {
+      body = `<div class="nx-admbox"><h3>Bejelentés</h3><p class="small muted">Belépéskor minden játékos látja egy sávban, amíg el nem tünteti. Üresen elküldve törli a mostanit.</p>
+          <textarea class="input" id="adm-notice" maxlength="400" style="height:90px;padding:10px;margin-top:8px" placeholder="Pl.: Ma este 20 órakor dupla tapasztalat!"></textarea>
+          <label class="row small" style="gap:8px;margin-top:8px"><input type="checkbox" id="adm-notice-chr" checked> A közös krónikába is kerüljön</label>
+          <label class="row small" style="gap:8px;margin-top:4px"><input type="checkbox" id="adm-notice-dc"> Discordra is menjen ki (ha be van állítva a webhook)</label>
+          <button class="btn primary sm" style="margin-top:10px" data-act="admin-notice">Bejelentés elküldése</button></div>
+        <div class="nx-admbox"><h3>Ajándék mindenkinek</h3><p class="small muted">Minden (nem kitiltott) játékos a következő belépésekor kapja meg, a krónikájában az indokkal együtt.</p>
+          <div class="row wrap" style="gap:8px;margin-top:8px"><label class="small">Holdezüst <input class="input" id="adm-g-s" type="number" min="0" value="0" style="height:38px;width:120px"></label><label class="small">Csillagpor <input class="input" id="adm-g-d" type="number" min="0" value="0" style="height:38px;width:120px"></label></div>
+          <input class="input" id="adm-g-n" maxlength="200" placeholder="Indok, pl.: Bocsánat a tegnapi leállásért!" style="height:38px;margin-top:8px">
+          <button class="btn fakla sm" style="margin-top:10px" data-act="admin-giftall">Ajándék küldése mindenkinek</button></div>`;
+    }
+    if (tab === 'vilag' && A2.world) {
+      const w = A2.world, b = w.boss;
+      body = `<div class="nx-admbox"><h3>Heti szörny</h3>${b ? `<p><b>${esc(b.name)}</b> (${b.level}. szint) · ${fmt(b.hp)} / ${fmt(b.maxHp)} életerő · ${b.participants} résztvevő${b.killed ? ' · <b>legyőzve</b>' : ''}</p><p class="small muted">Véget ér: ${new Date(b.ends).toLocaleString('hu-HU')}</p>
+          <button class="btn danger sm" style="margin-top:8px" data-act="admin-bossreset">Újraindítás (teljes életerő, a sebzések és ládák törlődnek)</button>` : '<p class="muted">Most nincs heti szörny.</p>'}</div>
+        <div class="nx-admbox"><h3>Céhek (${w.guilds.length})</h3>${w.guilds.length ? `<ul class="nx-glog">${w.guilds.map(g => `<li><span><b>${esc(g.name)}</b> <span class="nx-tag">${esc(g.tag)}</span> · ${g.members} tag${g.stars ? ` · ${g.stars}★` : ''}</span><span class="row" style="gap:6px"><button class="btn sm ghost" data-act="admin-grename" data-v="${g.id}">Átnevezés</button><button class="btn sm danger" data-act="admin-gdisband" data-v="${g.id}">Feloszlatás</button></span></li>`).join('')}</ul>` : '<p class="muted">Még nincs céh.</p>'}</div>
+        <div class="nx-admbox"><h3>Gyanús aktivitás</h3>${w.flagged.length ? `<ul class="nx-glog">${w.flagged.map(f => `<li><button class="nx-lnk" data-act="admin-open" data-v="${f.uid}">${esc(f.hero || '?')}</button> – ${f.why.map(esc).join(', ')}</li>`).join('')}</ul>` : '<p class="small muted">Most nincs semmi gyanús (24 óra alatt 600-nál több művelet, vagy naponta 7-nél több szint).</p>'}</div>`;
+    }
+    return `<section class="panel nx-admin">${head}${body}</section>`;
+  }
+  function adminDetail(d) {
+    const p = d.player, h = d.hero;
+    const rar = D.RARITY_ORDER.map(r => `<option value="${r}">${D.RARITIES[r].name}</option>`).join(''), slots = D.SLOT_ORDER.map(s => `<option value="${s}">${D.SLOTS[s].name}</option>`).join('');
+    return `<div class="nx-admdetail">
+      <div class="row" style="gap:12px;align-items:center">${h ? `<div class="portrait" style="width:72px;height:84px;margin:0">${A.heroSvg(h)}</div>` : ''}<div style="min-width:0"><h2>${esc(h ? h.name : '(nincs hőse)')}</h2>
+        <p class="small muted">Discord: ${esc(p.discord || '')} · azonosító: ${esc(p.discordId || '')} · csatlakozott: ${new Date(p.joined).toLocaleDateString('hu-HU')}</p>
+        <p class="small">${p.banned ? `<b style="color:var(--veszely-400)">KITILTVA</b>${p.banReason ? ` (${esc(p.banReason)})` : ''} · ` : ''}${p.admin ? 'admin · ' : ''}${d.guild ? `céh: ${esc(d.guild.name)} [${esc(d.guild.tag)}]` : 'nincs céhe'}</p></div></div>
+      ${h ? `<div class="nx-ch-stats" style="margin-top:10px">${[['Szint', h.level], ['Harcerő', fmt(h.power)], ['Holdezüst', fmt(h.silver)], ['Csillagpor', fmt(h.dust)], ['Fáklya', h.torches], ['Aréna', h.arena], ['Győzelem', fmt(h.stats.wins || 0)], ['Legendás', h.stats.legendaries || 0]].map(([l, v]) => `<span><small>${l}</small><b>${v}</b></span>`).join('')}</div>
+        <p class="small muted" style="margin-top:6px">${D.CLASSES[h.classId] ? D.CLASSES[h.classId].name : ''} · aktív: ${ago(h.active)} · táska: ${h.inventory} tárgy · műveletek ma: ${d.counts.d1}, összesen: ${d.counts.total}</p>
+        <div class="nx-prof-eq">${h.equipped.map(it => `<span title="${esc(it.name)}">${itemIcon(it)}</span>`).join('')}</div>` : ''}
+      ${d.slots.length ? `<p class="small" style="margin-top:8px">Pihenő hősei: ${d.slots.map(s => `${esc(s.name)} (${s.level}.)`).join(', ')}</p>` : ''}
+      <div class="nx-admbox"><h3>Ajándék vagy levonás</h3><p class="small muted">Negatív szám levon. A játékos krónikájában megjelenik.</p>
+        <div class="row wrap" style="gap:8px;margin-top:6px"><label class="small">Holdezüst <input class="input" id="adm-s" type="number" value="0" style="height:36px;width:110px"></label><label class="small">Csillagpor <input class="input" id="adm-d" type="number" value="0" style="height:36px;width:110px"></label><label class="small">Fáklya <input class="input" id="adm-t" type="number" value="0" style="height:36px;width:80px"></label></div>
+        <div class="row wrap" style="gap:8px;margin-top:6px"><label class="small">Tárgy <select class="input" id="adm-ir" style="height:36px"><option value="">nincs</option>${rar}</select></label><label class="small">Hely <select class="input" id="adm-is" style="height:36px"><option value="">véletlen</option>${slots}</select></label></div>
+        <input class="input" id="adm-n" maxlength="200" placeholder="Megjegyzés (a játékos is látja)" style="height:36px;margin-top:6px">
+        <button class="btn fakla sm" style="margin-top:8px" data-act="admin-grant" data-v="${p.uid}">Küldés</button></div>
+      <div class="nx-admbox"><h3>Kezelés</h3>
+        <div class="row wrap" style="gap:8px"><input class="input" id="adm-rn" placeholder="Új hősnév" style="height:36px;max-width:200px"><button class="btn sm" data-act="admin-rename" data-v="${p.uid}">Átnevezés</button></div>
+        <div class="row wrap" style="gap:8px;margin-top:8px">${p.banned ? `<button class="btn sm" data-act="admin-unban" data-v="${p.uid}">Visszaengedés</button>` : `<input class="input" id="adm-br" placeholder="Kitiltás indoka (a játékos látja)" style="height:36px;max-width:260px"><button class="btn sm danger" data-act="admin-ban" data-v="${p.uid}">Kitiltás</button>`}
+          <button class="btn sm ghost" data-act="admin-setadmin" data-v="${p.uid}" data-on="${p.admin ? '0' : '1'}">${p.admin ? 'Admin jog elvétele' : 'Admin jog adása'}</button></div></div>
+      <h3 class="nx-h3" style="margin-top:14px">Legutóbbi műveletei</h3>${d.actions.length ? `<div class="chron" style="max-height:260px">${d.actions.map(a => `<div class="chron-item"><span class="dot"></span><div><time>${new Date(a.at).toLocaleString('hu-HU')}</time>${esc(a.action)} <span class="small muted">${esc(JSON.stringify(a.info || {})).slice(0, 160)}</span></div></div>`).join('')}</div>` : '<p class="small muted">Még nincs.</p>'}
+      ${d.adminLog.length ? `<h3 class="nx-h3" style="margin-top:14px">Admin-műveletek vele</h3><div class="chron" style="max-height:200px">${d.adminLog.map(a => `<div class="chron-item"><span class="dot"></span><div><time>${new Date(a.at).toLocaleString('hu-HU')}</time>${esc(ADMIN_ACT[a.action] || a.action)} <span class="small muted">${esc(JSON.stringify(a.info || {}))}</span></div></div>`).join('')}</div>` : ''}
+    </div>`;
   }
   function renderHeroes() {
     const h = hero(), list = heroList(), free = MAX_HEROES - 1 - list.length;
@@ -799,7 +875,10 @@
     else if (S.screen === 'ceh') main = renderGuild();
     else if (S.screen === 'profil' && X) main = renderProfile();
     else if (S.screen === 'hosok') main = renderHeroes();
+    else if (S.screen === 'admin' && ONLINE && S.me && S.me.admin) main = renderAdmin();
     else main = renderSettings();
+    if (S.notice && !S.combat && S.screen !== 'admin' && (() => { try { return localStorage.getItem('nyx-notice') !== String(S.notice.at); } catch (e) { return true; } })())
+      main = `<div class="nx-notice" role="status"><span aria-hidden="true">📣</span><div><b>Bejelentés</b><p>${esc(S.notice.text)}</p></div><button class="btn sm ghost" data-act="notice-ok">Rendben</button></div>` + main;
     const showLeft = S.screen === 'hos' && !S.combat;
     if (NEW_SHELL) {
       // Hős: balra a hőskártya, mellette a név, a jellemzők és a fáklyák (így nincs üres folt és a név sem kétszer szerepel)
@@ -1403,11 +1482,7 @@
     if (ONLINE) {
       account = `<div class="row between wrap"><div><b>Fiók</b><p class="small muted">Discordon belépve: ${esc(S.me ? S.me.name : '')}. A hősöd a közös szerveren van elmentve.</p></div><button class="btn sm" data-act="logout">Kilépés</button></div>`;
       if (S.me && S.me.admin) {
-        const a = S.adminStats;
-        admin = `<hr class="divider"><div><div class="row between"><b>Kezelőpult</b><button class="btn sm" data-act="admin-stats">Frissítés</button></div>
-          ${a ? `<div class="row wrap" style="gap:6px;margin-top:8px"><span class="badge">${a.stats.players} játékos</span><span class="badge">${a.stats.heroes} hős</span><span class="badge">Ma aktív: ${a.stats.active1}</span><span class="badge">14 napon belül: ${a.stats.active14}</span><span class="badge">Össz. Holdezüst: ${fmt(a.stats.silver)}</span><span class="badge">Legmagasabb szint: ${a.stats.maxlevel}</span><span class="badge">Felfüggesztve: ${a.stats.banned}</span></div>
-          <div class="chron" style="margin-top:10px;max-height:240px">${a.recent.map(r => `<div class="chron-item"><span class="dot"></span><div><time>${new Date(r.at).toLocaleString('hu-HU')}</time>${esc(r.name || '?')}: ${esc(r.action)} ${esc(JSON.stringify(r.info || {}))}</div></div>`).join('')}</div>` : '<p class="small muted">Nyomd meg a Frissítést.</p>'}
-          <div class="row" style="margin-top:10px;gap:8px"><input class="input" id="admin-name" placeholder="Hős neve" style="height:38px;font-size:13px"><button class="btn danger sm" data-act="admin-ban" data-v="ban">Felfüggesztés</button><button class="btn sm" data-act="admin-ban" data-v="unban">Visszaengedés</button></div></div>`;
+        admin = `<hr class="divider"><div class="row between wrap"><div><b>Admin</b><p class="small muted">Játékosok kezelése, bejelentések, ajándékok, heti szörny és céhek.</p></div><button class="btn sm" data-act="screen" data-v="admin">Admin megnyitása</button></div>`;
       }
     } else {
       account = `<div><b>Gyakorló mód</b><p class="small muted">Gyakorló módban játszol: a hőseid csak ebben a böngészőben vannak meg. Másik gépre a lenti mentéssel viheted át (mindig a most játszott hőst).</p></div>`;
@@ -1666,6 +1741,24 @@
     'hero-del-ask'(v) { S.delSlot = +v; render(); },
     'hero-del-no'() { S.delSlot = null; render(); },
     'hero-delete'(v) { const inp = el('del-name'), x = heroList().filter(y => y.slot === +v)[0]; if (!x || !inp || inp.value.trim().toLowerCase() !== x.name.toLowerCase()) { toast('A törléshez írd be pontosan a hős nevét.'); return; } act('heroDelete', { slot: +v, confirm: inp.value.trim() }, async () => { S.delSlot = null; if (ONLINE) await refreshState(); toast(`${x.name} törölve.`); }); },
+    'notice-ok'() { try { localStorage.setItem('nyx-notice', String(S.notice.at)); } catch (e) { /* privát mód */ } render(); },
+    'admin-tab'(v) { S.admin.tab = v; render(); },
+    'admin-refresh'() { const t = S.admin ? S.admin.tab : 'attekintes', sel = S.admin && S.admin.sel; S.admin = { tab: t, q: S.admin && S.admin.q, sel: sel }; if (sel) actions['admin-open'](sel); else render(); },
+    'admin-search'() { S.admin.q = (el('adm-q') || {}).value || ''; S.admin.players = null; render(); },
+    'admin-open'(v) { const A2 = S.admin; A2.sel = v; if (A2.tab !== 'jatekosok') { A2.tab = 'jatekosok'; } adminCall('player', { uid: v }, r => { A2.detail = r; }); render(); },
+    'admin-grant'(v) { const val = id => Number((el(id) || {}).value) || 0, ir = (el('adm-ir') || {}).value, is = (el('adm-is') || {}).value;
+      const a = { uid: v, silver: val('adm-s'), dust: val('adm-d'), torches: val('adm-t'), item: ir ? { rarity: ir, slot: is || null } : null, note: (el('adm-n') || {}).value || '' };
+      if (!a.silver && !a.dust && !a.torches && !a.item) { toast('Nincs mit küldeni.'); return; }
+      if (!confirm('Biztosan elküldöd?')) return; adminCall('grant', a, r => { toast(`Elküldve${r.item ? ': ' + r.item : ''}.`); actions['admin-open'](v); }); },
+    'admin-rename'(v) { const n = ((el('adm-rn') || {}).value || '').trim(); if (!n) return; adminCall('rename', { uid: v, newName: n }, () => { toast('Átnevezve.'); S.admin.players = null; actions['admin-open'](v); }); },
+    'admin-ban'(v) { const r = ((el('adm-br') || {}).value || '').trim(); if (!confirm('Biztosan kitiltod?')) return; adminCall('ban', { uid: v, reason: r }, () => { toast('Kitiltva.'); S.admin.players = null; actions['admin-open'](v); }); },
+    'admin-unban'(v) { adminCall('unban', { uid: v }, () => { toast('Visszaengedve.'); S.admin.players = null; actions['admin-open'](v); }); },
+    'admin-setadmin'(v, e) { const on = (e && e.dataset && e.dataset.on) === '1' || (document.querySelector(`[data-act="admin-setadmin"][data-v="${v}"]`) || {}).dataset.on === '1'; if (!confirm(on ? 'Admin jogot adsz neki?' : 'Elveszed az admin jogát?')) return; adminCall('setAdmin', { uid: v, on: on }, () => { toast('Kész.'); actions['admin-open'](v); }); },
+    'admin-notice'() { const t = ((el('adm-notice') || {}).value || '').trim(); adminCall('notice', { text: t, chronicle: !!(el('adm-notice-chr') || {}).checked, discord: !!(el('adm-notice-dc') || {}).checked }, () => toast(t ? 'Bejelentés elküldve.' : 'Bejelentés törölve.')); },
+    'admin-giftall'() { const s = Number((el('adm-g-s') || {}).value) || 0, d = Number((el('adm-g-d') || {}).value) || 0, n = (el('adm-g-n') || {}).value || ''; if (!s && !d) { toast('Adj meg Holdezüstöt vagy Csillagport.'); return; } if (!confirm(`Minden játékos kap: ${s} Holdezüst, ${d} Csillagpor. Biztos?`)) return; adminCall('giftAll', { silver: s, dust: d, note: n }, r => toast(`Elküldve ${r.count} játékosnak.`)); },
+    'admin-bossreset'() { if (!confirm('Biztosan újraindítod a heti szörnyet? Minden sebzés és láda törlődik.')) return; adminCall('bossReset', {}, () => { toast('Újraindítva.'); S.admin.world = null; }); },
+    'admin-grename'(v) { const n = prompt('Új céhnév (3–24 karakter):'); if (!n) return; const t = prompt('Új céhjel (2–4 karakter):'); if (!t) return; adminCall('guildRename', { gid: +v, newName: n, tag: t }, () => { toast('Átnevezve.'); S.admin.world = null; }); },
+    'admin-gdisband'(v) { if (!confirm('Biztosan feloszlatod ezt a céhet? Nem vonható vissza.')) return; adminCall('guildDisband', { gid: +v }, () => { toast('Feloszlatva.'); S.admin.world = null; }); },
     'legend-equip'(v) { S.modal = null; act('equip', { id: v }, () => toast('Felvetted. Jól áll!')); },
     'guild-war-claim'() { guildCall('guildWarClaim', {}, r => `Céhháborús jutalom: +${fmt(r.silver)} Holdezüst · +${fmt(r.dust)} Csillagpor`); },
     'path-pick'(v) { const p = D.PATHS[hero().classId][+v]; if (S.pathArmed !== v || Date.now() - (S.pathArmedAt || 0) > 8000) { S.pathArmed = v; S.pathArmedAt = Date.now(); toast(hero().path != null ? `Biztosan a(z) ${p.name} ösvényre váltasz? ${fmt(X.pathCost(hero()))} Holdezüstbe kerül. Kattints újra.` : `${p.name}: biztos? A későbbi váltás Holdezüstbe kerül. Kattints újra.`); return; } S.pathArmed = null; act('pathPick', { i: +v }, () => toast(`Új ösvényen jársz: ${p.name}`)); },

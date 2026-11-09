@@ -875,3 +875,20 @@ svg.nxi-misc { width: 1.3em; height: 1.3em; flex: none; display: inline-block; v
   .creator-shell .nxc .nxc-creator { --stage-h: clamp(440px, calc(100dvh - 160px), 880px); }
   .layout.wide .nxc .nxc-creator { --stage-h: clamp(440px, calc(100dvh - 200px), 880px); }
 }
+/* admin */
+.nx-admtabs { display: flex; flex-wrap: wrap; gap: 4px; }
+.nx-admtabs button[aria-selected="true"] { background: var(--hold-300); color: #141a45; }
+.nx-adm2 { display: grid; grid-template-columns: minmax(240px, 340px) minmax(0, 1fr); gap: 14px; margin-top: 12px; align-items: start; }
+.nx-admlist { display: flex; flex-direction: column; gap: 6px; max-height: 70vh; overflow-y: auto; }
+.nx-admrow { display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 8px 10px; border-radius: 12px; background: var(--ej-900); border: 1px solid var(--ej-600); color: inherit; font: inherit; cursor: pointer; }
+.nx-admrow.on { border-color: var(--hold-300); box-shadow: 0 0 0 1px var(--hold-300) inset; }
+.nx-admbox { margin-top: 12px; padding: 12px; border-radius: 14px; background: var(--ej-900); border: 1px solid var(--ej-600); }
+.nx-admbox h3 { font-size: 16px; margin-bottom: 4px; }
+.nx-admbox label.small { display: inline-flex; flex-direction: column; gap: 4px; }
+.nx-admdetail h2 { font-size: 22px; }
+.nx-admin .nx-glog li { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.nx-notice { display: flex; gap: 12px; align-items: center; padding: 12px 14px; margin-bottom: 12px; border-radius: 14px; background: linear-gradient(90deg, rgba(233, 196, 120, .16), var(--ej-900)); border: 1px solid rgba(233, 196, 120, .45); }
+.nx-notice > span { font-size: 22px; }
+.nx-notice div { flex: 1 1 auto; min-width: 0; }
+.nx-notice p { margin-top: 2px; font-size: 14px; }
+@media (max-width: 760px) { .nx-adm2 { grid-template-columns: minmax(0, 1fr); } .nx-admlist { max-height: 40vh; } }

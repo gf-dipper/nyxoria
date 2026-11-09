@@ -211,3 +211,20 @@ alter table public.hero_slots enable row level security;
 -- a céhbe számító győzelmek napi felső határa fiókonként
 alter table public.guild_members add column if not exists day text;
 alter table public.guild_members add column if not exists day_wins int not null default 0;
+
+-- admin felület: kitiltás indoka, admin-napló, bejelentés minden játékosnak
+alter table public.players add column if not exists ban_reason text;
+create table if not exists public.admin_log (
+  id       bigserial primary key,
+  at       timestamptz not null default now(),
+  admin_id uuid,
+  target   uuid,
+  action   text not null,
+  info     jsonb
+);
+create index if not exists admin_log_time_idx on public.admin_log (at desc);
+create index if not exists admin_log_target_idx on public.admin_log (target, at desc);
+alter table public.admin_log enable row level security;
+alter table public.world_state add column if not exists notice text;
+alter table public.world_state add column if not exists notice_at timestamptz;
+

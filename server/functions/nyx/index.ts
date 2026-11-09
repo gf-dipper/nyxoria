@@ -2391,6 +2391,7 @@ async function statePayload(user, player) {
     save: save ? G.sanitize(save) : null,
     world: { median: world.median, active: world.active, wind: save ? G.wind(save.hero.level, world.median) : 1, rank: rank },
     heroes: await heroSlots(user.id),
+    notice: await sql`select notice, notice_at from world_state where id = 1`.then(r => r[0] && r[0].notice ? { text: r[0].notice, at: new Date(r[0].notice_at).getTime() } : null),
     boss: bossPublic(boss, Date.now()), bossMine: mine, titles: titles.map(t => t.title), guild: guildPublic(await guildOf(user.id)),
     chronicle: chron.map(c => ({ t: new Date(c.created_at).getTime(), kind: c.kind, text: c.html }))
   };
@@ -2512,16 +2513,151 @@ async function ranks(user, args) {
 async function admin(user, player, args) {
   if (!(player.is_admin || isAdminId(user.discordId))) throw new GameError('admin', 'Ehhez nincs jogod.', 403);
   if (args.op === 'stats') {
-    const [s] = await sql`select count(*)::int as heroes, count(*) filter (where active_at > now() - interval '1 day')::int as active1,
+    const [s] = await sql`select (select count(*) from ${ALLH(sql)} h)::int as heroes, count(*) filter (where active_at > now() - interval '1 day')::int as active1,
                           count(*) filter (where active_at > now() - interval '14 days')::int as active14, coalesce(sum((save->'hero'->>'silver')::bigint), 0)::bigint as silver,
-                          coalesce(max(level), 0)::int as maxlevel from ${ALLH(sql)} h`;
+                          (select coalesce(max(level), 0) from ${ALLH(sql)} h)::int as maxlevel from heroes`;
     const [p] = await sql`select count(*)::int as players, count(*) filter (where banned)::int as banned from players`;
     const recent = await sql`select at, action, info, (select name from heroes h where h.user_id = l.user_id) as name from action_log l order by id desc limit 20`;
     return { stats: Object.assign({}, s, p, { silver: Number(s.silver) }), recent: recent.map(r => ({ at: new Date(r.at).getTime(), action: r.action, name: r.name, info: r.info })) };
   }
+  const alog = (target, action, info) => sql`insert into admin_log (admin_id, target, action, info) values (${user.id}, ${target || null}, ${action}, ${sql.json(info || {})})`;
+  const uidOf = async () => {
+    if (args.uid) { const [p] = await sql`select user_id from players where user_id = ${String(args.uid)}`; if (p) return p.user_id; }
+    if (args.name) { const [h] = await sql`select user_id from ${ALLH(sql)} h where lower(name) = lower(${String(args.name)}) limit 1`; if (h) return h.user_id; }
+    throw new GameError('arg', 'Nincs ilyen játékos.');
+  };
+  // ---- játékoslista és adatlap ----
+  if (args.op === 'players') {
+    const q = String(args.q || '').trim(), like = '%' + q.toLowerCase() + '%';
+    const rows = await sql`select p.user_id, p.discord_name, p.avatar_url, p.banned, p.is_admin, p.created_at, h.name, h.class_id, h.level, h.power, h.active_at,
+                           (h.save->'hero'->>'silver')::bigint as silver, (h.save->'hero'->>'dust')::bigint as dust,
+                           (select count(*) from hero_slots s where s.user_id = p.user_id)::int as slots, g.name as gname, g.tag
+                           from players p left join heroes h on h.user_id = p.user_id left join guild_members m on m.user_id = p.user_id left join guilds g on g.id = m.guild_id
+                           where ${q} = '' or lower(coalesce(p.discord_name, '')) like ${like} or lower(coalesce(h.name, '')) like ${like}
+                              or exists (select 1 from hero_slots s where s.user_id = p.user_id and lower(s.name) like ${like})
+                           order by h.active_at desc nulls last limit 100`;
+    return { players: rows.map(r => ({ uid: r.user_id, discord: r.discord_name, avatar: r.avatar_url, banned: r.banned, admin: r.is_admin, joined: new Date(r.created_at).getTime(),
+      hero: r.name, classId: r.class_id, level: r.level, power: r.power, active: r.active_at ? new Date(r.active_at).getTime() : null, silver: Number(r.silver || 0), dust: Number(r.dust || 0), slots: r.slots, guild: r.gname ? `${r.gname} [${r.tag}]` : null })) };
+  }
+  if (args.op === 'player') {
+    const uid = await uidOf();
+    const [p] = await sql`select * from players where user_id = ${uid}`;
+    const [h] = await sql`select save, active_at, created_at from heroes where user_id = ${uid}`;
+    const slots = await sql`select slot, name, class_id, level, power from hero_slots where user_id = ${uid} order by slot`;
+    const g = await guildOf(uid);
+    const acts = await sql`select at, action, info from action_log where user_id = ${uid} order by id desc limit 40`;
+    const adm = await sql`select at, action, info from admin_log where target = ${uid} order by id desc limit 20`;
+    const [cnt] = await sql`select count(*) filter (where at > now() - interval '1 day')::int as d1, count(*)::int as total from action_log where user_id = ${uid}`;
+    let hero = null;
+    if (h) { const x = h.save.hero; hero = { name: x.name, classId: x.classId, people: x.people, level: x.level, xp: x.xp, silver: x.silver, dust: x.dust, rig: x.rig || null, look: x.look || null,
+      power: E.power(E.heroStats(x)), path: x.path, torches: h.save.torches ? h.save.torches.count : null, stats: x.stats || {}, equipped: D.SLOT_ORDER.map(k => x.equipped[k]).filter(Boolean),
+      inventory: (x.inventory || []).length, arena: h.save.arena ? h.save.arena.rating : 1000, tower: x.stats && x.stats.towerMax || 0, created: new Date(h.created_at).getTime(), active: new Date(h.active_at).getTime() }; }
+    return { player: { uid: uid, discord: p.discord_name, discordId: p.discord_id, avatar: p.avatar_url, banned: p.banned, banReason: p.ban_reason, admin: p.is_admin, joined: new Date(p.created_at).getTime() },
+      hero: hero, slots: slots.map(s => ({ slot: s.slot, name: s.name, classId: s.class_id, level: s.level, power: s.power })), guild: g ? { id: Number(g.id), name: g.name, tag: g.tag, role: g.role } : null,
+      actions: acts.map(a => ({ at: new Date(a.at).getTime(), action: a.action, info: a.info })), adminLog: adm.map(a => ({ at: new Date(a.at).getTime(), action: a.action, info: a.info })), counts: cnt };
+  }
+  // ---- játékos kezelése (minden lépés az admin-naplóba kerül) ----
   if (args.op === 'ban' || args.op === 'unban') {
-    const rows = await sql`update players set banned = ${args.op === 'ban'} where user_id = (select user_id from ${ALLH(sql)} h where lower(name) = lower(${String(args.name || '')}) limit 1) returning user_id`;
-    if (!rows.length) throw new GameError('arg', 'Nincs ilyen nevű hős.');
+    const uid = await uidOf();
+    if (uid === user.id) throw new GameError('arg', 'Saját magadat nem tilthatod ki.');
+    const reason = String(args.reason || '').slice(0, 200);
+    await sql`update players set banned = ${args.op === 'ban'}, ban_reason = ${args.op === 'ban' ? reason : null} where user_id = ${uid}`;
+    await alog(uid, args.op, { reason: reason });
+    return { ok: true };
+  }
+  if (args.op === 'setAdmin') {
+    const uid = await uidOf();
+    if (uid === user.id && !args.on) throw new GameError('arg', 'Saját magadtól nem veheted el az admin jogot.');
+    await sql`update players set is_admin = ${!!args.on} where user_id = ${uid}`;
+    await alog(uid, 'setAdmin', { on: !!args.on });
+    return { ok: true };
+  }
+  if (args.op === 'grant') {
+    const uid = await uidOf();
+    const silver = Math.round(Number(args.silver) || 0), dust = Math.round(Number(args.dust) || 0), torches = Math.round(Number(args.torches) || 0);
+    const item = args.item && D.RARITIES[args.item.rarity] ? { rarity: args.item.rarity, slot: D.SLOTS[args.item.slot] ? args.item.slot : null } : null;
+    const note = String(args.note || '').slice(0, 200);
+    if (Math.abs(silver) > 1e7 || Math.abs(dust) > 1e6 || Math.abs(torches) > 50) throw new GameError('arg', 'Túl nagy érték.');
+    const out = await sql.begin(async tx => {
+      const save = await loadHero(tx, uid, true);
+      if (!save) throw new GameError('arg', 'Ennek a játékosnak nincs hőse.');
+      const h = save.hero, now = Date.now();
+      h.silver = Math.max(0, h.silver + silver); h.dust = Math.max(0, h.dust + dust);
+      if (torches) { E.torchState(save, now); save.torches.count = Math.max(0, Math.min(E.TORCH.max, save.torches.count + torches)); }
+      let it = null;
+      if (item) { it = E.makeItem(E.mulberry32(E.newSeed()), { rarity: item.rarity, slot: item.slot || undefined, level: h.level, classId: h.classId, hero: h }); E.addItem(save, h, it, now); }
+      const parts = [silver ? `${silver > 0 ? '+' : ''}${silver} Holdezüst` : '', dust ? `${dust > 0 ? '+' : ''}${dust} Csillagpor` : '', torches ? `${torches > 0 ? '+' : ''}${torches} fáklya` : '', it ? G.esc(it.name) : ''].filter(Boolean);
+      if (parts.length) G.personal(save, now, `Az adminoktól: ${parts.join(', ')}${note ? ` – ${G.esc(note)}` : ''}.`, 'loot');
+      await storeHero(tx, uid, save);
+      return { item: it ? it.name : null };
+    });
+    await alog(uid, 'grant', { silver: silver, dust: dust, torches: torches, item: out.item, note: note });
+    return out;
+  }
+  if (args.op === 'rename') {
+    const uid = await uidOf(), name = String(args.newName || '').trim().replace(/\s+/g, ' ');
+    if (!G.validName(name)) throw new GameError('arg', 'A név 2–16 karakter legyen: betűk, számok, szóköz vagy kötőjel.');
+    if (await nameTaken(sql, name)) throw new GameError('arg', 'Ez a név már foglalt.');
+    let old = '';
+    await sql.begin(async tx => { const save = await loadHero(tx, uid, true); if (!save) throw new GameError('arg', 'Nincs hőse.'); old = save.hero.name; save.hero.name = name;
+      await tx`update heroes set name = ${name} where user_id = ${uid}`; await storeHero(tx, uid, save); });
+    await alog(uid, 'rename', { from: old, to: name });
+    return { ok: true };
+  }
+  // ---- bejelentés és ajándék mindenkinek ----
+  if (args.op === 'notice') {
+    const text = String(args.text || '').trim().slice(0, 400);
+    await sql`update world_state set notice = ${text || null}, notice_at = ${text ? new Date() : null} where id = 1`;
+    if (text && args.chronicle) await chronicle(null, 'admin', `📣 ${G.esc(text)}`, !!args.discord);
+    await alog(null, 'notice', { text: text, chronicle: !!args.chronicle });
+    return { ok: true };
+  }
+  if (args.op === 'giftAll') {
+    const silver = Math.max(0, Math.round(Number(args.silver) || 0)), dust = Math.max(0, Math.round(Number(args.dust) || 0)), note = String(args.note || '').trim().slice(0, 200);
+    if (!silver && !dust) throw new GameError('arg', 'Adj meg Holdezüstöt vagy Csillagport.');
+    if (silver > 1e6 || dust > 1e5) throw new GameError('arg', 'Túl nagy érték.');
+    const html = `Ajándék mindenkinek az adminoktól${note ? `: ${G.esc(note)}` : ''} (${[silver ? `+${silver} Holdezüst` : '', dust ? `+${dust} Csillagpor` : ''].filter(Boolean).join(', ')}).`;
+    const r = await sql`insert into pending_rewards (user_id, silver, dust, html) select user_id, ${silver}, ${dust}, ${html} from players where not banned returning id`;
+    await alog(null, 'giftAll', { silver: silver, dust: dust, note: note, count: r.length });
+    return { count: r.length };
+  }
+  // ---- világ: heti szörny, céhek, gyanús aktivitás ----
+  if (args.op === 'world') {
+    const [b] = await sql`select * from world_bosses order by id desc limit 1`;
+    const [bp] = b ? await sql`select count(*)::int as n, coalesce(sum(damage), 0)::bigint as dmg from boss_participants where boss_id = ${b.id}` : [null];
+    const guilds = await sql`select g.id, g.name, g.tag, g.stars, g.created_at, count(m.user_id)::int as members from guilds g left join guild_members m on m.guild_id = g.id group by g.id order by members desc, g.id limit 100`;
+    const [w] = await sql`select notice, notice_at from world_state where id = 1`;
+    // gyanús: sok művelet egy nap alatt, vagy a fiók korához képest nagyon gyors szintlépés
+    const sus = await sql`select p.user_id, p.discord_name, h.name, h.level, h.created_at, (select count(*) from action_log l where l.user_id = p.user_id and l.at > now() - interval '1 day')::int as d1
+                          from players p join heroes h on h.user_id = p.user_id where not p.banned`;
+    const flagged = sus.map(r => { const days = Math.max(1, (Date.now() - new Date(r.created_at).getTime()) / 864e5), why = [];
+      if (r.d1 > 600) why.push(`${r.d1} művelet 24 óra alatt`); if (r.level > 8 && r.level / days > 7) why.push(`${r.level}. szint ${Math.ceil(days)} nap alatt`);
+      return why.length ? { uid: r.user_id, discord: r.discord_name, hero: r.name, level: r.level, why: why } : null; }).filter(Boolean);
+    const recent = await sql`select a.at, a.action, a.info, p.discord_name as admin, t.discord_name as target from admin_log a left join players p on p.user_id = a.admin_id left join players t on t.user_id = a.target order by a.id desc limit 30`;
+    return { boss: b ? { id: Number(b.id), name: b.name, level: b.level, hp: Number(b.hp), maxHp: Number(b.max_hp), killed: !!b.killed_at, ends: new Date(b.ends_at).getTime(), participants: bp.n, damage: Number(bp.dmg) } : null,
+      guilds: guilds.map(g => ({ id: Number(g.id), name: g.name, tag: g.tag, stars: g.stars, members: g.members, created: new Date(g.created_at).getTime() })), notice: w ? w.notice : null,
+      flagged: flagged.slice(0, 40), adminLog: recent.map(a => ({ at: new Date(a.at).getTime(), action: a.action, info: a.info, admin: a.admin, target: a.target })) };
+  }
+  if (args.op === 'bossReset') {
+    const [b] = await sql`select id, name from world_bosses order by id desc limit 1`;
+    if (!b) throw new GameError('arg', 'Nincs heti szörny.');
+    await sql`update world_bosses set hp = max_hp, killed_at = null, finalized = false where id = ${b.id}`;
+    await sql`update boss_participants set damage = 0, hits = 0, hits_day = 0, claimed = '{}', title = null where boss_id = ${b.id}`;
+    await alog(null, 'bossReset', { boss: b.name });
+    return { ok: true };
+  }
+  if (args.op === 'guildRename') {
+    const gid = Number(args.gid) | 0, name = String(args.newName || '').trim(), tag = String(args.tag || '').trim().toUpperCase();
+    if (name.length < 3 || name.length > 24 || tag.length < 2 || tag.length > 4) throw new GameError('arg', 'A név 3–24, a jel 2–4 karakter legyen.');
+    try { await sql`update guilds set name = ${name}, tag = ${tag} where id = ${gid}`; } catch (e) { throw new GameError('arg', 'Ez a céhnév vagy jel már foglalt.'); }
+    await alog(null, 'guildRename', { gid: gid, name: name, tag: tag });
+    return { ok: true };
+  }
+  if (args.op === 'guildDisband') {
+    const gid = Number(args.gid) | 0, [g] = await sql`select name from guilds where id = ${gid}`;
+    if (!g) throw new GameError('arg', 'Nincs ilyen céh.');
+    await sql`delete from guilds where id = ${gid}`;
+    await alog(null, 'guildDisband', { gid: gid, name: g.name });
     return { ok: true };
   }
   throw new GameError('arg', 'Ismeretlen admin-művelet.');
@@ -2783,7 +2919,7 @@ async function handle(req) {
     await sql`insert into players (user_id, discord_id, discord_name, avatar_url) values (${user.id}, ${user.discordId}, ${user.name}, ${user.avatar})
               on conflict (user_id) do update set discord_name = excluded.discord_name, avatar_url = excluded.avatar_url, discord_id = excluded.discord_id`;
     const [player] = await sql`select * from players where user_id = ${user.id}`;
-    if (player.banned) throw new GameError('banned', 'A fiókodat egy admin felfüggesztette.', 403);
+    if (player.banned) throw new GameError('banned', `A fiókodat egy admin felfüggesztette.${player.ban_reason ? ' Indok: ' + player.ban_reason : ''}`, 403);
 
     if (action === 'verify') {
       const guild = env('NYXORIA_GUILD_ID');
