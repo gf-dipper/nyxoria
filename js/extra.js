@@ -582,7 +582,7 @@
     const exp = save.expedition, res = save.pendingResult;
     if (!exp || !res || !res.win) return;
     questBump(save, 'guardWin', 1, exp.offer.region);
-    if (exp.offer.elite) questBump(save, 'eliteWin', 1);
+    if (exp.offer.elite) { questBump(save, 'eliteWin', 1); bump(save.hero, 'eliteWins'); }
     if (exp.offer.diff === 'nehez') questBump(save, 'hardWin', 1);
     killNote(save, exp.offer.guard);
   });
@@ -680,13 +680,13 @@
     return { fight: { log: f.log, win: f.win, timeout: f.timeout, rounds: f.rounds, heroF: heroF, mon: mon }, out: out };
   };
 
-  ['gift', 'pathPick', 'shopOpen', 'shopReroll', 'shopBuy', 'towerFight', 'towerRush', 'storyChoice', 'storyFight', 'lookPick', 'questClaim', 'questDrop', 'questView', 'arenaFind', 'arenaFight', 'teamFind', 'teamFight', 'eventFight', 'eventClaim', 'achClaim'].forEach(n => G.FREE_DURING_EXPEDITION.push(n));
+  ['gift', 'pathPick', 'shopOpen', 'shopReroll', 'shopBuy', 'towerFight', 'towerRush', 'storyChoice', 'storyFight', 'lookPick', 'dye', 'questClaim', 'questDrop', 'questView', 'arenaFind', 'arenaFight', 'teamFind', 'teamFight', 'eventFight', 'eventClaim', 'achClaim'].forEach(n => G.FREE_DURING_EXPEDITION.push(n));
   const run0 = G.run;
   G.run = function (save, action, args, ctx) {
     try { if (save.hero && ctx && ctx.now) save.quests = questState(save, ctx.now); } catch (e) { /* a megbízások sosem akaszthatják meg a játékot */ }
     const r = run0(save, action, args, ctx);
     try { albumNote(save); } catch (e) { /* az album sosem akaszthatja meg a játékot */ }
-    try { G.unlockLooks(save.hero); } catch (e) { /* a kinézet-gyűjtemény sem */ }
+    try { G.unlockLooks(save.hero); G.unlockCosmetics(save, ctx && ctx.now); } catch (e) { /* a kinézet-gyűjtemény sem */ }
     return r;
   };
 

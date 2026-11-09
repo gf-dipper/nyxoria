@@ -109,6 +109,7 @@
     var m = D.RARITIES[rarity].affixMult || 1;
     return { id: a.id, v: Math.round((a.min + Math.floor(rng() * (a.max - a.min + 1))) * m) };
   }
+  function setForLevel(L) { var f = D.REGIONS.filter(function (r) { return L >= r.min && L <= r.max; }); return (f[0] || (L < D.REGIONS[0].min ? D.REGIONS[0] : D.REGIONS[D.REGIONS.length - 1])).id; }
   function makeItem(rng, opts) {
     var rarity = opts.rarity || 'szurke';
     var slot = opts.slot || (rarity === 'legendas' && opts.hero ? legendSlot(rng, opts.hero) : pick(rng, D.SLOT_ORDER));
@@ -128,6 +129,8 @@
       name: name || itemName(rng, slot, rarity, opts.classId), affixes: affixes,
       mythic: !!opts.mythic
     };
+    // a tárgy szettje (kinézete): ahonnan származik; ha nem tudjuk, a szintjéhez illő tájegység
+    it.set = opts.set && D.REGIONS.some(function (r) { return r.id === opts.set; }) ? opts.set : setForLevel(it.level);
     if (line) it.line = line;
     return it;
   }
@@ -596,7 +599,7 @@
     else if (eff === 'xp') { out.xp = Math.round(xpBase(hero.level) * 0.08 * m); exp.bonusXp += out.xp; }
     else if (eff === 'item' && exp.torchInfo && exp.torchInfo.tired) { out.effect = 'silver'; out.silver = Math.round(silverBase(lm) * 0.5); exp.silver += out.silver; }
     else if (eff === 'item') {
-      var it2 = makeItem(rng, { slot: 'fegyver', rarity: rng() < 0.5 ? 'zold' : 'szurke', level: lootLevel(hero, lm), classId: hero.classId });
+      var it2 = makeItem(rng, { slot: 'fegyver', rarity: rng() < 0.5 ? 'zold' : 'szurke', level: lootLevel(hero, lm), classId: hero.classId, set: exp.offer.region });
       exp.loot.push(it2); out.item = it2;
     }
   }
@@ -623,7 +626,7 @@
       if (out.success) {
         if (rng() < 0.45 && !(exp.torchInfo && exp.torchInfo.tired)) { // fáradtan nincs tárgy, helyette Holdezüst
           var rarity = rollLoot(rng, exp.offer.diff, hero, { pity: true });
-          var it = makeItem(rng, { rarity: rarity, level: lootLevel(hero, lm), classId: hero.classId, hero: hero });
+          var it = makeItem(rng, { rarity: rarity, level: lootLevel(hero, lm), classId: hero.classId, hero: hero, set: exp.offer.region });
           exp.loot.push(it); out.item = it;
         } else { out.silver = Math.round(silverBase(lm) * (0.6 + rng() * 0.6)); exp.silver += out.silver; }
       } else { exp.hpFactor = Math.max(0.7, exp.hpFactor - 0.04); out.hpLoss = true; } // a sikertelen kutatás csak kis sérülés (különben csapda lenne)
@@ -754,10 +757,10 @@
       var choices = [];
       if (!torchInfo.tired && rng() < itemChance) { // fáradtan (fáklya nélkül) nincs tárgy
         var rarity = rollLoot(rng, d, hero, { pity: true });
-        choices.push({ kind: 'item', item: makeItem(rng, { rarity: rarity, level: itemLv, classId: hero.classId, hero: hero }) });
+        choices.push({ kind: 'item', item: makeItem(rng, { rarity: rarity, level: itemLv, classId: hero.classId, hero: hero, set: exp.offer.region }) });
         if (rng() < 0.35) {
           var r2 = rollLoot(rng, d, hero, { pity: true });
-          choices.push({ kind: 'item', item: makeItem(rng, { rarity: r2, level: itemLv, classId: hero.classId, hero: hero }) });
+          choices.push({ kind: 'item', item: makeItem(rng, { rarity: r2, level: itemLv, classId: hero.classId, hero: hero, set: exp.offer.region }) });
         }
       }
       choices.push({ kind: 'silver', amount: Math.round(silverBase(lm) * D2.silver * 1.5 * (moon.silver || 1)) });
@@ -770,7 +773,7 @@
         if (rng() < ch) {
           hero.mythicTries = 0; hero.stats.mythics++;
           var mi = Math.floor(rng() * D.MYTHIC_NAMES.length);
-          res.mythic = makeItem(rng, { rarity: 'legendas', line: 'Egyedi ragyogású tárgy: kevés hős látott még ilyet.', level: itemLv, classId: hero.classId, mythic: true, name: D.MYTHIC_NAMES[mi], slot: D.MYTHIC_SLOTS[mi] });
+          res.mythic = makeItem(rng, { rarity: 'legendas', line: 'Egyedi ragyogású tárgy: kevés hős látott még ilyet.', level: itemLv, classId: hero.classId, mythic: true, name: D.MYTHIC_NAMES[mi], slot: D.MYTHIC_SLOTS[mi], set: exp.offer.region });
         } else hero.mythicTries++;
       }
       if (d === 'nehez') hero.stats.bestWinNehez = Math.max(hero.stats.bestWinNehez, Math.round(lm));
@@ -919,7 +922,7 @@
 
   root.NYX.engine = {
     bossFighter: bossFighter, bossHit: bossHit, averageBossHit: averageBossHit,
-    mulberry32: mulberry32, newSeed: newSeed, pick: pick, shuffle: shuffle, clamp: clamp,
+    mulberry32: mulberry32, newSeed: newSeed, setForLevel: setForLevel, pick: pick, shuffle: shuffle, clamp: clamp,
     MAX_ROUNDS: MAX_ROUNDS, MAX_LEVEL: MAX_LEVEL, DIFF: DIFF, DIFF_ORDER: DIFF_ORDER, MOONS: MOONS, MOON_ORDER: MOON_ORDER,
     TORCH: TORCH, DUST_WEEKLY: DUST_WEEKLY, PITY_PURPLE: PITY_PURPLE, PITY_LEGEND: PITY_LEGEND, MAX_PLUS: MAX_PLUS, REFUND: REFUND, maxPlus: maxPlus, refundValue: refundValue, upgradeSilver: upgradeSilver, legendChance: legendChance, RARITY_GATE: RARITY_GATE, gateRarity: gateRarity, rollLoot: rollLoot, lilaChance: lilaChance, INVENTORY_MAX: INVENTORY_MAX,
     refBase: refBase, xpNeeded: xpNeeded, xpBase: xpBase, silverBase: silverBase,

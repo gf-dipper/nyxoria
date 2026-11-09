@@ -35,6 +35,17 @@ svg.rig { overflow: visible; }
 @keyframes rig-spark { 0%, 70%, 100% { opacity: 0; } 72%, 78% { opacity: 1; } 75% { opacity: 0.2; } }
 @keyframes rig-shadow { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.97); } }
 @keyframes rig-wing { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(0.9); } }
+/* felszerelés-effektek: láng (lángszárny, Örök Láng), csillagpislákolás, füst, keringés, méregcsepp */
+.rig .r-flame { animation: rig-flame 0.9s ease-in-out infinite alternate; }
+.rig .r-twinkle { animation: rig-twinkle 2.2s ease-in-out infinite; }
+.rig .r-smoke { animation: rig-smoke 3.2s ease-out infinite; }
+.rig .r-spin { animation: rig-spin 10s linear infinite; }
+.rig .r-drip { animation: rig-drip 2.4s ease-in infinite; }
+@keyframes rig-flame { 0% { transform: scale(1, 1) skewX(0deg); opacity: 0.88; } 50% { transform: scale(1.03, 0.96) skewX(2deg); } 100% { transform: scale(0.98, 1.05) skewX(-2deg); opacity: 1; } }
+@keyframes rig-twinkle { 0%, 100% { transform: scale(0.6); opacity: 0.45; } 50% { transform: scale(1.15); opacity: 1; } }
+@keyframes rig-smoke { 0% { transform: translate(0, 0); opacity: 0.15; } 40% { opacity: 0.7; } 100% { transform: translate(-6px, -12px); opacity: 0; } }
+@keyframes rig-spin { to { transform: rotate(360deg); } }
+@keyframes rig-drip { 0%, 45% { transform: translateY(0); opacity: 1; } 90% { transform: translateY(12px); opacity: 0; } 100% { transform: translateY(0); opacity: 0; } }
 
 /* ---------- harci mozdulatok (a .rig elemre kerülő osztályok) ----------
    Animációs alapelvek: lendületvétel (anticipation) → gyors mozdulat → túllendülés (overshoot) →

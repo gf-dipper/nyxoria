@@ -1438,7 +1438,7 @@
     tip('harc');
   }
   const NEW_STAGE = !!(window.NYX.stage && A.isNew);
-  function safeRig(h) { try { return G.wornLook ? G.wornLook(h) : G.migrateLook(h); } catch (e) { return G.cleanRig(null, h.classId); } }
+  function safeRig(h) { try { if (h && h.rig && !(h.equipped && !Array.isArray(h.equipped)) && G.cleanWorn) return G.cleanWorn(h.rig, h.classId); return G.wornLook ? G.wornLook(h) : G.migrateLook(h); } catch (e) { return G.cleanRig(null, h.classId); } }
   // az új harci színpad: táj, hős, szörny, fejléc (élet, kör); alatta a napló és a gombok
   function renderStage(c, h, r, speed) {
     const hpP = Math.max(0, c.hp / c.heroF.maxHp * 100), mP = Math.max(0, c.mhp / c.mon.maxHp * 100);
@@ -1699,20 +1699,28 @@
   }
   // ---------- kinézet a felszerelésből (gyűjtemény) ----------
   const SLOT_NAME = { fegyver: 'Fegyver', pancel: 'Páncél', sisak: 'Fejfedő', gyuru: 'Gyűrű', amulett: 'Amulett' };
-  function lookLabel(h, sl, key) { const p = String(key).split('.'), r = D.RARITIES[p[0]], nm = (h.lookNames || {})[sl + ':' + key]; return (nm ? nm + ' · ' : '') + (r ? r.name : p[0]) + (p[2] === 'm' ? ', mitikus' : '') + (G.lookVisible(sl, key) ? '' : ' (még nem látszik)'); }
+  function lookLabel(h, sl, key) { const nm = (h.lookNames || {})[sl + ':' + key], ln = G.lookName(key); return (nm && nm !== ln ? nm + ' · ' : '') + ln + (G.lookVisible(sl, key) ? '' : ' (nem látszik)'); }
   function lookPanel(h) {
     if (!G.wornLook) return '';
-    const own = h.looks || {}, pick = h.lookPick || {};
-    const rows = D.SLOT_ORDER.map(sl => {
+    const own = h.looks || {}, pick = h.lookPick || {}, cos = G.cosmeticList ? G.cosmeticList(S.save) : [], C = h.cosm || { wings: [], aura: [] };
+    const rows = D.SLOT_ORDER.filter(sl => sl !== 'amulett' || (own.amulett || []).some(k => G.lookVisible('amulett', k))).map(sl => {
       const cur = pick[sl] || 'auto', it = h.equipped[sl];
       const ik = it && G.lookKey(it), vis = ik && G.lookVisible(sl, ik);
-      const opts = [['auto', it ? `A viselt tárgy (${D.RARITIES[it.rarity].name}${vis ? '' : ', még nem látszik rajtad'})` : 'A viselt tárgy (nincs)'], ['alap', sl === 'sisak' ? 'Nem látszik (amit a hőskészítőben választottál)' : 'Amit a hőskészítőben választottál']].concat((own[sl] || []).map(k => [k, lookLabel(h, sl, k)]));
+      const opts = [['auto', it ? `A viselt tárgy: ${G.lookName(ik) || D.RARITIES[it.rarity].name}${vis ? '' : ' (nem látszik)'}` : 'A viselt tárgy (nincs)'], ['alap', sl === 'sisak' ? 'Nem látszik (amit a hőskészítőben választottál)' : 'Amit a hőskészítőben választottál']].concat((own[sl] || []).filter(k => k.indexOf(':') > 0 || k.indexOf('u|') === 0).map(k => [k, lookLabel(h, sl, k)]));
       return `<label class="lk-row"><span>${SLOT_NAME[sl]}</span><select data-act="look-pick" data-v="${sl}">${opts.map(([k, l]) => `<option value="${esc(k)}"${k === cur ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
     }).join('');
+    const cosSel = (kind, slot, label) => { const list = cos.filter(c => c.kind === kind && c.done); return `<label class="lk-row"><span>${label}</span><select data-act="look-pick" data-v="${slot}"${list.length ? '' : ' disabled'}><option value="nincs">${list.length ? 'Nincs' : 'Még nincs (eredményekért jár)'}</option>${list.map(c => `<option value="${c.id}"${pick[slot] === c.id ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}${(C[kind] || []).filter(id => !cos.some(c => c.kind === kind && c.id === id)).map(id => `<option value="${id}"${pick[slot] === id ? ' selected' : ''}>${esc(id)} (régi)</option>`).join('')}</select></label>`; };
     const n = Object.keys(own).reduce((t, k) => t + own[k].length, 0);
-    return `<section class="panel lk-panel" style="margin-top:12px"><div class="panel-title"><div><h2>Ruhatár</h2><p class="small muted">A hősöd úgy néz ki, ahogy a felszerelése: minél ritkább egy tárgy, annál díszesebb. A szürke kezdő holmi még a hőskészítőben választott ruhádat mutatja; a gyűrű a kéktől, az amulett a lilától látszik. Amit egyszer már viseltél, a ruhatáradba kerül (${n} darab), és bármikor magadra öltheted. Az arcodat és a hajadat a Kinézet menüben alakíthatod.</p></div></div>
-      <div class="lk-grid"><div class="lk-fig">${A.heroSvg(h, { full: true })}</div><div class="lk-rows">${rows}</div></div></section>`;
+    const dye = h.dye || {}, pend = S.dyePend || {}, w0 = G.wornLook(h), canDye = !!(w0.gset || w0.uniqP);
+    const sw = (k) => `<div class="dye-row"><span class="tiny">${k === 'c1' ? 'Fő szín' : 'Díszítés'}</span><div class="dye-sw">${G.DYES.map(c => `<button class="sw${(pend[k] || dye[k]) === c ? ' on' : ''}" style="background:${c}" data-act="dye-pick" data-v="${k}|${c}" aria-label="Szín kiválasztása"${canDye ? '' : ' disabled'}></button>`).join('')}</div></div>`;
+    const pendN = Object.keys(pend).length;
+    const ach = cos.map(c => `<li class="${c.done ? 'ok' : ''}"><b>${esc(c.name)}</b><span class="small muted">${esc(c.how)}</span><span class="small">${c.done ? 'Megvan' : `${fmt(c.have)} / ${fmt(c.goal)}`}</span></li>`).join('');
+    return `<section class="panel lk-panel" style="margin-top:12px"><div class="panel-title"><div><h2>Ruhatár</h2><p class="small muted">A tárgyak a tájegységük szettjét adják: ahonnan a tárgy származik, olyan a stílusa, és minél ritkább, annál gazdagabb. A névvel ellátott legendás és mitikus tárgyak egyedi kinézetűek. A fegyvered a fejlesztéstől kezd fényleni (+4, +8, +10, +12). Amit egyszer viseltél, ide kerül (${n} darab), és bármikor magadra öltheted.</p></div></div>
+      <div class="lk-grid"><div class="lk-fig">${A.heroSvg(pendN ? Object.assign({}, h, { dye: Object.assign({}, h.dye, pend) }) : h, { full: true })}</div><div class="lk-rows">${rows}${cosSel('wings', 'szarny', 'Szárny')}${cosSel('aura', 'aura', 'Aura')}</div></div>
+      <details class="lk-more"${S.dyeOpen ? ' open' : ''}><summary>Festés (${G.DYE_COST} Csillagpor / festés)</summary><p class="small muted">${canDye ? 'Válassz színt: a képen rögtön látod. Csak a Festés gombbal fizetsz.' : 'Festeni csak szett- vagy egyedi páncélt lehet (a zöldtől felfelé).'}</p>${sw('c1')}${sw('c2')}<div class="row" style="gap:8px;margin-top:10px">${pendN ? `<button class="btn primary sm" data-act="dye" data-v="go">Festés: ${G.DYE_COST} Csillagpor</button><button class="btn ghost sm" data-act="dye" data-v="cancel">Mégse</button>` : ''}${h.dye && !pendN ? '<button class="btn ghost sm" data-act="dye" data-v="clear">Eredeti színek (ingyen)</button>' : ''}</div></details>
+      <details class="lk-more"><summary>Szárnyak és aurák (${cos.filter(c => c.done).length} / ${cos.length})</summary><ul class="lk-ach">${ach}</ul></details></section>`;
   }
+
 
   // ---------- táska ----------
   function renderBag() {
@@ -1732,7 +1740,7 @@
     const tryIt = S.tryOn && h.inventory.filter(x => x.id === S.tryOn)[0];
     const tryHtml = tryIt ? (() => { const t = JSON.parse(JSON.stringify(h)); t.equipped[tryIt.slot] = tryIt; if (t.lookPick) delete t.lookPick[tryIt.slot];
       return `<section class="panel try-on"><div class="panel-title"><h2>Próbafülke: ${esc(tryIt.name)}</h2><button class="btn ghost sm" data-act="try-on" data-v="${tryIt.id}">Bezárom</button></div>
-        ${JSON.stringify(G.wornLook(h)) === JSON.stringify(G.wornLook(t)) ? '<p class="small muted" style="margin-bottom:8px">Ez a tárgy nem változtat a kinézeteden (a szürke ruha a sajátodat mutatja, a gyűrű a kéktől, az amulett a lilától látszik).</p>' : ''}
+        ${JSON.stringify(G.wornLook(h)) === JSON.stringify(G.wornLook(t)) ? '<p class="small muted" style="margin-bottom:8px">Ez a tárgy nem változtat a kinézeteden (a szürke ruha a sajátodat mutatja, a gyűrű a kéktől látszik, az amulett csak mitikusként).</p>' : ''}
         <div class="try-grid"><figure><div class="try-fig">${A.heroSvg(h, { full: true })}</div><figcaption>Most</figcaption></figure><span class="hf-arrow">→</span><figure><div class="try-fig">${A.heroSvg(t, { full: true })}</div><figcaption>Ebben</figcaption></figure></div></section>`; })() : '';
     return tryHtml + `<section class="panel"><div class="panel-title"><div><h1>Táska</h1><p class="small muted">${h.inventory.length} / ${E.INVENTORY_MAX} hely · a zöld nyíl azt jelzi, hogy a tárgy erősebb a mostaninál</p></div></div>
       <p class="small" style="margin-bottom:10px">${room > 0 ? `A heti Csillagpor-keretből még <b>${fmt(room)}</b> fér bele: amíg van hely, a szétszedés éri meg jobban.` : 'A heti Csillagpor-keret betelt (hétfőn nyílik újra): most az <b>eladás</b> éri meg jobban.'} A fejlesztett tárgyakba tett por 70%-a mindkét esetben visszajár, a kereten felül.</p>
@@ -2060,6 +2068,13 @@
     'help-jump'(v, t) { const id = t && t.value; if (id) actions['help-go'](id); },
     'help-go'(v) { const el = document.getElementById('hp-' + v); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
     'look-pick'(v, t) { act('lookPick', { slot: v, key: t ? t.value : 'auto' }); },
+    'dye-pick'(v) { const [k, c] = String(v).split('|'); S.dyePend = Object.assign({}, S.dyePend, { [k]: c }); S.dyeOpen = true; render(); },
+    dye(v) {
+      if (v === 'clear') return act('dye', { clear: true });
+      if (v === 'cancel') { S.dyePend = null; return render(); }
+      const h = hero(); if ((h.dust || 0) < G.DYE_COST) return toast(`A festés ${G.DYE_COST} Csillagporba kerül.`);
+      const p = S.dyePend || {}; S.dyePend = null; act('dye', { c1: p.c1, c2: p.c2 });
+    },
     'try-on'(v) { S.tryOn = S.tryOn === v ? null : v; render(); },
     'story-choice'(v) { act('storyChoice', { v: v }); },
     'story-fight'() { S.storyRes = null; act('storyFight', {}, r => { const i = r.out.chapter - 1; startCombat('story', r.fight, { out: r.out, region: r.out.region, special: (X.storyChapters()[i] || { boss: {} }).boss.special, after: () => { S.storyRes = { i: i, win: r.out.win, out: r.out }; render(); scrollTop(); } }); scrollTop(); }); },

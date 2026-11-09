@@ -10,7 +10,7 @@
       { title: 'Harc és fejlődés', ids: ['harc', 'taktika', 'faklyak', 'holdak', 'targyak', 'fejlesztes', 'penzek', 'szintek'] },
       { title: 'Napi teendők', ids: ['holdkronika', 'megbizasok', 'ajandek', 'kereskedo', 'orjarat'] },
       { title: 'Kihívások és közösség', ids: ['torony', 'heti-esemeny', 'arena', 'csapat', 'boss', 'ceh'] },
-      { title: 'Hős és fiók', ids: ['eredmenyek', 'hosok', 'kozosseg', 'beallitasok'] }
+      { title: 'Hős és fiók', ids: ['ruhatar', 'eredmenyek', 'hosok', 'kozosseg', 'beallitasok'] }
     ],
 
     sections: [
@@ -27,7 +27,7 @@
             'Név (2–16 karakter: betű, szám, szóköz, kötőjel) és egy nem kötelező jelmondat. A közös szerveren a név egyedi.'
           ] },
           { h: 'A kinézet lépései', list: [
-            'Alap, Arc, Haj, Fej, Öltözet, Fegyver, Varázs, Összegzés, végül Név: minden lépésnél élőben látod a hősöd.',
+            'Alap (a farok is itt van), Arc, Haj, Fej, Öltözet, Fegyver, végül Név: minden lépésnél élőben látod a hősöd. A szárnyat és az aurát nem itt választod: eredményekért járnak.',
             'Később a Hős menü Kinézet pontjában, vagy a Karakter képernyő Kinézet átszabása gombjával alakíthatsz rajta.'
           ] },
           { tip: 'Huhu! Ha még sosem játszottál ilyet, a Harcos vagy a Vadász a legbarátságosabb kezdés. A többi sem nehéz, csak több figyelmet kér.' }
@@ -232,6 +232,16 @@
           { tip: 'A Harcerő egyetlen szám, ami összefoglalja, mennyire erős a hősöd. A zöld nyíl a tárgyakon azt jelzi, hogy erősebb a mostaninál.' }
         ] },
 
+      { id: 'ruhatar', title: 'Ruhatár és kinézet', short: 'A hősöd úgy néz ki, ahogy a felszerelése: szettek, egyedi legendások, fény, szárnyak.',
+        fig: 'hero', figCaption: 'A kinézet a felvett tárgyakból jön', go: 'hos',
+        blocks: [
+          { p: 'Az arcod, a hajad, a fegyvered típusa és a ruhád szabása a hőskészítőből jön, ez végig a tiéd. Minden más a felvett tárgyakon múlik, ahogy a WoW-ban vagy az AION-ban.' },
+          { h: 'Tájegység-szettek', list: ['Minden tárgy arról a tájegységről kapja a stílusát, ahonnan származik: Ködláp, Holdfény-erdő, Árnyromok, Csillaghullás-szirtek, Éjkatlan.', 'Minél ritkább, annál gazdagabb: a kéken szegélyek és embléma, a lilán nagyobb vállvért és rúnák jelennek meg.', 'A szürke kezdő holmi még a hőskészítőben választott ruhádat mutatja.', 'A névvel ellátott legendás és a mitikus tárgyak egyedi kinézetűek.'] },
+          { h: 'A fegyver fénye', p: 'A fegyvered a fejlesztéstől kezd fényleni: +4-től halványan, +8-tól erősebben, +10-től a ritkaság színében, +12-nél szikrázik is.' },
+          { h: 'Szárnyak és aurák', p: 'Ezek csak díszek, eredményekért járnak (például 100 győzelem, a Holdtorony 30. emelete, a Holdkrónika vége). A Ruhatárban látod, melyikhez mennyi hiányzik.' },
+          { h: 'Ruhatár és festés', list: ['A Hős fülön, a Karakter oldal Ruhatár részében bármelyik korábban viselt kinézetet magadra öltheted.', 'A páncél színét Csillagporért átfestheted, az eredeti színek visszaállítása ingyenes.', 'A Táskában a Felpróbálom gombbal előre megnézheted, hogy néznél ki egy tárgyban.'] },
+          { tip: 'Huhu! A fény a fegyver fejlesztéséből jön, nem a ritkaságból: egy jól kifejlesztett kék kard is szépen ragyog.' }
+        ] },
       { id: 'fejlesztes', title: 'Fejlesztés és a táska', short: 'Fejlesztés, újrasorsolás, szétszedés, eladás, tele táska.',
         fig: 'upgrade', figCaption: 'Csillagporral egyre erősebb lesz a tárgy', go: 'taska',
         blocks: [

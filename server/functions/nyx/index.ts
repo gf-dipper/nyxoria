@@ -349,7 +349,7 @@ import postgres from 'npm:postgres@3.4.9';
     mark: ['nincs', 'holdjel', 'csillagok', 'csikok', 'szeplok', 'forradas', 'harcifestek', 'konnycsepp'],
     headwear: ['nincs', 'diadem', 'abroncs', 'csuklya', 'suveg', 'koszoru', 'szemkoto', 'sisak'], earring: ['nincs', 'karika', 'kristaly'],
     metal: ['arany', 'ezust', 'bronz', 'ejacel'], cape: ['nincs', 'rovid', 'hosszu', 'rongyos', 'csillagos'],
-    wings: ['nincs', 'tunder', 'denever', 'feny'], tail: ['nincs', 'roka', 'macska', 'sarkany'], aura: ['nincs', 'holdfeny', 'parazs', 'arny', 'csillagpor', 'villam']
+    wings: ['nincs', 'tunder', 'denever', 'feny', 'toll', 'kristaly', 'lang', 'holdezust', 'csillag', 'arny'], tail: ['nincs', 'roka', 'macska', 'sarkany'], aura: ['nincs', 'holdfeny', 'parazs', 'arny', 'csillagpor', 'villam']
   };
   var LOOK_COLORS = ['skin', 'eye', 'hair', 'hornColor', 'c1', 'c2'], LOOK_COLORS_OPT = ['eye2', 'tip'], LOOK_INTS = { outfit: 1, weapon: 2 };
   var LOOK_BASE = {
@@ -1705,6 +1705,7 @@ import postgres from 'npm:postgres@3.4.9';
     var m = D.RARITIES[rarity].affixMult || 1;
     return { id: a.id, v: Math.round((a.min + Math.floor(rng() * (a.max - a.min + 1))) * m) };
   }
+  function setForLevel(L) { var f = D.REGIONS.filter(function (r) { return L >= r.min && L <= r.max; }); return (f[0] || (L < D.REGIONS[0].min ? D.REGIONS[0] : D.REGIONS[D.REGIONS.length - 1])).id; }
   function makeItem(rng, opts) {
     var rarity = opts.rarity || 'szurke';
     var slot = opts.slot || (rarity === 'legendas' && opts.hero ? legendSlot(rng, opts.hero) : pick(rng, D.SLOT_ORDER));
@@ -1724,6 +1725,8 @@ import postgres from 'npm:postgres@3.4.9';
       name: name || itemName(rng, slot, rarity, opts.classId), affixes: affixes,
       mythic: !!opts.mythic
     };
+    // a tárgy szettje (kinézete): ahonnan származik; ha nem tudjuk, a szintjéhez illő tájegység
+    it.set = opts.set && D.REGIONS.some(function (r) { return r.id === opts.set; }) ? opts.set : setForLevel(it.level);
     if (line) it.line = line;
     return it;
   }
@@ -2192,7 +2195,7 @@ import postgres from 'npm:postgres@3.4.9';
     else if (eff === 'xp') { out.xp = Math.round(xpBase(hero.level) * 0.08 * m); exp.bonusXp += out.xp; }
     else if (eff === 'item' && exp.torchInfo && exp.torchInfo.tired) { out.effect = 'silver'; out.silver = Math.round(silverBase(lm) * 0.5); exp.silver += out.silver; }
     else if (eff === 'item') {
-      var it2 = makeItem(rng, { slot: 'fegyver', rarity: rng() < 0.5 ? 'zold' : 'szurke', level: lootLevel(hero, lm), classId: hero.classId });
+      var it2 = makeItem(rng, { slot: 'fegyver', rarity: rng() < 0.5 ? 'zold' : 'szurke', level: lootLevel(hero, lm), classId: hero.classId, set: exp.offer.region });
       exp.loot.push(it2); out.item = it2;
     }
   }
@@ -2219,7 +2222,7 @@ import postgres from 'npm:postgres@3.4.9';
       if (out.success) {
         if (rng() < 0.45 && !(exp.torchInfo && exp.torchInfo.tired)) { // fáradtan nincs tárgy, helyette Holdezüst
           var rarity = rollLoot(rng, exp.offer.diff, hero, { pity: true });
-          var it = makeItem(rng, { rarity: rarity, level: lootLevel(hero, lm), classId: hero.classId, hero: hero });
+          var it = makeItem(rng, { rarity: rarity, level: lootLevel(hero, lm), classId: hero.classId, hero: hero, set: exp.offer.region });
           exp.loot.push(it); out.item = it;
         } else { out.silver = Math.round(silverBase(lm) * (0.6 + rng() * 0.6)); exp.silver += out.silver; }
       } else { exp.hpFactor = Math.max(0.7, exp.hpFactor - 0.04); out.hpLoss = true; } // a sikertelen kutatás csak kis sérülés (különben csapda lenne)
@@ -2350,10 +2353,10 @@ import postgres from 'npm:postgres@3.4.9';
       var choices = [];
       if (!torchInfo.tired && rng() < itemChance) { // fáradtan (fáklya nélkül) nincs tárgy
         var rarity = rollLoot(rng, d, hero, { pity: true });
-        choices.push({ kind: 'item', item: makeItem(rng, { rarity: rarity, level: itemLv, classId: hero.classId, hero: hero }) });
+        choices.push({ kind: 'item', item: makeItem(rng, { rarity: rarity, level: itemLv, classId: hero.classId, hero: hero, set: exp.offer.region }) });
         if (rng() < 0.35) {
           var r2 = rollLoot(rng, d, hero, { pity: true });
-          choices.push({ kind: 'item', item: makeItem(rng, { rarity: r2, level: itemLv, classId: hero.classId, hero: hero }) });
+          choices.push({ kind: 'item', item: makeItem(rng, { rarity: r2, level: itemLv, classId: hero.classId, hero: hero, set: exp.offer.region }) });
         }
       }
       choices.push({ kind: 'silver', amount: Math.round(silverBase(lm) * D2.silver * 1.5 * (moon.silver || 1)) });
@@ -2366,7 +2369,7 @@ import postgres from 'npm:postgres@3.4.9';
         if (rng() < ch) {
           hero.mythicTries = 0; hero.stats.mythics++;
           var mi = Math.floor(rng() * D.MYTHIC_NAMES.length);
-          res.mythic = makeItem(rng, { rarity: 'legendas', line: 'Egyedi ragyogású tárgy: kevés hős látott még ilyet.', level: itemLv, classId: hero.classId, mythic: true, name: D.MYTHIC_NAMES[mi], slot: D.MYTHIC_SLOTS[mi] });
+          res.mythic = makeItem(rng, { rarity: 'legendas', line: 'Egyedi ragyogású tárgy: kevés hős látott még ilyet.', level: itemLv, classId: hero.classId, mythic: true, name: D.MYTHIC_NAMES[mi], slot: D.MYTHIC_SLOTS[mi], set: exp.offer.region });
         } else hero.mythicTries++;
       }
       if (d === 'nehez') hero.stats.bestWinNehez = Math.max(hero.stats.bestWinNehez, Math.round(lm));
@@ -2515,7 +2518,7 @@ import postgres from 'npm:postgres@3.4.9';
 
   root.NYX.engine = {
     bossFighter: bossFighter, bossHit: bossHit, averageBossHit: averageBossHit,
-    mulberry32: mulberry32, newSeed: newSeed, pick: pick, shuffle: shuffle, clamp: clamp,
+    mulberry32: mulberry32, newSeed: newSeed, setForLevel: setForLevel, pick: pick, shuffle: shuffle, clamp: clamp,
     MAX_ROUNDS: MAX_ROUNDS, MAX_LEVEL: MAX_LEVEL, DIFF: DIFF, DIFF_ORDER: DIFF_ORDER, MOONS: MOONS, MOON_ORDER: MOON_ORDER,
     TORCH: TORCH, DUST_WEEKLY: DUST_WEEKLY, PITY_PURPLE: PITY_PURPLE, PITY_LEGEND: PITY_LEGEND, MAX_PLUS: MAX_PLUS, REFUND: REFUND, maxPlus: maxPlus, refundValue: refundValue, upgradeSilver: upgradeSilver, legendChance: legendChance, RARITY_GATE: RARITY_GATE, gateRarity: gateRarity, rollLoot: rollLoot, lilaChance: lilaChance, INVENTORY_MAX: INVENTORY_MAX,
     refBase: refBase, xpNeeded: xpNeeded, xpBase: xpBase, silverBase: silverBase,
@@ -2584,8 +2587,18 @@ import postgres from 'npm:postgres@3.4.9';
     D.LOOK_COLORS_OPT.forEach(k => { if (rig[k] === null) out[k] = null; else if (HEX.test(rig[k])) out[k] = rig[k].toLowerCase(); });
     Object.keys(D.LOOK_INTS).forEach(k => { const v = +rig[k]; if (Number.isInteger(v) && v >= 0 && v <= D.LOOK_INTS[k]) out[k] = v; });
     if (typeof rig.eyeGlow === 'boolean') out.eyeGlow = rig.eyeGlow;
-    if (GLOW_OK.indexOf(rig.wGlow) >= 0) out.wGlow = rig.wGlow; // csak a felszerelésből jöhet (lásd lookPiece)
+    return out;
+  }
+  // a szerver által kiszámolt (felszerelés szerinti) kinézet szűrése megjelenítéshez: a felszerelés-mezőket is átengedi.
+  // A mentésbe (készítés, átszabás) a szigorú cleanRig kerül, így ezeket a mezőket a kliens nem csempészheti be.
+  function cleanWorn(rig, classId) {
+    const out = cleanRig(rig, classId); rig = rig && typeof rig === 'object' ? rig : {};
+    if (GLOW_OK.indexOf(rig.wGlow) >= 0) out.wGlow = rig.wGlow;
     if (rig.wSpark === true) out.wSpark = true;
+    if ([1, 2, 3, 4].indexOf(rig.wGlowLv) >= 0) out.wGlowLv = rig.wGlowLv;
+    ['gset', 'hset', 'wset'].forEach(k => { if (SET_PAL[rig[k]]) out[k] = rig[k]; });
+    ['gtier', 'htier', 'wtier'].forEach(k => { if ([0, 1, 2, 3].indexOf(rig[k]) >= 0) out[k] = rig[k]; });
+    ['uniqP', 'uniqH', 'uniqW', 'uniqA'].forEach(k => { if (typeof rig[k] === 'string' && rig[k].length < 60 && /^(pancel|sisak|fegyver|mitikus):/.test(rig[k])) out[k] = rig[k]; });
     return out;
   }
   // régi (1. változatú) kinézet → új. Ugyanazt adja minden híváskor, a mentést nem kell átírni.
@@ -2601,59 +2614,130 @@ import postgres from 'npm:postgres@3.4.9';
       eye: OLD_EYE[o.eyes] || OLD_EYE.sotet, eyeGlow: o.eyes === 'tunde', mark: OLD_MARK[o.mark] || 'nincs', c1: o.outfit
     }, hero.classId);
   }
-  // ---------- a felszerelés kinézete ----------
-  // A hős arca, haja, teste a készítőből jön (ő maga); a páncél, fegyver, fejfedő, köpeny, aura és a díszek a viselt
-  // tárgyakból. Minél ritkább a tárgy, annál díszesebb. Amit egyszer már viseltél, az a gyűjteményedbe kerül
-  // (hero.looks), és bármikor magadra öltheted (hero.lookPick: 'auto' = a viselt tárgy, 'alap' = a készítőbeli kinézet).
-  const GEAR_PAL = {
-    szurke: [['#6b6458', '#4a443c'], ['#5e5a52', '#3e3a34'], ['#7a6a54', '#4f4436']],
-    zold: [['#3f6b3a', '#5a4630'], ['#4f7a44', '#3e3428'], ['#2f5a46', '#5a4a30']],
-    kek: [['#2f5a9e', '#2a3550'], ['#2a6a8a', '#1f3550'], ['#3a4aa8', '#2a2f5a']],
-    lila: [['#5a3e9e', '#2a2050'], ['#7a3a8e', '#2a1840'], ['#4a2f8a', '#1f6f8a']],
-    legendas: [['#e8e0c8', '#8a5a1a'], ['#f2e6b8', '#5a3e9e'], ['#e8e6f2', '#c8a46a']]
+  // ---------- a felszerelés kinézete (WoW/AION mintára) ----------
+  // A hős arca, haja, teste, fegyvertípusa és ruhaszabása a készítőből jön (ő maga). A tárgyak a tájegységük
+  // SZETTJÉT adják: ahonnan a tárgy származik, olyan a stílusa; a ritkaság egyre gazdagabb formát ad, a névvel
+  // ellátott legendás és a mitikus tárgyak egyedi rajzot kapnak. A fegyver fénye a fejlesztésből jön (+4, +8, +10, +12),
+  // a szárny és az aura eredményekért jár (csak dísz). Amit egyszer viseltél, a ruhatáradba kerül (hero.looks).
+  const SET_TIER = { zold: 0, kek: 1, lila: 2, legendas: 3 };
+  // szett-színek ritkaságonként: [fő szín, kiegészítő szín, fém]
+  const SET_PAL = {
+    kodlap:    [['#4f6b44', '#6a5236', 'bronz'], ['#3f6a5a', '#5a4630', 'bronz'], ['#2f5a4a', '#8fbf9a', 'ezust'], ['#2f5a46', '#e0b44a', 'arany']],
+    holdfeny:  [['#5a6a8e', '#3f5a3a', 'ezust'], ['#46609e', '#cfd6ea', 'ezust'], ['#3a4a9e', '#cfe0ff', 'ezust'], ['#2c3a8c', '#e0b44a', 'arany']],
+    arnyromok: [['#5e5a68', '#3e3a46', 'ejacel'], ['#4f4a6a', '#7a6aa8', 'ejacel'], ['#4a2f8a', '#c79bff', 'ejacel'], ['#3a2a6a', '#e0b44a', 'arany']],
+    szirtek:   [['#3f6e88', '#5a5f78', 'ezust'], ['#2f6a8a', '#8ff6ff', 'ezust'], ['#1f5a78', '#8ff6ff', 'ejacel'], ['#1f4a6a', '#e0b44a', 'arany']],
+    ejkatlan:  [['#3a2a36', '#5a1f30', 'ejacel'], ['#2a2030', '#8a2f56', 'ejacel'], ['#24182a', '#ff6a8a', 'ejacel'], ['#24182a', '#e0b44a', 'arany']]
   };
-  const GEAR_METAL = { szurke: 'bronz', zold: 'ezust', kek: 'ezust', lila: 'ejacel', legendas: 'arany' };
-  const GEAR_CAPE = { szurke: 'nincs', zold: 'nincs', kek: 'rovid', lila: 'hosszu', legendas: 'csillagos' };
+  const SET_NAME = { kodlap: 'Ködlápi', holdfeny: 'Holdfény-erdei', arnyromok: 'Árnyromoki', szirtek: 'Szirti', ejkatlan: 'Éjkatlani' };
+  const GEAR_CAPE = { zold: 'nincs', kek: 'rovid', lila: 'hosszu', legendas: 'hosszu' };
   const GEAR_HELM = {
-    nehez: { szurke: 'csuklya', zold: 'csuklya', kek: 'sisak', lila: 'sisak', legendas: 'sisak' },
-    konnyu: { szurke: 'csuklya', zold: 'csuklya', kek: 'csuklya', lila: 'abroncs', legendas: 'diadem' },
-    varazs: { szurke: 'suveg', zold: 'suveg', kek: 'koszoru', lila: 'abroncs', legendas: 'diadem' }
+    nehez: { zold: 'csuklya', kek: 'sisak', lila: 'sisak', legendas: 'sisak' },
+    konnyu: { zold: 'csuklya', kek: 'csuklya', lila: 'abroncs', legendas: 'diadem' },
+    varazs: { zold: 'suveg', kek: 'koszoru', lila: 'abroncs', legendas: 'diadem' }
   };
   const HELM_FAMILY = { harcos: 'nehez', alakvalto: 'konnyu', vadasz: 'konnyu', orgyilkos: 'konnyu', magus: 'varazs', gyogyito: 'varazs', idezo: 'varazs', dalnok: 'varazs' };
-  const GEAR_GLOW = { lila: '#c79bff', legendas: '#ffd76a' };
-  const GLOW_OK = ['#c79bff', '#ffd76a'];
-  // a legendás páncél a kaszt saját színét kapja arannyal (különben minden kaszt egyforma krémszínű lenne)
-  const LEG_PAL = { harcos: '#8e2448', orgyilkos: '#24203a', vadasz: '#2f6b4f', magus: '#2c3a8c', idezo: '#1f6f8a', alakvalto: '#3f5a2a', dalnok: '#8e2448', gyogyito: '#e8e6f2' };
+  // a fejlesztés fénye (AION-módra): +4 halvány, +8 erős, +10 a ritkaság színében, +12 szikrázik
+  const GLOW_PLAIN = '#cfe0ff';
+  const GLOW_RAR = { szurke: '#cfe0ff', zold: '#7be3a0', kek: '#7fb8ff', lila: '#c79bff', legendas: '#ffd76a' };
+  const GLOW_OK = [GLOW_PLAIN, '#7be3a0', '#7fb8ff', '#c79bff', '#ffd76a'];
+  function glowOf(it) {
+    const p = (it && it.plus) || 0, lv = p >= 12 ? 4 : p >= 10 ? 3 : p >= 8 ? 2 : p >= 4 ? 1 : 0;
+    if (!lv) return null;
+    return { wGlow: lv >= 3 ? GLOW_RAR[it.rarity] || GLOW_PLAIN : GLOW_PLAIN, wGlowLv: lv, wSpark: lv >= 4 };
+  }
   const RAR_RANK = { szurke: 0, zold: 1, kek: 2, lila: 3, legendas: 4 };
   function strHash(t) { let h = 0; t = String(t || ''); for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0; return h; }
-  // a kinézet kulcsa: ritkaság.változat (+ .m, ha mitikus) – a tárgy nevéből, így ugyanaz a tárgy mindig ugyanúgy néz ki
+  function uniqueName(it) {
+    if (!it) return null;
+    if (it.mythic && (D.MYTHIC_NAMES || []).indexOf(it.name) >= 0) return 'mitikus:' + it.name;
+    if (it.rarity !== 'legendas' || !D.LEGEND_NAMES) return null;
+    const L = D.LEGEND_NAMES, list = it.slot === 'fegyver' ? Object.keys(L.fegyver).reduce((a, k) => a.concat(L.fegyver[k]), []) : (L[it.slot] || []);
+    return list.indexOf(it.name) >= 0 ? it.slot + ':' + it.name : null;
+  }
+  // a kinézet kulcsa: „szett:ritkaság” vagy „u|egyedi név”; a régi (ritkaság.változat) kulcsok is működnek
   function lookKey(it) {
-    if (!it || !GEAR_PAL[it.rarity]) return null;
-    const n = { pancel: 3 }[it.slot] || 1; // a fegyver típusa és a ruha szabása a játékosé; a ritkaság a színt, fényt, díszt adja
-    return it.rarity + '.' + (strHash(it.name) % n) + (it.mythic ? '.m' : '');
+    if (!it || !RAR_RANK.hasOwnProperty(it.rarity)) return null;
+    const u = uniqueName(it);
+    if (u) return 'u|' + u;
+    return (it.set || (E.setForLevel ? E.setForLevel(it.level || 1) : 'kodlap')) + ':' + it.rarity;
   }
   function lookPiece(slot, key, classId) {
-    const p = String(key || '').split('.'), r = p[0], v = +p[1] || 0, myth = p[2] === 'm', out = {};
-    if (!GEAR_PAL[r]) return out;
-    if (slot === 'fegyver') {
-      if (GEAR_GLOW[r]) out.wGlow = GEAR_GLOW[r]; if (r === 'legendas') out.wSpark = true;
+    const out = {};
+    key = String(key || '');
+    if (key.indexOf('u|') === 0) { // egyedi legendás / mitikus
+      const u = key.slice(2), sl = u.split(':')[0] === 'mitikus' ? slot : u.split(':')[0];
+      if (sl === 'pancel') { out.uniqP = u; out.gtier = 3; out.cape = 'hosszu'; }
+      else if (sl === 'sisak') { out.uniqH = u; out.htier = 3; out.headwear = GEAR_HELM[HELM_FAMILY[classId] || 'varazs'].legendas; }
+      else if (sl === 'fegyver') { out.uniqW = u; out.wtier = 3; }
+      else if (sl === 'amulett' && u.indexOf('mitikus:') === 0) out.uniqA = u;
+      else if (sl === 'gyuru') out.earring = 'kristaly';
+      return out;
     }
-    if (slot === 'pancel') { const pal = r === 'legendas' ? [LEG_PAL[classId] || GEAR_PAL.legendas[v % 3][0], '#e0b44a'] : GEAR_PAL[r][v % 3]; out.c1 = pal[0]; out.c2 = pal[1]; out.metal = GEAR_METAL[r]; out.cape = GEAR_CAPE[r]; }
-    if (slot === 'sisak') { out.headwear = GEAR_HELM[HELM_FAMILY[classId] || 'varazs'][r]; out._metal = GEAR_METAL[r]; }
-    if (slot === 'amulett') out.aura = r === 'lila' ? 'holdfeny' : r === 'legendas' ? 'csillagpor' : 'nincs';
-    if (slot === 'gyuru') out.earring = RAR_RANK[r] >= 3 ? 'kristaly' : RAR_RANK[r] === 2 ? 'karika' : 'nincs';
-    if (myth) { out.wings = 'feny'; if (!out.aura || out.aura === 'nincs') out.aura = 'csillagpor'; }
-    Object.keys(out).forEach(k => out[k] === undefined && delete out[k]);
+    if (key.indexOf(':') < 0) return out; // régi formájú kulcs (az előző rendszerből): nincs szett-adata
+    const p = key.split(':'), set = p[0], r = p[1], t = SET_TIER[r];
+    if (!SET_PAL[set] || t == null) return out; // szürke: a saját, készítőbeli ruhád
+    const pal = SET_PAL[set][t];
+    if (slot === 'pancel') { out.gset = set; out.gtier = t; out.c1 = pal[0]; out.c2 = pal[1]; out.metal = pal[2]; out.cape = GEAR_CAPE[r]; }
+    if (slot === 'sisak') { out.hset = set; out.htier = t; out.headwear = GEAR_HELM[HELM_FAMILY[classId] || 'varazs'][r]; out._metal = pal[2]; }
+    if (slot === 'fegyver') { out.wset = set; out.wtier = t; }
+    if (slot === 'gyuru') out.earring = t >= 2 ? 'kristaly' : t === 1 ? 'karika' : 'nincs';
     return out;
   }
-  // látszik-e egyáltalán a tárgy a hősön (a szürke ruha a sajátodat mutatja; a gyenge gyűrű és amulett még nem látszik)
   function lookVisible(slot, key) {
-    const r = String(key || '').split('.')[0], rk = RAR_RANK[r], myth = /\.m$/.test(key || '');
-    if (myth) return true;
-    if (slot === 'amulett') return rk >= 3;
-    if (slot === 'gyuru') return rk >= 2;
-    return rk >= 1;
+    key = String(key || '');
+    if (key.indexOf('u|') === 0) return slot === 'amulett' ? key.indexOf('u|mitikus:') === 0 : true;
+    if (key.indexOf(':') < 0) return false;
+    const t = SET_TIER[key.split(':')[1]];
+    if (t == null) return false;
+    if (slot === 'amulett') return false;
+    if (slot === 'gyuru') return t >= 1;
+    return true;
   }
+  function lookName(key) {
+    key = String(key || '');
+    if (key.indexOf('u|') === 0) return key.slice(2).split(':').slice(1).join(':');
+    const p = key.split(':');
+    return SET_NAME[p[0]] ? `${SET_NAME[p[0]]} szett (${(D.RARITIES[p[1]] || {}).name || p[1]})` : key;
+  }
+
+  // ---------- szárnyak és aurák: eredményekért (csak dísz) ----------
+  const COSMETICS = [
+    { id: 'toll', kind: 'wings', name: 'Tollszárny', how: '100 győzelem', val: s => (s.hero.stats.wins || 0), goal: 100 },
+    { id: 'tunder', kind: 'wings', name: 'Tündérszárny', how: '30 teljesített megbízás', val: s => (s.hero.stats.quests || 0), goal: 30 },
+    { id: 'denever', kind: 'wings', name: 'Denevérszárny', how: 'Az Árnyromok mind a 6 őrzőjének legyőzése', val: s => regionGuards(s, 'arnyromok'), goal: 6 },
+    { id: 'kristaly', kind: 'wings', name: 'Kristályszárny', how: 'A Holdtorony 30. emelete', val: s => (s.hero.stats.towerMax || 0), goal: 30 },
+    { id: 'lang', kind: 'wings', name: 'Lángszárny', how: '25 elit őrző legyőzése', val: s => (s.hero.stats.eliteWins || 0), goal: 25 },
+    { id: 'arny', kind: 'wings', name: 'Árnyszárny', how: '50 győzelem az Arénában', val: s => (s.arena && s.arena.wins) || 0, goal: 50 },
+    { id: 'feny', kind: 'wings', name: 'Fényszárny', how: 'A Holdkrónika befejezése', val: s => (s.story && s.story.done) || 0, goal: 10 },
+    { id: 'holdezust', kind: 'wings', name: 'Holdezüst szárny', how: 'Az 50. szint', val: s => s.hero.level, goal: 50 },
+    { id: 'csillag', kind: 'wings', name: 'Csillagszárny', how: 'Egy mitikus tárgy megszerzése', val: s => (s.hero.stats.mythics || 0), goal: 1 },
+    { id: 'holdfeny', kind: 'aura', name: 'Holdfény-aura', how: '20 győzelem Nehéz kalandon', val: s => (s.hero.stats.hardWins || 0), goal: 20 },
+    { id: 'csillagpor', kind: 'aura', name: 'Csillagpor-aura', how: 'Egy legendás tárgy megszerzése', val: s => (s.hero.stats.legendaries || 0), goal: 1 },
+    { id: 'arny', kind: 'aura', name: 'Árnyaura', how: '40 lény a bestiáriumban', val: s => Object.keys(((s.album || {}).kills) || {}).length, goal: 40 },
+    { id: 'parazs', kind: 'aura', name: 'Parázsaura', how: 'Az Éjkatlan mind a 6 őrzőjének legyőzése', val: s => regionGuards(s, 'ejkatlan'), goal: 6 },
+    { id: 'villam', kind: 'aura', name: 'Villámaura', how: 'A Holdtorony 50. emelete', val: s => (s.hero.stats.towerMax || 0), goal: 50 }
+  ];
+  function regionGuards(save, rid) { const r = D.REGIONS.filter(x => x.id === rid)[0], m = (save.album || {}).mon || {}; return r ? r.guards.filter(g => m[g]).length : 0; }
+  function cosmeticList(save) { return COSMETICS.map(c => { const v = Math.min(c.goal, c.val(save) || 0); return Object.assign({}, c, { have: v, done: ((save.hero.cosm || {})[c.kind] || []).indexOf(c.id) >= 0 }); }); }
+  function unlockCosmetics(save, now) {
+    const h = save.hero; if (!h) return;
+    const C = h.cosm = h.cosm || { wings: [], aura: [] };
+    // a régi, készítőben választott szárny és aura megmarad (régi hősöknél)
+    const old = h.rig || {};
+    if (!C.legacy) { C.legacy = 1; if (old.wings && old.wings !== 'nincs' && C.wings.indexOf(old.wings) < 0) C.wings.push(old.wings); if (old.aura && old.aura !== 'nincs' && C.aura.indexOf(old.aura) < 0) C.aura.push(old.aura);
+      h.lookPick = h.lookPick || {}; if (old.wings && old.wings !== 'nincs' && !h.lookPick.szarny) h.lookPick.szarny = old.wings; if (old.aura && old.aura !== 'nincs' && !h.lookPick.aura) h.lookPick.aura = old.aura; }
+    COSMETICS.forEach(c => {
+      if (C[c.kind].indexOf(c.id) >= 0 || (c.val(save) || 0) < c.goal) return;
+      C[c.kind].push(c.id);
+      h.lookPick = h.lookPick || {}; const pk = c.kind === 'wings' ? 'szarny' : 'aura';
+      if (!h.lookPick[pk]) h.lookPick[pk] = c.id; // az első megszerzettet rögtön fel is veszi
+      if (now) personal(save, now, `<b>${esc(h.name)}</b> kiérdemelte: ${esc(c.name)} (${esc(c.how)}).`, 'win');
+    });
+  }
+  // festés: a páncél színe a játékos választása szerint (Csillagporért)
+  const DYES = ['#8e2448', '#c0503a', '#c8a46a', '#e8b94a', '#3f6b3a', '#2f6b4f', '#1f6f8a', '#2c3a8c', '#5a3e9e', '#7a3a8e', '#e8e6f2', '#9aa0b8', '#4a4a5e', '#24203a', '#5a3e2a', '#3a2418'];
+  const DYE_COST = 150;
+
   function unlockLooks(hero) {
     if (!hero || !hero.equipped) return;
     const L = hero.looks = hero.looks || {};
@@ -2662,28 +2746,33 @@ import postgres from 'npm:postgres@3.4.9';
   }
   function wornLook(hero) {
     const base = migrateLook(hero), eq = hero.equipped || {}, pick = hero.lookPick || {}, own = hero.looks || {};
-    if (Array.isArray(hero.equipped)) return base; // a profil régi formája (lista): ott a szerver már kiszámolta
-    // a díszek (szárny, aura, fülbevaló) már nem a készítőből jönnek, hanem a tárgyakból; aki a sajátját akarja,
-    // az amulettnél / gyűrűnél a hőskészítőbeli kinézetet választja. A szürke tárgy a készítőben választott ruhát mutatja.
-    // üres helynél a saját díszek maradnak (ez a ciklus előtt dől el, hogy a mitikus tárgy szárnyát ne írja felül)
-    if (pick.amulett !== 'alap' && (eq.amulett || pick.amulett)) { base.wings = 'nincs'; base.aura = 'nincs'; }
-    if (pick.gyuru !== 'alap' && (eq.gyuru || pick.gyuru)) base.earring = 'nincs';
+    if (Array.isArray(hero.equipped)) return base;
+    // a szárny és az aura eredményekért jár; a készítőbeliek a régi hősöknél gyűjteményként élnek tovább
+    const C = hero.cosm;
+    if (C && C.legacy) { // a régi hősök készítőbeli szárnya/aurája az első lépésükig a régi helyén marad
+      base.wings = pick.szarny && C.wings.indexOf(pick.szarny) >= 0 ? pick.szarny : 'nincs';
+      base.aura = pick.aura && C.aura.indexOf(pick.aura) >= 0 ? pick.aura : 'nincs';
+    }
+    if (pick.gyuru !== 'alap' && eq.gyuru) base.earring = 'nincs';
     let metal = null, mr = -1;
     (D.SLOT_ORDER || []).forEach(sl => {
       const pk = pick[sl];
       if (pk === 'alap') return;
-      const key = pk && pk !== 'auto' && (own[sl] || []).indexOf(pk) >= 0 ? pk : lookKey(eq[sl]);
+      const okPk = pk && pk !== 'auto' && (own[sl] || []).indexOf(pk) >= 0 && (pk.indexOf(':') > 0 || pk.indexOf('u|') === 0); // a régi (előző rendszerbeli) kulcs „auto”
+      const key = okPk ? pk : lookKey(eq[sl]);
       if (!key) return;
-      const r = key.split('.')[0];
-      if (r === 'szurke' && (sl === 'pancel' || sl === 'fegyver' || sl === 'sisak')) return; // kezdő holmi: a saját ruhád
       const pc = lookPiece(sl, key, hero.classId);
-      // a fém (díszek, sisak) a ritkább darabé a páncél és a fejfedő közül
-      const m = pc._metal || pc.metal; delete pc._metal;
-      if (m && RAR_RANK[r] > mr && (sl === 'pancel' || sl === 'sisak')) { mr = RAR_RANK[r]; metal = m; }
-      delete pc.metal;
+      const m = pc._metal || pc.metal; delete pc._metal; delete pc.metal;
+      const rk = pc.gtier != null ? pc.gtier : pc.htier != null ? pc.htier : -1;
+      if (m && rk > mr && (sl === 'pancel' || sl === 'sisak')) { mr = rk; metal = m; }
       Object.assign(base, pc);
     });
     if (metal) base.metal = metal;
+    // festés: a páncél színeit felülírja
+    if (hero.dye && (base.gset || base.uniqP)) { if (hero.dye.c1) base.c1 = hero.dye.c1; if (hero.dye.c2) base.c2 = hero.dye.c2; }
+    // a fegyver fénye a viselt fegyver fejlesztéséből (a ruhatárbeli kinézettől függetlenül, mint az AION-ban)
+    const g = glowOf(eq.fegyver);
+    if (g) Object.assign(base, g);
     return base;
   }
 
@@ -2779,17 +2868,32 @@ import postgres from 'npm:postgres@3.4.9';
   // ---------- műveletek ----------
   const A = {};
   A.lookPick = (save, a) => {
-    const h = save.hero, sl = a.slot;
-    if ((D.SLOT_ORDER || []).indexOf(sl) < 0) fail('arg', 'Ismeretlen hely.');
-    const k = String(a.key || 'auto');
-    if (k !== 'auto' && k !== 'alap' && ((h.looks || {})[sl] || []).indexOf(k) < 0) fail('arg', 'Ez a kinézet még nincs meg.');
+    const h = save.hero, sl = a.slot, k = String(a.key || 'auto');
     h.lookPick = h.lookPick || {};
+    if (sl === 'szarny' || sl === 'aura') { // szárny / aura: csak a megszerzettek közül
+      const C = h.cosm || { wings: [], aura: [] }, list = sl === 'szarny' ? C.wings : C.aura;
+      if (k !== 'nincs' && list.indexOf(k) < 0) fail('arg', 'Ezt még nem érdemelted ki.');
+      h.lookPick[sl] = k; return { ok: true };
+    }
+    if ((D.SLOT_ORDER || []).indexOf(sl) < 0) fail('arg', 'Ismeretlen hely.');
+    if (k !== 'auto' && k !== 'alap' && ((h.looks || {})[sl] || []).indexOf(k) < 0) fail('arg', 'Ez a kinézet még nincs meg.');
     if (k === 'auto') delete h.lookPick[sl]; else h.lookPick[sl] = k;
+    return { ok: true };
+  };
+  A.dye = (save, a) => {
+    const h = save.hero;
+    if (a.clear) { delete h.dye; return { ok: true }; }
+    const c1 = DYES.indexOf(a.c1) >= 0 ? a.c1 : null, c2 = DYES.indexOf(a.c2) >= 0 ? a.c2 : null;
+    if (!c1 && !c2) fail('arg', 'Válassz színt.');
+    const w = wornLook(h); if (!w.gset && !w.uniqP) fail('state', 'Festeni csak szett- vagy egyedi páncélt lehet. Előbb vegyél fel egyet (a zöldtől felfelé).');
+    if ((h.dust || 0) < DYE_COST) fail('cost', `A festés ${DYE_COST} Csillagporba kerül.`);
+    h.dust -= DYE_COST;
+    h.dye = { c1: c1 || (h.dye && h.dye.c1) || null, c2: c2 || (h.dye && h.dye.c2) || null };
     return { ok: true };
   };
 
   // a kinézet átszabása bármikor (a név, a faj és a kaszt nem változik)
-  A.restyle = (save, a) => { const old = migrateLook(save.hero), r = cleanRig(Object.assign({}, old, a.rig && typeof a.rig === 'object' ? a.rig : {}), save.hero.classId); delete r.wGlow; delete r.wSpark; r.aura = old.aura; r.wings = old.wings; save.hero.rig = r; };
+  A.restyle = (save, a) => { const old = migrateLook(save.hero), r = cleanRig(Object.assign({}, old, a.rig && typeof a.rig === 'object' ? a.rig : {}), save.hero.classId); ['wGlow', 'wSpark', 'wGlowLv', 'gset', 'hset', 'wset', 'gtier', 'htier', 'wtier', 'uniqP', 'uniqH', 'uniqW', 'uniqA'].forEach(k => delete r[k]); r.aura = old.aura; r.wings = old.wings; save.hero.rig = r; };
   A.tactic = (save, a) => { if (!D.TACTICS[a.v]) fail('arg', 'Ismeretlen taktika.'); save.hero.tactic = a.v; };
   A.moon = (save, a) => {
     if (!E.MOONS[a.v]) fail('arg', 'Ismeretlen Hold-fokozat.');
@@ -2964,7 +3068,7 @@ import postgres from 'npm:postgres@3.4.9';
   };
 
   // ---------- futtatás ----------
-  const FREE_DURING_EXPEDITION = ['tactic', 'restyle', 'lookPick', 'settings', 'tip', 'equip', 'salvage', 'sell', 'salvageWeak', 'upgrade', 'reroll', 'skillMove', 'patrolStart', 'patrolClaim'];
+  const FREE_DURING_EXPEDITION = ['tactic', 'restyle', 'lookPick', 'dye', 'settings', 'tip', 'equip', 'salvage', 'sell', 'salvageWeak', 'upgrade', 'reroll', 'skillMove', 'patrolStart', 'patrolClaim'];
 
   // tárgyak átállítása az új rendszerre (legendás fokozat, fejlesztés-visszatérítés): egyszer, minden régi mentésen
   function migrateItems(save) {
@@ -3010,7 +3114,7 @@ import postgres from 'npm:postgres@3.4.9';
   root.NYX.game = {
     run: run, actions: A, createSave: createSave, refreshOffers: refreshOffers, offersKey: offersKey, sanitize: sanitize, summary: summary,
     wind: wind, xpBonus: xpBonus, patrolReward: patrolReward, PATROL_HOURS: PATROL_HOURS, budapestDate: budapestDate, validName: validName,
-    cleanRig: cleanRig, migrateLook: migrateLook, wornLook: wornLook, lookVisible: lookVisible, lookKey: lookKey, lookPiece: lookPiece, unlockLooks: unlockLooks,
+    cleanRig: cleanRig, cleanWorn: cleanWorn, migrateLook: migrateLook, wornLook: wornLook, lookVisible: lookVisible, lookName: lookName, cosmeticList: cosmeticList, unlockCosmetics: unlockCosmetics, DYES: DYES, DYE_COST: DYE_COST, SET_NAME: SET_NAME, lookKey: lookKey, lookPiece: lookPiece, unlockLooks: unlockLooks,
     esc: esc, az: az, fmt: fmt, personal: personal, itemEvent: itemEvent, levelEvents: levelEvents, FREE_DURING_EXPEDITION: FREE_DURING_EXPEDITION
   };
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -3600,7 +3704,7 @@ import postgres from 'npm:postgres@3.4.9';
     const exp = save.expedition, res = save.pendingResult;
     if (!exp || !res || !res.win) return;
     questBump(save, 'guardWin', 1, exp.offer.region);
-    if (exp.offer.elite) questBump(save, 'eliteWin', 1);
+    if (exp.offer.elite) { questBump(save, 'eliteWin', 1); bump(save.hero, 'eliteWins'); }
     if (exp.offer.diff === 'nehez') questBump(save, 'hardWin', 1);
     killNote(save, exp.offer.guard);
   });
@@ -3698,13 +3802,13 @@ import postgres from 'npm:postgres@3.4.9';
     return { fight: { log: f.log, win: f.win, timeout: f.timeout, rounds: f.rounds, heroF: heroF, mon: mon }, out: out };
   };
 
-  ['gift', 'pathPick', 'shopOpen', 'shopReroll', 'shopBuy', 'towerFight', 'towerRush', 'storyChoice', 'storyFight', 'lookPick', 'questClaim', 'questDrop', 'questView', 'arenaFind', 'arenaFight', 'teamFind', 'teamFight', 'eventFight', 'eventClaim', 'achClaim'].forEach(n => G.FREE_DURING_EXPEDITION.push(n));
+  ['gift', 'pathPick', 'shopOpen', 'shopReroll', 'shopBuy', 'towerFight', 'towerRush', 'storyChoice', 'storyFight', 'lookPick', 'dye', 'questClaim', 'questDrop', 'questView', 'arenaFind', 'arenaFight', 'teamFind', 'teamFight', 'eventFight', 'eventClaim', 'achClaim'].forEach(n => G.FREE_DURING_EXPEDITION.push(n));
   const run0 = G.run;
   G.run = function (save, action, args, ctx) {
     try { if (save.hero && ctx && ctx.now) save.quests = questState(save, ctx.now); } catch (e) { /* a megbízások sosem akaszthatják meg a játékot */ }
     const r = run0(save, action, args, ctx);
     try { albumNote(save); } catch (e) { /* az album sosem akaszthatja meg a játékot */ }
-    try { G.unlockLooks(save.hero); } catch (e) { /* a kinézet-gyűjtemény sem */ }
+    try { G.unlockLooks(save.hero); G.unlockCosmetics(save, ctx && ctx.now); } catch (e) { /* a kinézet-gyűjtemény sem */ }
     return r;
   };
 

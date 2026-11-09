@@ -344,7 +344,7 @@
     mark: ['nincs', 'holdjel', 'csillagok', 'csikok', 'szeplok', 'forradas', 'harcifestek', 'konnycsepp'],
     headwear: ['nincs', 'diadem', 'abroncs', 'csuklya', 'suveg', 'koszoru', 'szemkoto', 'sisak'], earring: ['nincs', 'karika', 'kristaly'],
     metal: ['arany', 'ezust', 'bronz', 'ejacel'], cape: ['nincs', 'rovid', 'hosszu', 'rongyos', 'csillagos'],
-    wings: ['nincs', 'tunder', 'denever', 'feny'], tail: ['nincs', 'roka', 'macska', 'sarkany'], aura: ['nincs', 'holdfeny', 'parazs', 'arny', 'csillagpor', 'villam']
+    wings: ['nincs', 'tunder', 'denever', 'feny', 'toll', 'kristaly', 'lang', 'holdezust', 'csillag', 'arny'], tail: ['nincs', 'roka', 'macska', 'sarkany'], aura: ['nincs', 'holdfeny', 'parazs', 'arny', 'csillagpor', 'villam']
   };
   var LOOK_COLORS = ['skin', 'eye', 'hair', 'hornColor', 'c1', 'c2'], LOOK_COLORS_OPT = ['eye2', 'tip'], LOOK_INTS = { outfit: 1, weapon: 2 };
   var LOOK_BASE = {

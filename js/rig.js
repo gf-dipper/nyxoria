@@ -137,7 +137,7 @@
     outfit: { label: 'Öltözet', items: { 0: 'Első', 1: 'Második' } },
     cape: { label: 'Köpeny', items: { nincs: 'Nincs', rovid: 'Rövid', hosszu: 'Hosszú', rongyos: 'Rongyos', csillagos: 'Csillagos' } },
     weapon: { label: 'Fegyver', items: { 0: 'Első', 1: 'Második', 2: 'Harmadik' } },
-    wings: { label: 'Szárny', items: { nincs: 'Nincs', tunder: 'Tündérszárny', denever: 'Denevérszárny', feny: 'Fényszárny' } },
+    wings: { label: 'Szárny', items: { nincs: 'Nincs', tunder: 'Tündérszárny', denever: 'Denevérszárny', feny: 'Fényszárny', toll: 'Tollszárny', kristaly: 'Kristályszárny', lang: 'Lángszárny', holdezust: 'Holdezüst szárny', csillag: 'Csillagszárny', arny: 'Árnyszárny' } },
     tail: { label: 'Farok', items: { nincs: 'Nincs', roka: 'Rókafarok', macska: 'Macskafarok', sarkany: 'Sárkányfarok' } },
     aura: { label: 'Aura', items: { nincs: 'Nincs', holdfeny: 'Holdfény', parazs: 'Parázs', arny: 'Árny', csillagpor: 'Csillagszikra', villam: 'Villám' } }
   };
@@ -619,6 +619,7 @@
     if (!isRobe) {
       s += shaded(id, LEG_L, dark(c2, 0.15)) + shaded(id, LEG_R, dark(c2, 0.15));
       s += shaded(id, BOOT_L, '#4a2e22') + shaded(id, BOOT_R, '#4a2e22') + S('M132 376 L155 376', light('#4a2e22', 0.25), 3) + S(mirror('M132 376 L155 376'), light('#4a2e22', 0.25), 3);
+      if (L.gset && SET_ACC[L.gset] && !uniqP(L)) s += setGreaves(gearCtx(L, id, L.gset, L.gtier), ARMOR_TYPE[cls] || 'v');
     } else {
       s += P('M140 404 C140 414 146 420 156 420 L160 420 L160 404 Z', '#3a2840') + P(mirror('M140 404 C140 414 146 420 156 420 L160 420 L160 404 Z'), '#3a2840');
     }
@@ -631,7 +632,7 @@
       if (cls === 'vadasz' && v === 1) s += P('M120 192 C138 182 182 182 200 192 L205 212 L210 318 C190 322 130 322 110 318 L115 212 Z', c1);
       s += S('M160 196 L160 ' + (isRobe ? 400 : 300), dark(c1, 0.3), 1.6, { op: 0.5 }) + P('M136 186 C150 194 170 194 184 186 L186 194 C170 202 150 202 134 194 Z', dark(c1, 0.12));
       s += S('M122 264 C146 270 174 270 198 264', cls === 'magus' || cls === 'idezo' ? L.c2 : cls === 'gyogyito' ? m : '#3a2418', 6);
-      return s;
+      return s + gearTorsoSvg(cls, L, id, isRobe, true);
     }
     switch (cls) {
       case 'harcos':
@@ -683,6 +684,16 @@
         s += S('M122 266 C146 272 174 272 198 266', '#3a2418', 6) + leafAt(136, 280, '#5fd39a') + leafAt(184, 284, '#5fd39a');
         break;
     }
+    return s + gearTorsoSvg(cls, L, id, isRobe, false);
+  }
+  const UNIQ_P = ['Holdpáncél', 'Éjszövet Köpeny', 'Sárkánypikkely Mellvért', 'Csillagfátyol Köntös', 'Csillaghullás-köpeny'];
+  function uniqP(L) { const n = L.uniqP && uniqName(L.uniqP); return n && UNIQ_P.indexOf(n) >= 0 ? n : null; }
+  function gearTorsoSvg(cls, L, id, isRobe, back) {
+    const u = uniqP(L), a = L.uniqA && uniqName(L.uniqA);
+    let s = '';
+    if (u) s += uniqTorso(u, id, L, isRobe, back);
+    else if (L.gset && SET_ACC[L.gset]) s += setTorso(gearCtx(L, id, L.gset, L.gtier), ARMOR_TYPE[cls] || 'v', isRobe, back, cls);
+    if (a && !back) s += uniqAmulet(a, id, L);
     return s;
   }
   function starAt(x, y, r, c) {
@@ -779,6 +790,23 @@
       P(`M${bx - 11} ${y0 - 3} C${bx - 6} ${y0 - 1} ${bx + 6} ${y0 - 1} ${bx + 11} ${y0 - 3} L${bx + 11} ${y0 + 3} C${bx + 6} ${y0 + 5} ${bx - 6} ${y0 + 5} ${bx - 11} ${y0 + 3} Z`, guard, { sw: 1.4 });
   }
   function weaponSvg(cls, v, L, id) {
+    const key = cls + v;
+    let s = weaponBase(cls, v, L, id);
+    if (key === 'vadasz0' || key === 'vadasz1') return s; // az íj díszeit a leftGripSvg rajzolja
+    const U = L.uniqW && UNIQ_W[uniqName(L.uniqW)];
+    if (U && U.blade) s = s.split(`url(#${id}-metal)`).join(`url(#${id}-umetal)`);
+    return s + weaponDecor(key, L, id);
+  }
+  function weaponDecor(key, L, id) {
+    const A = WANCH[key];
+    if (!A) return '';
+    let s = '';
+    const U = L.uniqW && UNIQ_W[uniqName(L.uniqW)];
+    if (L.wset && SET_ACC[L.wset] && !U) s += setWeaponDecor(A, gearCtx(L, id, L.wset, L.wtier));
+    if (U) s += uniqWeaponDecor(A, uniqName(L.uniqW), id);
+    return s;
+  }
+  function weaponBase(cls, v, L, id) {
     const m = METAL[L.metal] ? METAL[L.metal][1] : '#cfd6ea', mf = metalFill(id), wood = '#8a5a32';
     const glow = (x, y, r, c) => `<circle class="r-glow" cx="${x}" cy="${y}" r="${r}" fill="${c}" opacity="0.35" filter="url(#${id}-blur6)"/>`;
     const shaft = (y0, y1, c, w) => shaded(id, `M${213 - (w || 3.5)} ${y1} L${213 - (w || 3.5) + 0.6} ${y0} L${213 + (w || 3.5) - 0.6} ${y0} L${213 + (w || 3.5)} ${y1} Z`, c, { off: [-2, -1], rim: 1.2 });
@@ -875,10 +903,10 @@
     switch (cls + v) {
       case 'vadasz0': // hosszúíj: a markolata az ökölben, a húr kifelé (balra)
         return S('M84 150 C122 212 122 348 84 410', '#3a2418', 7) + S('M84 150 C122 212 122 348 84 410', '#8a5a32', 4.4) + S('M89 162 C108 196 113 230 114 262', light('#8a5a32', 0.35), 1.4, { op: 0.7 }) +
-          S('M84 150 L80 144 M84 410 L80 416', '#3a2418', 3) + S('M82 148 L82 412', '#efe4cc', 1.1);
+          S('M84 150 L80 144 M84 410 L80 416', '#3a2418', 3) + S('M82 148 L82 412', '#efe4cc', 1.1) + weaponDecor('vadasz0', L, id);
       case 'vadasz1': // reflexíj: visszahajló végek
         return S('M90 196 C82 202 80 196 84 190 M90 362 C82 356 80 362 84 368', '#3a2418', 5) + S('M90 196 C118 230 118 328 90 362', '#3a2418', 7) + S('M90 196 C118 230 118 328 90 362', '#5a3a20', 4) +
-          P('M100 268 L114 268 L114 290 L100 290 Z', '#2f6b4f', { sw: 1.2 }) + S('M86 192 L86 366', '#efe4cc', 1.1);
+          P('M100 268 L114 268 L114 290 L100 290 Z', '#2f6b4f', { sw: 1.2 }) + S('M86 192 L86 366', '#efe4cc', 1.1) + weaponDecor('vadasz1', L, id);
       case 'orgyilkos0': case 'orgyilkos1': case 'orgyilkos2': case 'alakvalto0': // páros fegyverek: a bal kézben a tükörképe
         return `<g transform="matrix(-1 0 0 1 320 0)"><g transform="rotate(${WEAPON_ROT[cls + v] || 0} ${GRIP[0]} ${GRIP[1]})">${weaponSvg(cls, v, L, id)}</g></g>`;
     }
@@ -910,6 +938,21 @@
       case 'hosszu': return shaded(id, 'M118 190 C96 250 84 340 80 408 C120 420 200 420 240 408 C236 340 224 250 202 190 Z', out) + P('M116 194 C102 250 94 330 92 400 L108 404 C110 330 116 250 122 198 Z', dark(inner, 0.05), { stroke: false });
       case 'rongyos': return shaded(id, 'M118 190 C98 250 88 330 84 396 L100 384 L112 404 L126 386 L142 408 L156 388 L170 410 L186 388 L200 406 L214 386 L226 400 L236 390 C232 330 222 250 202 190 Z', dark(out, 0.1));
       case 'csillagos': return shaded(id, 'M118 190 C96 250 84 340 80 408 C120 420 200 420 240 408 C236 340 224 250 202 190 Z', '#1b2050') + [[104, 300], [214, 330], [120, 370], [200, 260], [96, 390], [226, 392], [112, 240]].map(([x, y], i) => starAt(x, y, 3 + (i % 3), i % 2 ? '#ffe2a0' : '#cfd8ff')).join('') + P('M116 194 C102 250 94 330 92 400 L106 404 C108 330 114 250 122 198 Z', '#5a3e9e', { stroke: false });
+      case 'u_ejszovet': { // Éjszövet Köpeny: éjszín, csillagképekkel hímzett, hosszú köpeny
+        const d = 'M116 188 C92 250 78 340 72 410 C110 424 210 424 248 410 C242 340 228 250 204 188 Z';
+        return shaded(id, d, '#241c48', { off: [-8, -6] }) + P('M116 194 C100 250 90 330 86 402 L102 406 C106 330 112 250 122 198 Z', '#5a3e9e', { stroke: false }) +
+          [[100, 300], [220, 330], [116, 372], [204, 260], [92, 392], [228, 394], [110, 240], [160, 360], [184, 300]].map(([x, y], i) => `<path class="r-twinkle" style="animation-delay:-${(i * 0.37).toFixed(2)}s;transform-origin:${x}px ${y}px" d="${starD(x, y, 2 + (i % 3), 4, 0.3)}" fill="${i % 2 ? '#e8ecff' : '#9fb0ff'}"/>`).join('') +
+          S('M100 300 L116 372 L92 392 M204 260 L184 300 L220 330', '#9fb0ff', 0.8, { op: 0.5 });
+      }
+      case 'u_csillaghullas': { // mitikus Csillaghullás-köpeny: mélykék, hulló csillagok csóvával, arany szegély
+        const d = 'M114 188 C88 250 74 340 66 414 C108 428 212 428 254 414 C246 340 232 250 206 188 Z';
+        let s = shaded(id, d, '#141c4a', { off: [-8, -6] }) + S('M66 414 C108 428 212 428 254 414', '#e0b44a', 3) + P('M114 194 C98 250 86 330 80 406 L96 410 C100 330 108 250 120 198 Z', '#2c3a8c', { stroke: false });
+        s += [[96, 260], [214, 300], [128, 340], [190, 380], [236, 360]].map(([x, y], i) => `<g class="r-twinkle" style="animation-delay:-${(i * 0.53).toFixed(2)}s;transform-origin:${x}px ${y}px">${S(`M${x} ${y} L${x - 22} ${y - 26}`, '#ffe2a0', 1.6, { op: 0.6 })}<path d="${starD(x, y, 4 + (i % 2) * 2)}" fill="#fff4cf"/></g>`).join('');
+        return s + [[110, 300], [200, 240], [150, 380], [226, 400], [90, 380], [170, 290]].map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${1 + (i % 2)}" fill="#e8ecff" opacity="0.8"/>`).join('');
+      }
+      case 'u_fatyol': // Csillagfátyol Köntös hátsó fátyla
+        return `<path d="M118 188 C96 250 84 340 78 412 C116 424 204 424 242 412 C236 340 224 250 202 188 Z" fill="#d8ccff" opacity="0.4" stroke="#b8a8f0" stroke-width="1.2"/>` +
+          [[104, 300], [214, 330], [130, 380], [196, 260], [160, 340]].map(([x, y], i) => `<path class="r-twinkle" style="animation-delay:-${(i * 0.41).toFixed(2)}s;transform-origin:${x}px ${y}px" d="${starD(x, y, 2.4 + (i % 2), 4, 0.3)}" fill="#fff"/>`).join('');
     }
     return '';
   }
@@ -923,7 +966,7 @@
         const lines = tips.slice(1, -1).map(t => `M${t[0]} ${t[1]} L${(t[0] + 156) / 2 + 10} ${(t[1] + 212) / 2 - 6}`).join(' ');
         return both(d).map(x => `<path d="${x}" fill="#fff6d8" fill-opacity="0.88" stroke="#f2c66d" stroke-width="1.6"/>`).join('') + both(lines).map(x => `<path d="${x}" stroke="#e8c27a" stroke-width="1.2" opacity="0.7" fill="none"/>`).join('') + both('M156 212 C130 168 90 128 36 120 C70 140 100 166 120 196 Z').map(x => `<path d="${x}" fill="#ffffff" opacity="0.55"/>`).join('') + `<ellipse cx="160" cy="200" rx="120" ry="70" fill="#ffe2a0" opacity="0.12" filter="url(#${id}-blur6)"/>`; }
     }
-    return '';
+    return wingsExtra(w, id);
   }
   function tailSvg(t, L, id) {
     // a farok a derék mögül indul, és jobbra (a fegyverkar mögött) kanyarodik ki, hogy jól látsszon
@@ -964,11 +1007,722 @@
     return s + '</g>';
   }
 
+  // ---------- felszerelés: régiós szettek és egyedi (legendás / mitikus) darabok ----------
+  // A páncél TÍPUSA a kasztból jön (n = nehéz, k = könnyű, v = varázsló), a SZETT a régióból (forma + motívum),
+  // a FOKOZAT (0 zöld, 1 kék, 2 lila, 3 legendás) a díszességet. A szett a kaszt ruhája FÖLÉ kerül (vállvért,
+  // mellvért, öv, csípővért, gallér, karvédő, lábvért), így a ruha szabása alatta megmarad.
+  const GOLD = '#e0b44a';
+  const SET_ACC = { kodlap: '#c9d38a', holdfeny: '#dfe9ff', arnyromok: '#b48cff', szirtek: '#7fe8ff', ejkatlan: '#ff2e4a' };
+  const ARMOR_TYPE = { harcos: 'n', alakvalto: 'n', vadasz: 'k', orgyilkos: 'k', magus: 'v', gyogyito: 'v', idezo: 'v', dalnok: 'v' };
+  const DEG = Math.PI / 180;
+  const f2 = v => +(+v).toFixed(2);
+  // abszolút útvonal pontjainak eltolása és nagyítása (kx < 0: tükrözés) – a fényirány a világkoordinátában marad
+  function aff(d, ox, oy, kx, ky) { return d.replace(/(-?\d*\.?\d+)[\s,]+(-?\d*\.?\d+)/g, (q, a, b) => `${f2(ox + a * kx)} ${f2(oy + b * ky)}`); }
+  function axis(x, y, ang) { const dx = Math.cos(ang * DEG), dy = Math.sin(ang * DEG); return (a, b) => `${f2(x + dx * a - dy * b)} ${f2(y + dy * a + dx * b)}`; }
+  function leafP(x, y, len, ang, w) { const p = axis(x, y, ang); return `M${p(0, 0)} Q${p(len * 0.42, w * 1.3)} ${p(len, 0)} Q${p(len * 0.42, -w * 1.3)} ${p(0, 0)} Z`; }
+  function shardP(x, y, len, ang, w) { const p = axis(x, y, ang); return `M${p(0, w)} L${p(len * 0.7, w * 0.9)} L${p(len, 0)} L${p(len * 0.66, -w * 0.95)} L${p(0, -w)} Z`; }
+  function shardHi(x, y, len, ang, w) { const p = axis(x, y, ang); return `M${p(len * 0.08, w * 0.15)} L${p(len * 0.68, w * 0.1)} L${p(len * 0.96, 0)}`; }
+  function spikeP(x, y, len, ang, w, bend) { const p = axis(x, y, ang), b = bend || 0; return `M${p(0, w)} Q${p(len * 0.55, w * 0.45 + b)} ${p(len, b)} Q${p(len * 0.5, -w * 0.4 + b)} ${p(0, -w)} Z`; }
+  function capsP(x1, y1, x2, y2, r) {
+    const dx = x2 - x1, dy = y2 - y1, l = Math.hypot(dx, dy) || 1, ux = dx / l, uy = dy / l, nx = -uy * r, ny = ux * r;
+    return `M${f2(x1 + nx)} ${f2(y1 + ny)} L${f2(x2 + nx)} ${f2(y2 + ny)} Q${f2(x2 + ux * r * 1.6 + nx)} ${f2(y2 + uy * r * 1.6 + ny)} ${f2(x2 + ux * r * 1.6)} ${f2(y2 + uy * r * 1.6)} Q${f2(x2 + ux * r * 1.6 - nx)} ${f2(y2 + uy * r * 1.6 - ny)} ${f2(x2 - nx)} ${f2(y2 - ny)} L${f2(x1 - nx)} ${f2(y1 - ny)} Q${f2(x1 - ux * r * 1.6 - nx)} ${f2(y1 - uy * r * 1.6 - ny)} ${f2(x1 - ux * r * 1.6)} ${f2(y1 - uy * r * 1.6)} Q${f2(x1 - ux * r * 1.6 + nx)} ${f2(y1 - uy * r * 1.6 + ny)} ${f2(x1 + nx)} ${f2(y1 + ny)} Z`;
+  }
+  // holdsarló: a domború oldala rot irányába néz; off: a belső ív középpontjának hátratolása (vastagság)
+  function crescentP(x, y, r, rot, off) {
+    off = off == null ? 0.42 : off;
+    const pt = (cx, cy, rr, a) => `${f2(cx + rr * Math.cos(a * DEG))} ${f2(cy + rr * Math.sin(a * DEG))}`;
+    const span = 128, c2x = x - Math.cos(rot * DEG) * off * r, c2y = y - Math.sin(rot * DEG) * off * r;
+    const ax = x + r * Math.cos((rot + span) * DEG), ay = y + r * Math.sin((rot + span) * DEG);
+    const r2 = Math.hypot(ax - c2x, ay - c2y), aI = Math.atan2(ay - c2y, ax - c2x) / DEG;
+    let dI = aI - rot; while (dI > 180) dI -= 360; while (dI < -180) dI += 360;
+    let d = '';
+    for (let i = 0; i <= 12; i++) d += (i ? 'L' : 'M') + pt(x, y, r, rot + span - 2 * span * i / 12) + ' ';
+    for (let i = 1; i < 12; i++) d += 'L' + pt(c2x, c2y, r2, rot - dI + 2 * dI * i / 12) + ' ';
+    return d + 'Z';
+  }
+  function starD(x, y, r, n, ins) { n = n || 5; ins = ins || 0.45; let d = ''; for (let i = 0; i < n * 2; i++) { const a = -Math.PI / 2 + i * Math.PI / n, rr = i % 2 ? r * ins : r; d += (i ? 'L' : 'M') + f2(x + Math.cos(a) * rr) + ' ' + f2(y + Math.sin(a) * rr) + ' '; } return d + 'Z'; }
+  function gemSvg(x, y, r, c, id, glow) { // csiszolt drágakő: rombusz lapokkal
+    const d = `M${f2(x)} ${f2(y - r)} L${f2(x + r * 0.8)} ${f2(y)} L${f2(x)} ${f2(y + r)} L${f2(x - r * 0.8)} ${f2(y)} Z`;
+    return (glow ? `<g opacity="0.35"><circle class="r-glow" cx="${f2(x)}" cy="${f2(y)}" r="${f2(r * 1.9)}" fill="${c}" filter="url(#${id}-blur3)"/></g>` : '') +
+      P(d, c, { stroke: dark(c, 0.55), sw: 1.1 }) + `<path d="M${f2(x - r * 0.8)} ${f2(y)} L${f2(x)} ${f2(y - r * 0.35)} L${f2(x + r * 0.8)} ${f2(y)} M${f2(x)} ${f2(y - r)} L${f2(x)} ${f2(y - r * 0.35)}" fill="none" stroke="${light(c, 0.6)}" stroke-width="0.8" opacity="0.9"/>` +
+      `<path d="M${f2(x)} ${f2(y - r)} L${f2(x - r * 0.8)} ${f2(y)} L${f2(x)} ${f2(y - r * 0.35)} Z" fill="#fff" opacity="0.45"/>`;
+  }
+  function gearCtx(L, id, set, tier) {
+    const m = METAL[L.metal] ? METAL[L.metal][1] : '#cfd6ea', t = Math.max(0, Math.min(3, Math.round(+tier) || 0));
+    const g = { set: set, t: t, id: id, m: m, c1: L.c1, c2: L.c2, acc: SET_ACC[set] || '#cfd8ff' };
+    const gt = c => t >= 3 ? GOLD : c;
+    if (set === 'kodlap') { g.mat = mix(L.c2, '#6e5236', 0.6); g.bone = '#ebe1c6'; g.reed = '#a3ad5c'; g.fur = mix(L.c2, '#857152', 0.6); g.trim = gt(g.bone); }
+    else if (set === 'holdfeny') { g.mat = mix(m, '#e6edff', 0.6); g.bark = '#6b5040'; g.vine = '#6fa06a'; g.trim = gt(light(g.mat, 0.55)); }
+    else if (set === 'arnyromok') { g.mat = mix('#8f8a9c', L.c2, 0.18); g.cloth = mix(dark(L.c1, 0.25), '#2a2436', 0.35); g.trim = gt(light(g.mat, 0.35)); }
+    else if (set === 'szirtek') { g.mat = mix('#3d3850', m, t >= 3 ? 0.12 : 0.3); g.trim = gt(light(g.mat, 0.45)); }
+    else { g.set = 'ejkatlan'; g.acc = SET_ACC.ejkatlan; g.mat = mix('#1d1a28', m, t >= 3 ? 0.08 : 0.2); g.trim = gt(mix(g.mat, '#9a98b0', 0.5)); }
+    return g;
+  }
+  function glowLine(g, d, c, w, op) {
+    return `<path d="${d}" fill="none" stroke="${c}" stroke-width="${f2(w * 3.2)}" stroke-linecap="round" stroke-linejoin="round" opacity="${op || 0.45}" filter="url(#${g.id}-blur3)"/>` +
+      `<path class="r-glow" d="${d}" fill="none" stroke="${light(c, 0.4)}" stroke-width="${f2(w)}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  }
+  // romvárosi rúnajelek (változatosan, hogy ne legyen mindenhol ugyanaz)
+  const RUNES = ['M-4 -7 L-4 7 M-4 -3 L4 -7 M-4 1 L4 -3', 'M0 -7 L5 0 L0 7 L-5 0 Z M0 -3 L0 3', 'M-4 -7 L-4 7 M4 -7 L4 7 M-4 -7 L4 1 M4 -7 L-4 1', 'M-5 -6 L5 6 M5 -6 L-5 6 M0 -7 L0 7', 'M-3 -7 L3 -7 M0 -7 L0 7 M-4 2 L0 7 L4 2'];
+  let RUNE_I = 0;
+  const RUNE = RUNES[1];
+  function runeAt(x, y, k) { const r = RUNES[(RUNE_I++) % RUNES.length]; return aff(r, x, y, k, k); }
+
+  // ---------- vállvért (a karon ül, minden nézetben) ----------
+  function setPauldron(g, type, side) {
+    const t = g.t, k = type === 'n' ? 1.1 + t * 0.1 : type === 'k' ? 0.95 + t * 0.07 : 0.88 + t * 0.06;
+    const ox = side > 0 ? 205 : 115, oy = 195, kx = side > 0 ? k : -k;
+    const D = d => aff(d, ox, oy, kx, k), id = g.id, mat = g.mat;
+    const sh = (d, fill, o) => shaded(id, D(d), fill, Object.assign({ off: [-3, -3], rim: 1.6, sw: 1.8 }, o || {}));
+    const ln = (d, c, w, o) => S(D(d), c, w, o);
+    const dot = (x, y, r, c) => `<circle cx="${f2(ox + x * kx)}" cy="${f2(oy + y * k)}" r="${f2(r * k)}" fill="${c}" stroke="${line(c)}" stroke-width="0.8"/>`;
+    let s = '';
+    switch (g.set) {
+      case 'kodlap': { // bőrrel bebugyolált párna, csontpecek, a lila fokozattól nádcsokor
+        if (t >= 2) [[2, -12, 13, -46], [8, -10, 25, -38], [-4, -13, 2, -42]].forEach((r, i) => {
+          if (t < 3 && i === 2) return;
+          const [a, b, c, e] = r, d = `M${a} ${b} Q${(a + c) / 2 + 3} ${(b + e) / 2} ${c} ${e}`;
+          s += ln(d, '#3a3f22', 4) + ln(d, g.reed, 2.2) + sh(capsP(a + (c - a) * 0.6, b + (e - b) * 0.6, a + (c - a) * 0.88, b + (e - b) * 0.88, 2.8), '#7a5230', { rim: 1, off: [-1.5, -1.5], sw: 1.2 }) +
+            ln(`M${c} ${e} L${f2(c + (c - a) * 0.12)} ${f2(e + (e - b) * 0.12)}`, '#3a3f22', 1.4);
+        });
+        if (type === 'n') s += P(D('M-22 4 L-18 15 L-14 9 L-10 18 L-5 11 L0 19 L5 12 L10 18 L14 11 L19 15 L22 6 C10 2 -10 0 -22 4 Z'), g.fur, { sw: 1.4 });
+        s += sh('M-21 3 C-19 -13 1 -19 16 -10 C23 -4 25 8 19 14 C8 18 -9 15 -21 3 Z', mat, { off: [-4, -3] });
+        s += ln('M-12 -12 C-7 -4 -6 6 -8 15 M-1 -16 C4 -7 5 4 3 16 M10 -13 C14 -5 16 4 13 15', dark(mat, 0.45), 2.4) + ln('M-11 -13 C-6 -5 -5 4 -7 12 M0 -17 C5 -8 6 2 4 13 M11 -14 C15 -6 17 3 14 12', light(mat, 0.3), 0.9, { op: 0.8 });
+        if (t >= 1) s += ln('M-4 -6 L-2 6 M9 -4 L10 8', dark(mat, 0.6), 1) + sh(capsP(-8, -2, 3, -5, 2), g.trim, { rim: 1, off: [-1, -1], sw: 1.1 }) + sh(capsP(4, 4, 15, 1, 2), g.trim, { rim: 1, off: [-1, -1], sw: 1.1 });
+        if (t >= 3) s += ln('M-10 -7 L-6 -9 M12 -7 L16 -8 M-9 9 L-6 7', GOLD, 2.6);
+        break;
+      }
+      case 'holdfeny': { // ezüst levelek legyezője kéreg alapon, inda
+        s += sh('M-18 5 C-16 -9 2 -15 14 -8 C20 -2 20 8 14 12 C4 14 -8 12 -18 5 Z', g.bark, { off: [-3, -2] });
+        const leaves = [[-48, 36, 7.5, 2], [-18, 32, 7.5, 0], [12, 31, 7.5, 0], [42, 26, 7, 1], [70, 20, 6, 3]].filter(l => t >= l[3]);
+        leaves.forEach(([a, len, w]) => {
+          const big = a === -48 ? 1.15 + t * 0.05 : 1;
+          s += sh(leafP(-13, -3, len * big, a, w), mat, { off: [-2.5, -2.5], rim: 1.3 }) + ln(`M-13 -3 L${axis(-13, -3, a)(len * big * 0.86, 0)}`, t >= 3 ? GOLD : dark(mat, 0.35), 1.1, { op: 0.85 });
+        });
+        if (t >= 1) s += ln('M-17 8 C-8 14 6 14 13 9 C17 6 15 1 11 3', g.vine, 2) + sh(leafP(13, 6, 7, -70, 2.6), g.vine, { rim: 0.8, off: [-1, -1], sw: 1 });
+        if (t >= 2) s += dot(-13, -3, 2.6, t >= 3 ? GOLD : light(mat, 0.4));
+        break;
+      }
+      case 'arnyromok': { // faragott kőlap lepattant sarokkal, rúnavájat
+        if (t >= 2) s += sh('M-16 -12 L-10 -25 L8 -28 L18 -18 L14 -11 L-10 -10 Z', dark(mat, 0.12)) + glowLine(g, D('M-8 -16 L0 -23 L8 -18'), g.acc, 1.4);
+        if (type === 'n') s += sh('M-20 8 L20 10 L18 21 L-16 19 Z', dark(mat, 0.15), { rim: 1.2 });
+        const slab = 'M-21 -4 L-13 -15 L13 -15 L22 -5 L21 11 L13 16 L-14 15 L-21 8 Z';
+        s += sh(slab, mat, { off: [-4, -3] });
+        s += P(D('M13 -15 L22 -5 L15 -7 Z'), dark(mat, 0.25), { sw: 1 }) + ln('M-8 -15 L-5 -9 L-8 -3 M15 10 L10 6 L12 2', dark(mat, 0.5), 1.1) + ln('M-19 6 L20 7', dark(mat, 0.35), 1.6) + ln('M-19 -4 L-12 -13 L12 -13', light(mat, 0.4), 1.1, { op: 0.8 });
+        { const rr = D(aff(RUNES[side > 0 ? 0 : 2], 1, -3, 0.85, 0.85)); s += t >= 1 ? glowLine(g, rr, g.acc, 1.5) : S(rr, dark(mat, 0.5), 1.6); }
+        if (t >= 3) s += S(D(slab), GOLD, 1.5);
+        break;
+      }
+      case 'szirtek': { // meteorvas lemez, kifelé álló kristályszilánkok
+        const sh2 = [[3, -10, 20, -82, 5], [11, -6, 17, -50, 4.5], [-6, -10, 15, -112, 4], [16, 0, 13, -22, 3.8]];
+        const n = Math.min(4, t + 1), sc = 1 + t * 0.12;
+        if (t >= 2) s += `<g opacity="0.3"><circle class="r-glow" cx="${f2(ox + 4 * kx)}" cy="${f2(oy - 18 * k)}" r="${f2(14 * k)}" fill="${g.acc}" filter="url(#${id}-blur3)"/></g>`;
+        sh2.slice(0, n).forEach(([x, y, len, a, w]) => { s += sh(shardP(x, y, len * sc, a, w), g.acc, { stroke: dark(g.acc, 0.55), off: [-2, -2], rim: 1.2, sw: 1.3 }) + ln(shardHi(x, y, len * sc, a, w), '#ffffff', 0.9, { op: 0.8 }); });
+        s += sh('M-20 4 C-20 -12 0 -18 14 -10 C22 -4 22 8 16 14 C6 18 -10 16 -20 4 Z', mat, { off: [-4, -3] });
+        s += ln('M-18 9 C-6 16 8 16 17 9', g.trim, 2.2) + dot(-10, -4, 1.4, dark(mat, 0.4)) + dot(-2, 4, 1.1, dark(mat, 0.4)) + dot(7, -6, 1.2, dark(mat, 0.4)) + ln('M-16 -6 C-12 -12 -4 -15 4 -14', light(mat, 0.45), 1.4, { op: 0.8 });
+        if (t >= 1) s += gemSvg(f2(ox + 3 * kx), f2(oy + 3 * k), 3.6 * k, g.acc, id, t >= 2);
+        break;
+      }
+      default: { // éjkatlan: rétegzett fekete acél, tüskék, bíbor izzó illesztés
+        const sp = [[6, -9, 21, -66, 4.4, -2], [14, -3, 17, -30, 4, -2], [-4, -11, 16, -100, 3.8, 2]];
+        const n = Math.min(3, t + 1), sc = 1 + t * 0.14;
+        if (type === 'n') s += sh('M-19 9 C-6 13 8 13 20 16 L17 22 C4 20 -8 19 -18 15 Z', dark(mat, 0.05), { rim: 1.2 });
+        s += sh('M-20 4 C-8 7 8 7 20 11 C21 15 18 18 14 19 C2 15 -10 14 -19 10 Z', mat, { rim: 1.3 });
+        s += sh('M-21 2 C-19 -12 1 -18 16 -10 C22 -5 23 4 20 9 C8 4 -8 3 -21 2 Z', mat, { off: [-4, -3] });
+        s += glowLine(g, D('M-20 3.5 C-8 5.5 8 6 20 10'), g.acc, 1.3) + ln('M-17 -4 C-13 -11 -3 -15 6 -14', light(mat, 0.4), 1.4, { op: 0.8 }) + dot(-12, -1, 1.3, g.trim) + dot(10, 1, 1.3, g.trim);
+        sp.slice(0, n).forEach(([x, y, len, a, w, b]) => { s += sh(spikeP(x, y, len * sc, a, w, b), mix(g.mat, '#5a5670', 0.35), { off: [-2, -2], rim: 1.2, sw: 1.4 }) + ln(`M${x} ${y} L${axis(x, y, a)(len * sc * 0.8, b * 0.6)}`, light(mix(g.mat, '#5a5670', 0.35), 0.35), 0.9, { op: 0.8 }); });
+        if (t >= 3) s += S(D('M-21 2 C-19 -12 1 -18 16 -10 C22 -5 23 4 20 9'), GOLD, 1.6);
+      }
+    }
+    return s;
+  }
+
+  // ---------- karvédő (a mandzsetta fölött) ----------
+  const BRACER_R = 'M198 240 C205 245 216 245 223 239 L224.5 262 C218 270 205 270 200 264 Z';
+  function setBracer(g, type, side) {
+    const t = g.t, id = g.id, mat = g.mat, M = d => side > 0 ? d : mirror(d);
+    const sh = (d, fill, o) => shaded(id, M(d), fill, Object.assign({ off: [-3, -2], rim: 1.3, sw: 1.6 }, o || {}));
+    const ln = (d, c, w, o) => S(M(d), c, w, o);
+    let s = '';
+    switch (g.set) {
+      case 'kodlap': s += sh(BRACER_R, mat) + ln('M199 247 L222 242 M199 254 L223 249 M200 261 L224 256', dark(mat, 0.45), 1.8) + (t >= 1 ? sh(capsP(205, 252, 215, 251, 1.6), g.trim, { rim: 0.8, off: [-1, -1], sw: 1 }) : ''); break;
+      case 'holdfeny': s += sh(BRACER_R, g.bark) + ln('M201 246 C206 252 212 248 218 254 C221 257 220 262 216 262', g.vine, 1.6) + sh(leafP(222, 254, 16 + t * 2, -62, 4), mat, { off: [-2, -2], rim: 1 }); break;
+      case 'arnyromok': s += sh('M197 241 L224 238 L225 263 L218 269 L203 269 L199 263 Z', mat) + ln('M199 252 L224 250', dark(mat, 0.4), 1.2) + (t >= 1 ? glowLine(g, M('M207 258 L211 253 L215 258 M211 253 L211 263'), g.acc, 1.2) : ''); break;
+      case 'szirtek': s += sh(BRACER_R, mat) + ln('M199 246 C206 251 216 251 223 245', g.trim, 1.6) + sh(shardP(222, 250, 12 + t * 3, -20, 3.4), g.acc, { stroke: dark(g.acc, 0.55), rim: 1, off: [-1.5, -1.5], sw: 1.1 }); break;
+      default: s += sh(spikeP(223, 250, 11 + t * 3, -10, 3.2, -1), mix(mat, '#4a4660', 0.3), { rim: 1, off: [-1.5, -1.5], sw: 1.2 }) + sh(BRACER_R, mat) + glowLine(g, M('M199 252 C206 256 216 256 224 251'), g.acc, 1.1);
+    }
+    if (t >= 3) s += ln('M198 241 C205 246 216 246 223 240', GOLD, 1.8);
+    return s;
+  }
+
+  // ---------- törzs: mellvért / heveder / stóla, öv, csípővért, gallér, ruhaszegély ----------
+  const PLATE = 'M132 197 C148 190 172 190 188 197 L187 238 C179 250 141 250 133 238 Z';
+  const BELT = 'M121 259 C146 265 174 265 199 259 L199 268 C174 274 146 274 121 268 Z';
+  function setTorso(g, type, isRobe, back, cls) {
+    const t = g.t, id = g.id, mat = g.mat, acc = g.acc;
+    const sh = (d, fill, o) => shaded(id, d, fill, Object.assign({ off: [-4, -3], rim: 1.6, sw: 1.8 }, o || {}));
+    const both2 = (d, fn) => fn(d) + fn(mirror(d));
+    let s = '', col = '', chest = '', belt = '', low = '', hem = '';
+    const hemY = isRobe ? 398 : 0;
+    // gallér (lila fokozattól magas, „elit”), kéken csak egy szegély
+    const collar = () => {
+      if (t < 1) return '';
+      if (t === 1) return S('M136 190 C150 197 170 197 184 190', g.trim, 3) + S('M136 190 C150 197 170 197 184 190', dark(g.trim, 0.4), 0.8, { op: 0.6 });
+      switch (g.set) {
+        case 'kodlap': return sh('M126 196 C122 186 132 178 140 182 C143 173 154 172 160 179 C166 172 177 173 180 182 C188 178 198 186 194 196 C180 203 140 203 126 196 Z', g.fur) + S('M134 192 C140 186 146 188 150 184 M186 192 C180 186 174 188 170 184', dark(g.fur, 0.35), 1.4) + `<path d="M138 196 C142 190 148 192 150 196 M170 196 C172 192 178 190 182 196" fill="#6f8a4a" stroke="#3f5a2a" stroke-width="1"/>`;
+        case 'holdfeny': return [[-128, 26], [-108, 30], [-72, 30], [-52, 26]].map(([a, len], i) => sh(leafP(i < 2 ? 142 + i * 6 : 166 + (i - 2) * 6, 194, len + t * 3, a, 6), g.mat, { off: [-2, -2], rim: 1.2 })).join('') + S('M136 194 C150 200 170 200 184 194', g.bark, 4);
+        case 'arnyromok': return [[128, 182, 144, 180, 146, 196, 130, 198], [146, 176, 158, 175, 158, 190, 147, 191], [162, 175, 174, 176, 173, 191, 162, 190], [176, 180, 192, 182, 190, 198, 174, 196]].map(q => sh(`M${q[0]} ${q[1]} L${q[2]} ${q[3]} L${q[4]} ${q[5]} L${q[6]} ${q[7]} Z`, mat, { rim: 1.2, off: [-2, -2] })).join('') + glowLine(g, 'M132 192 L142 190 M178 190 L188 192', acc, 1.2);
+        case 'szirtek': return S('M134 194 C150 200 170 200 186 194', mat, 6) + [[140, 192, -112, 16], [149, 190, -100, 20], [171, 190, -80, 20], [180, 192, -68, 16]].map(([x, y, a, len]) => sh(shardP(x, y, len + t * 2, a, 3.6), acc, { stroke: dark(acc, 0.55), rim: 1, off: [-1.5, -1.5], sw: 1.1 })).join('');
+        default: return sh('M124 198 C124 182 134 172 146 174 L160 180 L174 174 C186 172 196 182 196 198 C180 192 140 192 124 198 Z', mat) + [[130, 182, -120], [140, 175, -104], [180, 175, -76], [190, 182, -60]].map(([x, y, a]) => sh(spikeP(x, y, 10 + t * 2, a, 3), mix(mat, '#4a4660', 0.3), { rim: 1, off: [-1.5, -1.5], sw: 1.1 })).join('') + glowLine(g, 'M130 192 C146 186 174 186 190 192', acc, 1.1);
+      }
+    };
+    col = collar();
+    if (!back) {
+      // mellkas
+      switch (g.set) {
+        case 'kodlap':
+          if (type === 'n') chest = sh(PLATE, mat) + S('M134 206 L186 226 M134 220 L186 240', dark(mat, 0.45), 3) + S('M135 205 L186 225 M135 219 L186 239', light(mat, 0.25), 1, { op: 0.7 }) + `<path d="${PLATE}" fill="none" stroke="${dark(mat, 0.5)}" stroke-width="1" stroke-dasharray="2 2.5" transform="translate(160 220) scale(0.9) translate(-160 -220)"/>`;
+          else if (type === 'k') chest = both2('M128 198 L192 258', d => S(d, dark(mat, 0.35), 7) + S(d, mat, 4.6)) + (t >= 1 ? sh(capsP(154, 228, 166, 228, 2.6), g.trim, { rim: 1, off: [-1, -1], sw: 1.2 }) : '');
+          else chest = both2('M140 192 L146 192 L148 ' + (isRobe ? 392 : 262) + ' L138 ' + (isRobe ? 392 : 262) + ' Z', d => sh(d, mix(g.reed, mat, 0.55), { rim: 1.2 }) + `<path d="${d}" fill="none" stroke="${dark(mat, 0.4)}" stroke-width="1" stroke-dasharray="1.5 3"/>`);
+          if (t >= 1 && type !== 'k') chest += [208, 222, 236].map(y => sh(capsP(154, y, 166, y - 2, 2), g.trim, { rim: 1, off: [-1, -1], sw: 1.1 })).join('');
+          if (t >= 2) chest += S('M140 200 C146 214 174 214 180 200', '#5a4a30', 1.2) + [146, 153, 160, 167, 174].map((x, i) => `<circle cx="${x}" cy="${206 + (i === 2 ? 3 : i % 2 ? 2 : 0)}" r="2.2" fill="${g.trim}" stroke="${line(g.trim)}" stroke-width="0.8"/>`).join('');
+          break;
+        case 'holdfeny':
+          if (type === 'n') chest = sh(PLATE, mat) + sh(leafP(160, 244, 40, -90, 8), mix(g.vine, mat, 0.35), { off: [-2, -2], rim: 1.2 }) + S('M160 242 L160 210', t >= 3 ? GOLD : dark(mat, 0.35), 1.2);
+          else if (type === 'k') chest = S('M128 196 L192 262', dark(g.bark, 0.3), 7) + S('M128 196 L192 262', g.bark, 4.6) + S('M130 197 L190 260', g.vine, 1.2, { op: 0.8 }) + sh(leafP(140, 206, 20, -125, 5), mat, { rim: 1, off: [-2, -2] }) + sh(leafP(140, 206, 18, -55, 5), mat, { rim: 1, off: [-2, -2] });
+          else chest = both2('M139 192 L147 192 L148 ' + (isRobe ? 392 : 262) + ' L138 ' + (isRobe ? 392 : 262) + ' Z', d => sh(d, mix(g.c2, g.mat, 0.35), { rim: 1.2 })) + [214, 236, 258].concat(isRobe ? [300, 340, 380] : []).map(y => sh(leafP(143, y - 8, 14, 90, 3.6), g.mat, { rim: 0.8, off: [-1, -1], sw: 1 }) + sh(leafP(177, y - 8, 14, 90, 3.6), g.mat, { rim: 0.8, off: [-1, -1], sw: 1 })).join('');
+          if (t >= 1) chest += S('M146 222 C140 214 142 206 150 206 M174 222 C180 214 178 206 170 206', g.vine, 1.6) + (type === 'v' ? sh(leafP(160, 204, 14, -60, 4), g.mat, { rim: 1, off: [-1, -1] }) + sh(leafP(160, 204, 14, -120, 4), g.mat, { rim: 1, off: [-1, -1] }) : '');
+          if (t >= 2) chest += `<path d="${crescentP(160, 206, 7, 90, 0.5)}" fill="${t >= 3 ? GOLD : '#eef3ff'}" stroke="${dark(g.mat, 0.5)}" stroke-width="1"/><g opacity="0.3"><circle class="r-glow" cx="160" cy="206" r="10" fill="${acc}" filter="url(#${id}-blur3)"/></g>`;
+          break;
+        case 'arnyromok': {
+          const SP = 'M134 196 L150 190 L170 190 L186 196 L184 238 L170 250 L150 250 L136 238 Z';
+          if (type === 'n') chest = sh(SP, mat) + S('M140 204 L146 214 L142 222 M178 230 L172 236', dark(mat, 0.5), 1.1) + S('M136 210 L184 210', dark(mat, 0.3), 1.2);
+          else { // tépett tabard a mellkastól lefelé
+            const yb = isRobe ? 392 : 316;
+            chest = sh(`M146 192 L174 192 L176 ${yb - 8} L171 ${yb} L166 ${yb - 10} L161 ${yb + 2} L156 ${yb - 9} L151 ${yb} L145 ${yb - 6} Z`, g.cloth, { rim: 1.2 }) + S(`M149 196 L149 ${yb - 10} M171 196 L171 ${yb - 10}`, t >= 1 ? acc : light(g.cloth, 0.2), 1, { op: t >= 1 ? 0.7 : 0.5 });
+            if (type === 'k') chest += S('M128 198 L146 214 M192 198 L174 214', dark(mat, 0.3), 5) + sh('M152 214 L168 214 L172 226 L160 236 L148 226 Z', mat, { rim: 1.2, off: [-2, -2] });
+          }
+          const ry = type === 'n' ? 224 : type === 'k' ? 224 : 240;
+          chest += t >= 1 ? glowLine(g, runeAt(160, ry, 1.3), acc, 1.6) : S(runeAt(160, ry, 1.3), dark(mat, 0.5), 1.8);
+          if (t >= 2) chest += glowLine(g, type === 'n' ? 'M138 200 L150 195 L170 195 L182 200 M140 236 L151 245 L169 245 L180 236' : 'M150 198 L150 230 M170 198 L170 230', acc, 1);
+          if (t >= 3) chest += S(type === 'n' ? SP : 'M146 192 L174 192', GOLD, 1.6);
+          break;
+        }
+        case 'szirtek':
+          if (type === 'n') chest = sh(PLATE, mat) + S('M136 214 C150 220 170 220 184 214', g.trim, 1.6) + S('M140 200 C146 196 152 195 158 195', light(mat, 0.45), 1.4, { op: 0.8 });
+          else if (type === 'k') chest = S('M128 198 L192 258', dark(mat, 0.3), 7) + S('M128 198 L192 258', mat, 4.6) + S('M192 198 L172 216', dark(mat, 0.3), 6) + S('M192 198 L172 216', mat, 3.6);
+          else chest = S('M136 194 C146 210 154 216 160 220 C166 216 174 210 184 194', dark(mat, 0.2), 3) + S('M136 194 C146 210 154 216 160 220 C166 216 174 210 184 194', g.trim, 1.2);
+          chest += gemSvg(type === 'k' ? 172 : 160, type === 'k' ? 216 : 222 + (type === 'v' ? 4 : 0), 6 + t * 1.2, acc, id, t >= 1);
+          if (t >= 2) chest += [[146, 214, -150], [174, 214, -30]].map(([x, y, a]) => sh(shardP(x, y, 10, a, 3), acc, { stroke: dark(acc, 0.55), rim: 1, off: [-1, -1], sw: 1 })).join('');
+          if (t >= 3) chest += `<path d="M${type === 'k' ? 172 : 160} ${type === 'k' ? 205 : 210 + (type === 'v' ? 4 : 0)} l-9 ${11} l9 ${11} l9 -${11} Z" fill="none" stroke="${GOLD}" stroke-width="1.6"/>`;
+          break;
+        default: // éjkatlan
+          if (type === 'n') chest = sh(PLATE, mat) + glowLine(g, 'M138 202 L160 230 L182 202 M160 230 L160 246', acc, 1.3) + [[140, 236], [180, 236]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.6" fill="${g.trim}"/>`).join('');
+          else if (type === 'k') chest = both2('M128 198 L192 258', d => S(d, dark(mat, 0.2), 6) + S(d, mat, 4)) + glowLine(g, 'M132 202 L188 254', acc, 0.9) + sh('M152 220 L168 220 L172 230 L160 240 L148 230 Z', mat, { rim: 1, off: [-2, -2] });
+          else chest = both2('M139 192 L147 192 L149 ' + (isRobe ? 392 : 262) + ' L137 ' + (isRobe ? 392 : 262) + ' Z', d => sh(d, mat, { rim: 1.2 })) + glowLine(g, 'M143 196 L143 ' + (isRobe ? 388 : 258) + ' M177 196 L177 ' + (isRobe ? 388 : 258), acc, 0.9);
+          if (t >= 1) chest += gemSvg(160, type === 'k' ? 230 : type === 'n' ? 214 : 204, 4.4 + t, acc, id, true);
+          if (t >= 2 && type === 'n') chest += [[136, 198, -130], [184, 198, -50]].map(([x, y, a]) => sh(spikeP(x, y, 12, a, 3.2), mix(mat, '#4a4660', 0.3), { rim: 1, off: [-1.5, -1.5], sw: 1.1 })).join('');
+          if (t >= 3) chest += S(type === 'n' ? 'M132 197 C148 190 172 190 188 197' : 'M137 194 L183 194', GOLD, 1.8);
+      }
+    } else if (type === 'n') { // hátlap a nehéz vértnél
+      chest = sh('M130 198 C146 190 174 190 190 198 L188 250 C176 258 144 258 132 250 Z', g.set === 'kodlap' ? mat : g.set === 'holdfeny' ? g.mat : mat, { off: [-5, -4] });
+      if (g.set === 'arnyromok' && t >= 1) chest += glowLine(g, runeAt(160, 224, 1.4), acc, 1.5);
+      if (g.set === 'ejkatlan') chest += glowLine(g, 'M160 196 L160 252', acc, 1.2);
+      if (g.set === 'szirtek' && t >= 1) chest += gemSvg(160, 222, 5 + t, acc, id, true);
+      if (g.set === 'holdfeny') chest += sh(leafP(160, 248, 36, -90, 7), mix(g.vine, mat, 0.35), { rim: 1.2, off: [-2, -2] });
+      if (g.set === 'kodlap') chest += S('M134 210 L186 230 M134 226 L186 246', dark(mat, 0.45), 3);
+    }
+    if (back && g.set === 'arnyromok' && type !== 'n') { const yb = isRobe ? 392 : 316; chest += sh(`M146 192 L174 192 L176 ${yb - 8} L171 ${yb} L166 ${yb - 10} L161 ${yb + 2} L156 ${yb - 9} L151 ${yb} L145 ${yb - 6} Z`, g.cloth, { rim: 1.2 }); }
+    // öv
+    const buckle = () => {
+      if (back) return '';
+      switch (g.set) {
+        case 'kodlap': return sh(capsP(152, 265, 168, 265, 3), g.trim, { rim: 1, off: [-1, -1], sw: 1.2 }) + (t >= 1 ? S('M150 268 L147 284 M170 268 L173 282', '#5a4a30', 1.2) + `<circle cx="147" cy="286" r="2.6" fill="${g.trim}" stroke="${line(g.trim)}" stroke-width="0.8"/><circle cx="173" cy="284" r="2.2" fill="${g.trim}" stroke="${line(g.trim)}" stroke-width="0.8"/>` : '');
+        case 'holdfeny': return sh(leafP(160, 266, 15, 200, 4), g.mat, { rim: 1, off: [-1, -1], sw: 1.2 }) + sh(leafP(160, 266, 15, -20, 4), g.mat, { rim: 1, off: [-1, -1], sw: 1.2 }) + `<circle cx="160" cy="266" r="3" fill="${t >= 3 ? GOLD : g.vine}" stroke="${dark(g.vine, 0.5)}" stroke-width="1"/>`;
+        case 'arnyromok': return sh('M151 259 L169 259 L170 273 L150 273 Z', mat, { rim: 1, off: [-2, -2], sw: 1.4 }) + (t >= 1 ? glowLine(g, runeAt(160, 266, 0.7), acc, 1) : '');
+        case 'szirtek': return sh('M152 260 L168 260 L168 272 L152 272 Z', g.trim, { rim: 1, off: [-1.5, -1.5], sw: 1.3 }) + gemSvg(160, 266, 4.4, acc, id, t >= 1);
+        default: return sh('M150 260 L170 260 L172 266 L170 272 L150 272 L148 266 Z', mat, { rim: 1, off: [-2, -2], sw: 1.3 }) + sh(spikeP(160, 270, 9, 90, 2.6), mix(mat, '#4a4660', 0.3), { rim: 0.8, off: [-1, -1], sw: 1 }) + gemSvg(160, 265.5, 3, acc, id, true);
+      }
+    };
+    const bc = { kodlap: '#5c4a34', holdfeny: g.bark || '#6b5040', arnyromok: dark(mat, 0.15), szirtek: mat, ejkatlan: mat }[g.set];
+    belt = sh(BELT, bc, { rim: 1.2, off: [-2, -2], sw: 1.6 });
+    if (g.set === 'kodlap') belt += `<path d="M123 263 C146 269 174 269 197 263" fill="none" stroke="${light(bc, 0.3)}" stroke-width="1.4" stroke-dasharray="3 3"/>`;
+    if (g.set === 'holdfeny') belt += S('M122 262 C134 270 140 260 152 268 M168 268 C180 260 186 270 198 262', g.vine, 1.4);
+    if (g.set === 'arnyromok') belt += S('M136 262 L136 271 M184 262 L184 271', dark(mat, 0.5), 1.2);
+    if (g.set === 'ejkatlan' && t >= 1) belt += glowLine(g, 'M124 266 C146 271 174 271 196 266', acc, 0.8);
+    if (t >= 3) belt += S('M121 259 C146 265 174 265 199 259', GOLD, 1.4);
+    belt += buckle();
+    // csípővért / rongysáv / levelek – nehéznél kéktől, másnál lilától; köntösnél a hosszú elő- és hátlap
+    const tassN = type === 'n' ? (t >= 1) : (t >= 2);
+    if (tassN && !isRobe) {
+      const xs = type === 'n' ? [128, 145, 175, 192] : [132, 188];
+      switch (g.set) {
+        case 'kodlap': low = [124, 134, 144, 176, 186, 196].filter((x, i) => type === 'n' || i % 2 === 0).map((x, i) => sh(`M${x - 5} 268 L${x + 5} 268 L${x + 4} ${300 + (i % 3) * 5} L${x + 1} ${294 + (i % 3) * 5} L${x - 2} ${303 + (i % 3) * 5} L${x - 5} ${296 + (i % 3) * 4} Z`, i % 2 ? mat : g.fur, { rim: 1.1, off: [-2, -2], sw: 1.3 })).join(''); break;
+        case 'holdfeny': low = xs.map(x => sh(leafP(x, 267, 34 + t * 3, 90 + (x - 160) * 0.25, 6), g.mat, { rim: 1.1, off: [-2, -2] }) + S(`M${x} 268 L${f2(x + (x - 160) * 0.1)} ${296 + t * 2}`, t >= 3 ? GOLD : dark(g.mat, 0.35), 1)).join(''); break;
+        case 'arnyromok': low = xs.map(x => sh(`M${x - 8} 268 L${x + 8} 268 L${x + 7} 296 L${x - 1} 300 L${x - 7} 294 Z`, mat, { rim: 1.1, off: [-2, -2] }) + S(`M${x - 6} 281 L${x + 6} 281`, dark(mat, 0.4), 1)).join('') + (t >= 2 ? glowLine(g, xs.map(x => `M${x - 5} 286 L${x + 5} 286`).join(' '), acc, 0.9) : ''); break;
+        case 'szirtek': low = xs.map(x => sh(`M${x - 8} 268 L${x + 8} 268 L${x + 6} 292 L${x} 298 L${x - 6} 292 Z`, mat, { rim: 1.1, off: [-2, -2] }) + sh(shardP(x, 296, 8 + t * 2, 90, 2.6), acc, { stroke: dark(acc, 0.55), rim: 0.8, off: [-1, -1], sw: 1 })).join(''); break;
+        default: low = xs.map(x => sh(`M${x - 8} 268 L${x + 8} 268 L${x + 5} 294 L${x} ${304 + t * 2} L${x - 5} 294 Z`, mat, { rim: 1.1, off: [-2, -2] }) + glowLine(g, `M${x - 6} 272 L${x - 3} 292 M${x + 6} 272 L${x + 3} 292`, acc, 0.7, 0.3)).join('');
+      }
+    }
+    // köntös szegélye
+    if (isRobe && t >= 1) {
+      const H = 'M102 398 C134 408 186 408 218 398';
+      switch (g.set) {
+        case 'kodlap': hem = [108, 122, 136, 150, 164, 178, 192, 206].map((x, i) => P(`M${x - 6} ${398 + (Math.abs(x - 160) < 40 ? 4 : 2)} L${x + 6} ${398 + (Math.abs(x - 160) < 40 ? 4 : 2)} L${x + 3} ${410 + (i % 3) * 3} L${x} ${406} L${x - 4} ${411 + (i % 2) * 3} Z`, i % 2 ? mat : g.fur, { sw: 1.2 })).join(''); break;
+        case 'holdfeny': hem = S(H, g.bark, 5) + [110, 128, 146, 164, 182, 200].map(x => sh(leafP(x, 402, 12, -20, 3.4), g.mat, { rim: 0.8, off: [-1, -1], sw: 1 })).join(''); break;
+        case 'arnyromok': hem = S(H, dark(mat, 0.1), 6) + glowLine(g, 'M110 400 L118 402 L122 396 L130 404 L138 398 M182 398 L190 404 L198 396 L202 402 L210 400', acc, 1); break;
+        case 'szirtek': hem = S(H, mat, 5) + [112, 136, 160, 184, 208].map(x => sh(shardP(x, 404, 9, 90, 2.8), acc, { stroke: dark(acc, 0.55), rim: 0.8, off: [-1, -1], sw: 1 })).join(''); break;
+        default: hem = S(H, mat, 6) + glowLine(g, H, acc, 1);
+      }
+      if (t >= 3) hem += S('M102 394 C134 404 186 404 218 394', GOLD, 1.6);
+    }
+    s = low + chest + col + belt + hem;
+    return g.male ? `<g transform="translate(160 0) scale(1.12 1) translate(-160 0)">${s}</g>` : s;
+  }
+
+  // ---------- lábvért (köntösnél nincs) ----------
+  function setGreaves(g, type) {
+    const t = g.t, id = g.id, mat = g.mat, acc = g.acc;
+    if (type === 'v' && t < 2) return '';
+    if (type === 'k' && t < 1) return '';
+    const side = M => {
+      const sh = (d, fill, o) => shaded(id, M(d), fill, Object.assign({ off: [-3, -2], rim: 1.3, sw: 1.6 }, o || {}));
+      const ln = (d, c, w, o) => S(M(d), c, w, o), gl = (d, w, op) => glowLine(g, M(d), acc, w, op);
+      const KNEE = 'M134 322 C134 311 157 311 157 322 C157 330 134 330 134 322 Z', SHIN = 'M135.5 324 L155.5 324 L155 372 L136 372 Z';
+      const WR = 'M135 336 L156 330 M135 346 L156 340 M135 356 L156 350 M135 366 L156 360';
+      let one = '';
+      switch (g.set) {
+        case 'kodlap': one = (type === 'n' ? sh(SHIN, mat) + ln(WR, dark(mat, 0.45), 2) : ln(WR, dark(mat, 0.4), 3.4) + ln(WR, mat, 2)) + (t >= 1 ? sh(capsP(140, 322, 151, 322, 2.2), g.trim, { rim: 1, off: [-1, -1], sw: 1.1 }) : ''); break;
+        case 'holdfeny': one = (type === 'n' ? sh(SHIN, g.bark) + ln('M138 330 C144 340 140 352 148 362', g.vine, 1.4) : '') + sh(leafP(145.5, 336, 24 + t * 2, -90, 6), g.mat, { rim: 1.1, off: [-2, -2] }); break;
+        case 'arnyromok': one = (type === 'n' ? sh(SHIN, mat) : '') + sh('M134 314 L157 314 L158 326 L146 332 L133 326 Z', mat) + (t >= 1 ? gl('M141 323 L145.5 318 L150 323', 1.1) : ''); break;
+        case 'szirtek': one = (type === 'n' ? sh(SHIN, mat) : '') + sh(shardP(145.5, 316, 10 + t * 2, -90, 3), acc, { stroke: dark(acc, 0.55), rim: 0.8, off: [-1, -1], sw: 1 }) + sh(KNEE, mat); break;
+        default: one = (type === 'n' ? sh(SHIN, mat) + gl('M145.5 330 L145.5 368', 0.9) : '') + sh(spikeP(145.5, 318, 10 + t * 2, -90, 3), mix(mat, '#4a4660', 0.3), { rim: 1, off: [-1, -1], sw: 1.1 }) + sh(KNEE, mat);
+      }
+      if (t >= 3) one += ln('M135 372 L156 372', GOLD, 2);
+      return one;
+    };
+    return side(d => d) + side(mirror);
+  }
+
+  // ---------- fejfedő-díszek (a fej koordinátáiban; a meglévő fejfedőre kerülnek) ----------
+  // dome: [cx, cy, rx, ry] a fejfedő teteje (ide kerül a taréj), band: a pánt íve (köbös Bézier), brow: a homlok közepe
+  const HWG = {
+    sisak: { dome: [160, 122, 58, 88], band: [[106, 104], [126, 92], [194, 92], [214, 104]], brow: [160, 101] },
+    csuklya: { dome: [160, 146, 62, 108], band: [[112, 118], [126, 84], [194, 84], [208, 118]], brow: [160, 86] },
+    suveg: { band: [[122, 68], [140, 56], [180, 56], [198, 68]], brow: [160, 63], plume: [196, 60] },
+    abroncs: { band: [[106, 84], [122, 66], [198, 66], [214, 84]], brow: [160, 71] },
+    diadem: { band: [[112, 98], [140, 86], [180, 86], [208, 98]], brow: [160, 89] },
+    koszoru: { band: [[110, 92], [130, 70], [190, 70], [210, 92]], brow: [160, 72] },
+    nincs: { band: [[108, 94], [128, 78], [192, 78], [212, 94]], brow: [160, 82], circlet: 1 }
+  };
+  // a fejfedő ívének u ∈ [−1, 1] pontja és kifelé mutató normálisa (fokban)
+  function hwPoint(G, u, onBand) {
+    if (G.dome && !onBand) {
+      const [cx, cy, rx, ry] = G.dome, ph = u * 0.9, x = cx + rx * Math.sin(ph), y = cy - ry * Math.cos(ph);
+      return [x, y, Math.atan2(-Math.cos(ph) / ry, Math.sin(ph) / rx) / DEG];
+    }
+    const b = G.band, t = (u + 1) / 2, p = bez(b[0], b[1], b[2], b[3], t), q = bez(b[0], b[1], b[2], b[3], Math.min(1, t + 0.01)), r = bez(b[0], b[1], b[2], b[3], Math.max(0, t - 0.01));
+    const tx = q[0] - r[0], ty = q[1] - r[1];
+    return [p[0], p[1], Math.atan2(-tx, ty) / DEG];
+  }
+  function setHelmDecor(g, hw, back) {
+    const G = HWG[hw] || HWG.nincs, t = g.t, id = g.id, mat = g.mat, acc = g.acc;
+    const sh = (d, fill, o) => shaded(id, d, fill, Object.assign({ off: [-2, -2], rim: 1.2, sw: 1.5 }, o || {}));
+    const crest = (G.dome ? [-0.0] : [0]).concat();
+    const br = G.brow, sides = [hwPoint(G, -1, true), hwPoint(G, 1, true)];
+    let s = '';
+    if (G.circlet && !back) { // fejfedő nélkül egy vékony szettpánt
+      const bd = `M${G.band[0].join(' ')} C${G.band[1].join(' ')} ${G.band[2].join(' ')} ${G.band[3].join(' ')}`;
+      s += S(bd, dark(g.set === 'holdfeny' ? g.bark : mat, 0.3), 5) + S(bd, g.set === 'holdfeny' ? g.bark : mat, 3);
+    }
+    const along = (us, fn) => us.map(u => { const p = hwPoint(G, u, !G.dome); return fn(p[0], p[1], p[2], u); }).join('');
+    switch (g.set) {
+      case 'kodlap': {
+        // nádcsomó a jobb oldalon, csontpeckek, bőrszíj-tekercs
+        const base = G.plume || [sides[1][0] - 6, sides[1][1] - 8];
+        const reeds = [[0, -40, 4], [12, -32, -2], [-8, -36, 6]].slice(0, t >= 2 ? 3 : 2);
+        reeds.forEach(([dx, dy, bnd]) => {
+          const k = 1 + t * 0.12, x1 = base[0] + dx * k, y1 = base[1] + dy * k, d = `M${base[0]} ${base[1]} Q${f2((base[0] + x1) / 2 + bnd)} ${f2((base[1] + y1) / 2)} ${f2(x1)} ${f2(y1)}`;
+          s += S(d, '#3a3f22', 3.6) + S(d, g.reed, 2) + sh(capsP(base[0] + (x1 - base[0]) * 0.62, base[1] + (y1 - base[1]) * 0.62, base[0] + (x1 - base[0]) * 0.9, base[1] + (y1 - base[1]) * 0.9, 2.6), '#7a5230', { rim: 0.8, off: [-1, -1], sw: 1 });
+        });
+        if (!back && (hw === 'sisak' || hw === 'csuklya')) {
+          const bd = `M${G.band[0].join(' ')} C${G.band[1].join(' ')} ${G.band[2].join(' ')} ${G.band[3].join(' ')}`;
+          s += S(bd, dark(g.mat, 0.4), 7) + S(bd, g.mat, 5) + along([-0.7, -0.35, 0, 0.35, 0.7], (x, y) => S(`M${f2(x - 2)} ${f2(y - 3)} L${f2(x + 2)} ${f2(y + 3)}`, dark(g.mat, 0.5), 1.2));
+        }
+        if (t >= 1) s += sides.map(([x, y], i) => sh(capsP(x - 5, y + 2, x + 5, y - 2, 2), g.trim, { rim: 0.8, off: [-1, -1], sw: 1 })).join('');
+        if (t >= 2 && !back) s += sh(capsP(br[0] - 8, br[1] - 4, br[0] + 8, br[1] + 4, 1.8), g.trim, { rim: 0.8, off: [-1, -1], sw: 1 }) + sh(capsP(br[0] - 8, br[1] + 4, br[0] + 8, br[1] - 4, 1.8), g.trim, { rim: 0.8, off: [-1, -1], sw: 1 }) + `<circle cx="${br[0]}" cy="${br[1]}" r="3.2" fill="${g.trim}" stroke="${line(g.trim)}" stroke-width="0.9"/>`;
+        break;
+      }
+      case 'holdfeny': {
+        // ezüst levélszárnyak a halántéknál, hátrafelé-felfelé söpörve
+        const n = t >= 2 ? 3 : t >= 1 ? 2 : 1;
+        sides.forEach(([x, y], i) => {
+          const sd = i ? 1 : -1;
+          for (let j = n - 1; j >= 0; j--) {
+            const a = sd > 0 ? -60 + j * 22 : -120 - j * 22, len = (24 + t * 5) * (1 - j * 0.18);
+            s += sh(leafP(x, y, len, a, 5.5 - j * 0.6), mat, { rim: 1 }) + S(`M${f2(x)} ${f2(y)} L${axis(x, y, a)(len * 0.85, 0)}`, t >= 3 ? GOLD : dark(mat, 0.35), 0.9, { op: 0.8 });
+          }
+          if (t >= 1) s += `<circle cx="${f2(x)}" cy="${f2(y)}" r="2.6" fill="${g.vine}" stroke="${dark(g.vine, 0.5)}" stroke-width="0.8"/>`;
+        });
+        if (!back && t >= 1) s += sh(leafP(br[0], br[1] + 4, 14 + t * 2, -90, 4), mat, { rim: 0.9 });
+        if (!back && t >= 2) s += `<path d="${crescentP(br[0], br[1] - 12 - t, 5.5, 90, 0.5)}" fill="${t >= 3 ? GOLD : '#eef3ff'}" stroke="${dark(mat, 0.5)}" stroke-width="0.9"/><g opacity="0.35"><circle class="r-glow" cx="${br[0]}" cy="${br[1] - 12 - t}" r="8" fill="${acc}" filter="url(#${id}-blur3)"/></g>`;
+        break;
+      }
+      case 'arnyromok': {
+        if (!back) {
+          s += sh(`M${br[0] - 13} ${br[1] - 6} L${br[0] + 13} ${br[1] - 6} L${br[0] + 10} ${br[1] + 6} L${br[0] - 10} ${br[1] + 6} Z`, mat, { rim: 1 });
+          s += t >= 1 ? glowLine(g, runeAt(br[0], br[1], 0.7), acc, 1.1) : S(runeAt(br[0], br[1], 0.7), dark(mat, 0.5), 1.2);
+          if (t >= 3) s += S(`M${br[0] - 13} ${br[1] - 6} L${br[0] + 13} ${br[1] - 6}`, GOLD, 1.4);
+        }
+        s += sides.map(([x, y]) => sh(`M${f2(x - 5)} ${f2(y - 6)} L${f2(x + 5)} ${f2(y - 6)} L${f2(x + 4)} ${f2(y + 5)} L${f2(x - 4)} ${f2(y + 5)} Z`, mat, { rim: 0.8 })).join('');
+        if (t >= 2) { // lebegő rúnaív a fej fölött
+          const top = G.dome ? hwPoint(G, 0)[1] : G.band[1][1] - 6;
+          s += `<g class="r-float">` + [-22, 0, 22].map((dx, i) => glowLine(g, runeAt(160 + dx, top - 14 - (i === 1 ? 6 : 0), 0.65), acc, 1.1)).join('') + `</g>`;
+        }
+        break;
+      }
+      case 'szirtek': {
+        const us = [[0, 1.25], [-0.32, 0.9], [0.32, 0.9], [-0.6, 0.7], [0.6, 0.7]].slice(0, Math.min(5, 1 + t * 1.4 | 0));
+        if (t >= 2) { const p = hwPoint(G, 0, !G.dome); s += `<g opacity="0.3"><circle class="r-glow" cx="${f2(p[0])}" cy="${f2(p[1] - 10)}" r="14" fill="${acc}" filter="url(#${id}-blur3)"/></g>`; }
+        us.slice().reverse().forEach(([u, sc]) => { const p = hwPoint(G, u, !G.dome), len = (14 + t * 4) * sc; s += sh(shardP(p[0] - Math.cos(p[2] * DEG) * 4, p[1] - Math.sin(p[2] * DEG) * 4, len, p[2], 3.6 * Math.max(0.8, sc * 0.9)), acc, { stroke: dark(acc, 0.55), rim: 1 }) + S(shardHi(p[0] - Math.cos(p[2] * DEG) * 4, p[1] - Math.sin(p[2] * DEG) * 4, len, p[2], 3.6), '#fff', 0.8, { op: 0.8 }); });
+        if (!back && t >= 1) s += gemSvg(br[0], br[1], 4 + t * 0.6, acc, id, true);
+        break;
+      }
+      default: { // éjkatlan: tüskekorona, bíbor homlokkő, lilától szarvak
+        if (t >= 2) s += sides.map(([x, y], i) => { const sd = i ? 1 : -1; return sh(`M${f2(x - sd * 4)} ${f2(y + 4)} C${f2(x + sd * 10)} ${f2(y - 4)} ${f2(x + sd * 18)} ${f2(y - 22)} ${f2(x + sd * 12)} ${f2(y - 40 - t * 3)} C${f2(x + sd * 8)} ${f2(y - 24)} ${f2(x + sd * 2)} ${f2(y - 12)} ${f2(x - sd * 4)} ${f2(y - 6)} Z`, mix(mat, '#4a4660', 0.3), { rim: 1 }); }).join('');
+        const us = t >= 2 ? [-0.6, -0.3, 0, 0.3, 0.6] : [-0.35, 0, 0.35];
+        us.forEach(u => { const p = hwPoint(G, u, !G.dome), len = (u === 0 ? 14 : 10) + t * 2.5; s += sh(spikeP(p[0] - Math.cos(p[2] * DEG) * 3, p[1] - Math.sin(p[2] * DEG) * 3, len, p[2], 3), mix(mat, '#4a4660', 0.3), { rim: 0.9 }); });
+        if (t >= 3) s += along([-0.6, 0, 0.6], (x, y) => `<circle cx="${f2(x)}" cy="${f2(y)}" r="1.8" fill="${GOLD}"/>`);
+        if (!back && t >= 1) s += gemSvg(br[0], br[1], 3.6 + t * 0.6, acc, id, true);
+      }
+    }
+    return s;
+  }
+
+  // ---------- fegyverdíszek ----------
+  // h: a fej (hegy, gömb, íjvég), h2: az íj másik vége, g: keresztvas / nyak, p: markolatgomb / alsó vég, seg: díszvonal szakasza
+  const WANCH = {
+    harcos0: { h: [213, 116], g: [213, 264], p: [213, 300], seg: [[213, 134], [213, 250]] },
+    harcos1: { h: [213, 110], g: [213, 266], p: [213, 302], seg: [[213, 126], [213, 252]] },
+    harcos2: { h: [240, 196], g: [213, 216], p: [213, 334], seg: [[213, 224], [213, 300]] },
+    vadasz0: { h: [84, 150], h2: [84, 410], g: [116, 279], p: [116, 279], seg: [[112, 236], [112, 322]], bow: 1 },
+    vadasz1: { h: [90, 196], h2: [90, 362], g: [110, 279], p: [110, 279], seg: [[111, 244], [111, 316]], bow: 1 },
+    vadasz2: { h: [276, 269], g: [250, 279], p: [188, 285], seg: [[200, 279], [244, 276]] },
+    magus0: { h: [213, 132], g: [213, 158], p: [213, 334], seg: [[213, 170], [213, 252]] },
+    magus1: { h: [213, 120], g: [213, 154], p: [213, 334], seg: [[213, 168], [213, 252]] },
+    magus2: { h: [252, 186], g: [252, 232], p: [252, 232], book: 1 },
+    gyogyito0: { h: [213, 144], g: [213, 164], p: [213, 334], seg: [[213, 178], [213, 252]] },
+    gyogyito1: { h: [240, 194], g: [213, 176], p: [213, 334], seg: [[213, 186], [213, 252]] },
+    gyogyito2: { h: [213, 192], g: [213, 212], p: [213, 328], seg: [[213, 218], [213, 262]] },
+    orgyilkos0: { h: [213, 342], g: [213, 298], p: [213, 262], seg: [[213, 306], [213, 330]] },
+    orgyilkos1: { h: [226, 342], g: [213, 298], p: [213, 262], seg: [[211, 306], [214, 328]] },
+    orgyilkos2: { h: [213, 352], g: [213, 298], p: [213, 262], seg: [[213, 306], [213, 340]] },
+    idezo0: { h: [213, 323], g: [213, 292], p: [213, 340] },
+    idezo1: { h: [252, 186], g: [252, 232], p: [252, 232], book: 1 },
+    idezo2: { h: [213, 168], g: [213, 192], p: [213, 328], seg: [[213, 198], [213, 262]] },
+    dalnok0: { h: [233, 217], g: [203, 302], p: [171, 373], seg: [[207, 294], [231, 238]] },
+    dalnok1: { h: [214, 212], g: [244, 282], p: [212, 332], seg: [[213, 230], [213, 300]] },
+    dalnok2: { h: [228, 206], g: [222, 236], p: [203, 326], seg: [[225, 222], [206, 306]] },
+    alakvalto0: { h: [252, 284], g: [221, 276], p: [221, 276], seg: [[228, 268], [248, 270]] },
+    alakvalto1: { h: [214, 152], g: [214, 196], p: [214, 334], seg: [[214, 204], [214, 262]] },
+    alakvalto2: { h: [226, 342], g: [213, 298], p: [213, 262], seg: [[211, 306], [214, 328]] }
+  };
+  function wAxis(A) { const a = A.seg ? [A.seg[1][0] - A.seg[0][0], A.seg[1][1] - A.seg[0][1]] : [A.h[0] - A.g[0], A.h[1] - A.g[1]]; const ang = Math.atan2(a[1], a[0]) / DEG; return ang; }
+  function segPts(A, n) { if (!A.seg) return []; const out = []; for (let i = 0; i < n; i++) { const t = n === 1 ? 0.5 : i / (n - 1); out.push([A.seg[0][0] + (A.seg[1][0] - A.seg[0][0]) * t, A.seg[0][1] + (A.seg[1][1] - A.seg[0][1]) * t]); } return out; }
+  function setWeaponDecor(A, g) {
+    const t = g.t, id = g.id, mat = g.mat, acc = g.acc, ang = wAxis(A), id2 = id;
+    const sh = (d, fill, o) => shaded(id2, d, fill, Object.assign({ off: [-1.5, -1.5], rim: 1, sw: 1.2 }, o || {}));
+    const [gx, gy] = A.g, [px, py] = A.p, [hx, hy] = A.h;
+    const segD = A.seg ? `M${A.seg[0].join(' ')} L${A.seg[1].join(' ')}` : '';
+    const sideA = [ang + 90, ang - 90];
+    let s = '';
+    switch (g.set) {
+      case 'kodlap': // szíjtekercs a markolat fölött, csontgyöngyös zsinór, nádtoll
+        if (A.seg) s += segPts({ seg: [A.seg[0], [A.seg[0][0] + (A.seg[1][0] - A.seg[0][0]) * 0.3, A.seg[0][1] + (A.seg[1][1] - A.seg[0][1]) * 0.3]] }, 4).map(([x, y]) => { const p = axis(x, y, ang); return S(`M${p(0, -5)} L${p(3, 5)}`, dark(mat, 0.4), 3) + S(`M${p(0, -5)} L${p(3, 5)}`, mat, 1.8); }).join('');
+        s += S(`M${gx} ${gy} Q${gx - 8} ${gy + 10} ${gx - 6} ${gy + 20}`, '#5a4a30', 1.2) + `<circle cx="${gx - 7}" cy="${gy + 12}" r="2.4" fill="${g.trim}" stroke="${line(g.trim)}" stroke-width="0.7"/><circle cx="${gx - 6}" cy="${gy + 21}" r="2.8" fill="${g.trim}" stroke="${line(g.trim)}" stroke-width="0.7"/>`;
+        if (t >= 1) s += sh(capsP(px - 4, py, px + 4, py, 2.2), g.trim);
+        if (t >= 2) { const p = axis(hx, hy, ang + 180); s += [[-30, 16], [-55, 14]].map(([da, len]) => { const q = axis(gx, gy, ang + 180 + da), e = q(len, 0); return S(`M${gx} ${gy} L${e}`, '#3a3f22', 3) + S(`M${gx} ${gy} L${e}`, g.reed, 1.6); }).join(''); }
+        break;
+      case 'holdfeny': // ezüstlevélpár a keresztvasnál, indatekercs, holdsarló a gombon
+        s += sideA.map(a => sh(leafP(gx, gy, 12 + t * 2.5, a + (a > ang ? -25 : 25), 3.4), mat)).join('');
+        if (t >= 1) s += `<path d="${crescentP(px, py + 2, 4.5, 90, 0.5)}" fill="${t >= 3 ? GOLD : '#eef3ff'}" stroke="${dark(mat, 0.5)}" stroke-width="0.8"/>`;
+        if (t >= 2 && A.seg) { let d = ''; segPts(A, 9).forEach(([x, y], i) => { const p = axis(x, y, ang); d += (i ? 'L' : 'M') + p(0, i % 2 ? 4 : -4) + ' '; }); s += S(d, g.vine, 1.4, { op: 0.9 }) + segPts(A, 3).map(([x, y], i) => sh(leafP(x, y, 7, ang + (i % 2 ? 60 : -60), 2.2), g.vine, { rim: 0.6 })).join(''); }
+        break;
+      case 'arnyromok': // kőgyűrű a nyakon, izzó rúnák a pengén / nyélen
+        s += sh(`M${axis(gx, gy, ang)(-4, -7)} L${axis(gx, gy, ang)(4, -7)} L${axis(gx, gy, ang)(4, 7)} L${axis(gx, gy, ang)(-4, 7)} Z`, mat);
+        if (t >= 1 && A.seg) s += segPts(A, t >= 2 ? 3 : 2).map(([x, y]) => glowLine(g, runeAt(x, y, 0.55), acc, 0.9, 0.35)).join('');
+        else if (t >= 1) s += glowLine(g, runeAt(hx, hy - 18, 0.6), acc, 1);
+        if (t >= 2) s += `<g class="r-float">${glowLine(g, runeAt(hx + 14, hy - 10, 0.5), acc, 0.9)}</g>`;
+        if (t >= 3) s += S(`M${axis(gx, gy, ang)(-4, -7)} L${axis(gx, gy, ang)(-4, 7)}`, GOLD, 1.4);
+        break;
+      case 'szirtek': // kristályfürt a nyakon, csiszolt kő a gombon, lilától szilánkok a fejnél
+        s += sideA.map(a => sh(shardP(gx, gy, 9 + t * 2, a + (a > ang ? -30 : 30), 2.6), acc, { stroke: dark(acc, 0.55) })).join('');
+        if (t >= 1) s += gemSvg(px, py, 3.4, acc, id, t >= 2);
+        if (t >= 2) s += [-40, 0, 40].map(da => sh(shardP(hx, hy, 8 + t * 2, ang + 180 + da, 2.2), acc, { stroke: dark(acc, 0.55) })).join('') + `<g opacity="0.3"><circle class="r-glow" cx="${hx}" cy="${hy}" r="10" fill="${acc}" filter="url(#${id}-blur3)"/></g>`;
+        if (t >= 3) s += `<circle cx="${px}" cy="${py}" r="5" fill="none" stroke="${GOLD}" stroke-width="1.6"/>`;
+        break;
+      default: // éjkatlan: tüskés keresztvas, bíbor izzó él, tüskés gomb
+        s += sideA.map(a => sh(spikeP(gx, gy, 9 + t * 2.5, a + (a > ang ? -35 : 35), 2.4), mix(mat, '#4a4660', 0.3))).join('');
+        if (t >= 1 && segD) s += glowLine(g, segD, acc, 1, 0.4);
+        if (t >= 2) s += sh(spikeP(px, py, 8, ang + 180, 2.4), mix(mat, '#4a4660', 0.3)) + gemSvg(gx, gy, 3, acc, id, true);
+        if (t >= 3) s += `<circle cx="${gx}" cy="${gy}" r="5.5" fill="none" stroke="${GOLD}" stroke-width="1.6"/>`;
+    }
+    return s;
+  }
+
+  // ---------- egyedi (legendás / mitikus) darabok ----------
+  function uniqName(v) { v = String(v || ''); const i = v.indexOf(':'); return i >= 0 ? v.slice(i + 1) : v; }
+  const UNIQ_W = {
+    'Hajnalhasító': { blade: '#ffd49a', glow: '#ffb347', fx: 'sun' }, 'Éjfél Pallosa': { blade: '#4a5098', glow: '#8f9cff', fx: 'midnight' }, 'Csillagtörő Szablya': { blade: '#d8ecff', glow: '#7fe8ff', fx: 'cracks' },
+    'Holdsugár-íj': { glow: '#cfe0ff', fx: 'moonbow' }, 'Szélsuttogó': { glow: '#9affc8', fx: 'wind' }, 'Hullócsillag Hosszúíja': { glow: '#ffe2a0', fx: 'falling' },
+    'Az Örök Láng Botja': { glow: '#ff8a3a', fx: 'flame' }, 'Ködfaló Pálca': { glow: '#bfd8e0', fx: 'fog' }, 'Csillagszövő Bot': { glow: '#cfd8ff', fx: 'weave' },
+    'Hajnalpír Jogar': { blade: '#ffc4d4', glow: '#ff9ac0', fx: 'dawn' }, 'Az Első Fény': { blade: '#fffbe8', glow: '#fff3c0', fx: 'light' }, 'Holdkút Jogara': { blade: '#cfe8ff', glow: '#7fd0ff', fx: 'well' },
+    'Árnyékcsók': { blade: '#7a52b8', glow: '#b07bff', fx: 'shadow' }, 'Éjféli Fullánk': { blade: '#2a3060', glow: '#5a7bff', fx: 'sting' }, 'Suttogó Penge': { blade: '#eef4ff', glow: '#dff4ff', fx: 'whisper' },
+    'Lidércfény Lámpás': { glow: '#7fffb0', fx: 'wisp' }, 'A Néma Könyv': { glow: '#c8b0ff', fx: 'silence' }, 'Szellemhívó Mécses': { glow: '#7fd8ff', fx: 'spirit' },
+    'Csillagdal Lant': { glow: '#ffe2a0', fx: 'starsong' }, 'Az Ébredés Hárfája': { glow: '#ffc890', fx: 'awaken' }, 'Holdhívó Furulya': { glow: '#cfe0ff', fx: 'moonsong' },
+    'Farkasfog Karmok': { blade: '#f2efe6', glow: '#e0e6f0', fx: 'fang' }, 'Ősvadon Agyarai': { blade: '#d8e8c0', glow: '#7fe39a', fx: 'wild' }, 'Vihartépő Karmok': { blade: '#d0e4ff', glow: '#7fd8ff', fx: 'storm' },
+    'Csillagpenge': { blade: '#2c3a7a', glow: '#9fe8ff', fx: 'starblade', myth: 1 }
+  };
+  function flameSvg(x, y, s, c1, c2, c3, cls) { // lobogó láng (alul a talppont)
+    const d = k => `M${f2(x)} ${f2(y - 26 * s * k)} C${f2(x + 4 * s * k)} ${f2(y - 16 * s * k)} ${f2(x + 11 * s * k)} ${f2(y - 10 * s * k)} ${f2(x + 9 * s * k)} ${f2(y - 2 * s * k)} C${f2(x + 7 * s * k)} ${f2(y + 5 * s * k)} ${f2(x - 7 * s * k)} ${f2(y + 5 * s * k)} ${f2(x - 9 * s * k)} ${f2(y - 2 * s * k)} C${f2(x - 11 * s * k)} ${f2(y - 10 * s * k)} ${f2(x - 3 * s * k)} ${f2(y - 14 * s * k)} ${f2(x)} ${f2(y - 26 * s * k)} Z`;
+    return `<g class="${cls || 'r-flame'}" style="transform-origin:${f2(x)}px ${f2(y)}px"><path d="${d(1)}" fill="${c1}" stroke="${dark(c1, 0.4)}" stroke-width="1"/><path d="${d(0.68)}" fill="${c2}"/><path d="${d(0.38)}" fill="${c3}"/></g>`;
+  }
+  function noteSvg(x, y, s, c) { return `<g class="r-float"><ellipse cx="${f2(x)}" cy="${f2(y)}" rx="${f2(3 * s)}" ry="${f2(2.2 * s)}" fill="${c}" transform="rotate(-20 ${f2(x)} ${f2(y)})"/>` + S(`M${f2(x + 2.6 * s)} ${f2(y - 0.5 * s)} L${f2(x + 2.6 * s)} ${f2(y - 11 * s)} Q${f2(x + 7 * s)} ${f2(y - 9 * s)} ${f2(x + 7 * s)} ${f2(y - 5 * s)}`, c, 1.3 * s) + '</g>'; }
+  function wispSvg(x, y, r, c, id, cls) { return `<g class="${cls || 'r-float'}"><circle cx="${f2(x)}" cy="${f2(y)}" r="${f2(r * 2.2)}" fill="${c}" opacity="0.35" filter="url(#${id}-blur3)"/><path d="M${f2(x - r)} ${f2(y)} C${f2(x - r)} ${f2(y - r * 1.6)} ${f2(x + r)} ${f2(y - r * 1.6)} ${f2(x + r)} ${f2(y)} C${f2(x + r)} ${f2(y + r * 1.3)} ${f2(x + r * 0.2)} ${f2(y + r * 2.6)} ${f2(x - r * 0.6)} ${f2(y + r * 3.4)} C${f2(x - r * 0.3)} ${f2(y + r * 2)} ${f2(x - r)} ${f2(y + r * 1.2)} ${f2(x - r)} ${f2(y)} Z" fill="${light(c, 0.4)}" opacity="0.9"/><circle cx="${f2(x - r * 0.3)}" cy="${f2(y - r * 0.3)}" r="${f2(r * 0.4)}" fill="#fff"/></g>`; }
+  function uniqWeaponDecor(A, name, id) {
+    const U = UNIQ_W[name]; if (!U) return '';
+    const ang = wAxis(A), [gx, gy] = A.g, [px, py] = A.p, [hx, hy] = A.h, glow = U.glow;
+    const g = { id: id };
+    const gl = (d, w, c, op) => glowLine(g, d, c || glow, w, op);
+    const halo = (x, y, r, c, op) => `<g opacity="${op || 0.4}"><circle class="r-glow" cx="${f2(x)}" cy="${f2(y)}" r="${f2(r)}" fill="${c || glow}" filter="url(#${id}-blur6)"/></g>`;
+    const segD = A.seg ? `M${A.seg[0].join(' ')} L${A.seg[1].join(' ')}` : '';
+    const sp = n => segPts(A, n);
+    const tw = (x, y, r, c, k) => `<path class="r-twinkle" style="animation-delay:-${((k || 0) * 0.37 % 2).toFixed(2)}s;transform-origin:${f2(x)}px ${f2(y)}px" d="${starD(x, y, r, 4, 0.3)}" fill="${c || '#fff'}"/>`;
+    let s = '';
+    switch (U.fx) {
+      case 'sun': s += halo(gx, gy, 14, '#ffb347', 0.55) + sunAt(gx, gy, 9, '#ffcf5a') + `<circle cx="${gx}" cy="${gy}" r="4" fill="#fff4cf"/>` + (segD ? gl(segD, 1.4, '#ffe2a0') : '') + tw(hx, hy, 6, '#fff4cf', 1); break;
+      case 'midnight': s += sp(6).map(([x, y], i) => `<path d="${starD(x + (i % 2 ? 2 : -2), y, 1.8 + (i % 3) * 0.5, 4, 0.35)}" fill="#e8ecff"/>`).join('') + `<path d="${crescentP(px, py, 6, 60, 0.5)}" fill="#e8ecff" stroke="#3a3f78" stroke-width="1"/>` + halo(px, py, 9, '#8f9cff'); break;
+      case 'cracks': { let d = ''; sp(9).forEach(([x, y], i) => { const p = axis(x, y, ang); d += (i ? 'L' : 'M') + p(0, i % 2 ? 2.4 : -2.4) + ' '; }); s += (A.seg ? gl(d, 1.2, '#7fe8ff') : '') + `<path class="r-glow" d="${starD(gx, gy, 11, 4, 0.25)}" fill="#dff8ff" stroke="#7fe8ff" stroke-width="1"/>` + halo(gx, gy, 12, '#7fe8ff'); break; }
+      case 'moonbow': s += [A.h, A.h2 || A.h].map(([x, y], i) => `<path d="${crescentP(x + 4, y + (i ? -4 : 4), 7, i ? 45 : -45, 0.5)}" fill="#eef3ff" stroke="#6a78a8" stroke-width="1"/>` + halo(x, y, 8, '#cfe0ff')).join('') + `<circle cx="${gx}" cy="${gy}" r="5" fill="#eef3ff" stroke="#6a78a8" stroke-width="1"/>` + (segD ? gl(segD, 1, '#eef3ff', 0.3) : ''); break;
+      case 'wind': s += [0, 1, 2].map(i => `<path class="r-float" style="animation-delay:-${i * 0.6}s" d="M${gx} ${gy - 4 + i * 6} C${gx - 14} ${gy - 10 + i * 8} ${gx - 18} ${gy + 10 + i * 6} ${gx - 34 - i * 6} ${gy + 4 + i * 10}" fill="none" stroke="${['#9affc8', '#c8ffe0', '#5fd39a'][i]}" stroke-width="${2.4 - i * 0.5}" stroke-linecap="round" opacity="0.85"/>`).join('') + leafAt(gx - 8, gy + 4, '#5fd39a') + (A.h2 ? halo(A.h[0], A.h[1], 8, '#9affc8') + halo(A.h2[0], A.h2[1], 8, '#9affc8') : ''); break;
+      case 'falling': s += S(`M${gx} ${gy} L${gx - 26} ${gy - 22} M${gx + 2} ${gy + 3} L${gx - 20} ${gy - 8} M${gx - 1} ${gy - 3} L${gx - 16} ${gy - 30}`, '#ffe2a0', 1.6, { op: 0.75 }) + halo(gx, gy, 12, '#ffe2a0', 0.55) + `<path d="${starD(gx, gy, 8)}" fill="#ffe9a8" stroke="#c4902a" stroke-width="1"/>` + [A.h, A.h2 || A.h].map(([x, y], k) => tw(x, y, 4, '#fff4cf', k)).join(''); break;
+      case 'flame': s += halo(hx, hy - 8, 20, '#ff8a3a', 0.55) + flameSvg(hx, hy + 6, 1.15, '#ff5a2a', '#ffa040', '#fff0a0') + [0, 1, 2].map(k => `<circle class="r-p" style="animation-delay:-${k * 0.9}s;animation-duration:2.2s" cx="${hx - 6 + k * 6}" cy="${hy - 14}" r="1.6" fill="#ffcf5a"/>`).join(''); break;
+      case 'fog': s += [0, 1, 2].map(k => `<ellipse class="r-smoke" style="animation-delay:-${k * 1.1}s" cx="${hx + (k - 1) * 10}" cy="${hy - 4 - k * 4}" rx="${12 - k * 2}" ry="6" fill="#dbe8ee" opacity="0.55" filter="url(#${id}-blur3)"/>`).join('') + S(`M${hx - 10} ${hy} C${hx - 10} ${hy - 12} ${hx + 10} ${hy - 12} ${hx + 8} ${hy - 2} C${hx + 6} ${hy + 6} ${hx - 4} ${hy + 4} ${hx - 2} ${hy - 4}`, '#eef6fa', 1.6, { op: 0.8 }); break;
+      case 'weave': { const pts = [[-16, -10], [-6, -22], [10, -18], [18, -4], [4, 6]].map(([dx, dy]) => [hx + dx, hy + dy]); s += S('M' + pts.map(q => q.join(' ')).join(' L') + ' Z', '#cfd8ff', 0.9, { op: 0.75 }) + pts.map((q, k) => tw(q[0], q[1], 3.2, k % 2 ? '#ffe2a0' : '#fff', k)).join('') + halo(hx, hy - 6, 16, '#cfd8ff', 0.35); break; }
+      case 'dawn': s += halo(hx, hy, 20, '#ff9ac0', 0.55) + [0, 1, 2, 3, 4, 5, 6].map(k => { const a = -170 + k * 26, p = axis(hx, hy, a); return S(`M${p(12, 0)} L${p(22 + (k % 2) * 6, 0)}`, '#ffc4d4', 2, { op: 0.9 }); }).join('') + `<circle cx="${hx}" cy="${hy}" r="6" fill="#ffe0ea"/>`; break;
+      case 'light': s += halo(hx, hy, 26, '#fff3c0', 0.6) + `<g class="r-glow">${[0, 1, 2, 3, 4, 5, 6, 7].map(k => { const p = axis(hx, hy, k * 45 + 22.5); return S(`M${p(6, 0)} L${p(k % 2 ? 22 : 32, 0)}`, '#fffbe8', k % 2 ? 1.2 : 2); }).join('')}</g>` + `<path d="${starD(hx, hy, 9, 4, 0.3)}" fill="#fff"/>`; break;
+      case 'well': s += halo(hx, hy, 18, '#7fd0ff') + [0, 1, 2].map(k => `<ellipse class="r-glow" style="animation-delay:-${k * 0.6}s" cx="${hx}" cy="${hy + 2}" rx="${8 + k * 6}" ry="${3 + k * 2}" fill="none" stroke="#bfe8ff" stroke-width="${1.4 - k * 0.3}"/>`).join('') + `<path d="${crescentP(hx, hy - 16, 5, -90, 0.5)}" fill="#eef8ff" stroke="#3a7ab8" stroke-width="0.8"/>`; break;
+      case 'shadow': s += sp(4).concat([A.h]).map(([x, y], k) => `<ellipse class="r-smoke" style="animation-delay:-${k * 0.7}s" cx="${x + (k % 2 ? 6 : -6)}" cy="${y}" rx="7" ry="5" fill="#6a3aa8" opacity="0.6" filter="url(#${id}-blur3)"/>`).join('') + (segD ? gl(segD, 1, '#d8b8ff', 0.4) : '') + `<path d="M${px - 4} ${py - 3} C${px - 6} ${py - 8} ${px - 1} ${py - 9} ${px} ${py - 6} C${px + 1} ${py - 9} ${px + 6} ${py - 8} ${px + 4} ${py - 3} L${px} ${py + 2} Z" fill="#c070ff" stroke="#4a1a6a" stroke-width="0.8"/>`; break;
+      case 'sting': s += sp(4).map(([x, y], k) => `<path d="${starD(x, y, 1.6 + (k % 2), 4, 0.35)}" fill="#cfd8ff"/>`).join('') + `<path class="r-drip" style="transform-origin:${hx}px ${hy}px" d="M${hx} ${hy + 2} C${hx - 3} ${hy + 7} ${hx - 3} ${hy + 10} ${hx} ${hy + 10} C${hx + 3} ${hy + 10} ${hx + 3} ${hy + 7} ${hx} ${hy + 2} Z" fill="#8affb0" stroke="#2a6f4a" stroke-width="0.8"/>` + halo(hx, hy, 8, '#5a7bff'); break;
+      case 'whisper': s += (segD ? `<path d="${segD}" stroke="#ffffff" stroke-width="7" opacity="0.25" stroke-linecap="round" fill="none"/>` : '') + sp(3).map(([x, y], k) => { const p = axis(x, y, ang); return `<path class="r-smoke" style="animation-delay:-${k * 0.8}s" d="M${p(0, 4)} C${p(-4, 12)} ${p(4, 16)} ${p(-2, 24)}" fill="none" stroke="#eef6ff" stroke-width="1.2" opacity="0.8"/>`; }).join('') + halo(gx, gy, 10, '#dff4ff', 0.35); break;
+      case 'wisp': s += wispSvg(hx, hy, 6, '#7fffb0', id) + wispSvg(hx + 18, hy - 22, 3, '#7fffb0', id) + wispSvg(hx - 16, hy - 30, 2.4, '#bfffd8', id); break;
+      case 'silence': s += `<g class="r-spin" style="transform-origin:${hx}px ${hy}px"><circle cx="${hx}" cy="${hy}" r="20" fill="none" stroke="#c8b0ff" stroke-width="1.4" stroke-dasharray="3 4" opacity="0.85"/>${[0, 90, 180, 270].map(a => { const p = axis(hx, hy, a); return S(`M${p(17, -2)} L${p(23, 0)} L${p(17, 2)}`, '#e8dcff', 1.2); }).join('')}</g>` + halo(hx, hy, 14, '#c8b0ff', 0.35) + S(`M${hx - 5} ${hy - 26} L${hx + 5} ${hy - 26}`, '#e8dcff', 2); break;
+      case 'spirit': s += halo(hx, hy, 16, '#7fd8ff', 0.5) + flameSvg(hx, hy + 4, 0.75, '#4aa8ff', '#9fe0ff', '#ffffff') + wispSvg(hx + 16, hy - 26, 2.6, '#9fe0ff', id) + wispSvg(hx - 14, hy - 18, 2, '#9fe0ff', id); break;
+      case 'starsong': s += noteSvg(hx + 12, hy - 8, 1, '#ffe2a0') + noteSvg(hx - 10, hy - 20, 0.8, '#fff4cf') + `<path d="${starD(gx, gy, 6)}" fill="#ffe2a0" stroke="#c4902a" stroke-width="0.8"/>` + tw(hx + 22, hy - 24, 3.4, '#fff', 2) + halo(hx, hy, 12, '#ffe2a0', 0.3); break;
+      case 'awaken': s += sp(3).concat([A.h]).map(([x, y], k) => flower(x + (k % 2 ? 4 : -4), y, k % 2 ? '#ffc890' : '#ffe2a0')).join('') + halo(hx, hy, 14, '#ffc890', 0.45) + noteSvg(hx + 14, hy - 12, 0.8, '#ffc890'); break;
+      case 'moonsong': s += `<path d="${crescentP(hx, hy - 6, 7, -60, 0.5)}" fill="#eef3ff" stroke="#6a78a8" stroke-width="1"/>` + noteSvg(hx + 12, hy - 18, 0.8, '#dfe8ff') + noteSvg(hx - 12, hy - 28, 0.7, '#eef3ff') + halo(hx, hy - 6, 12, '#cfe0ff', 0.4); break;
+      case 'fang': s += S(`M${gx - 8} ${gy - 4} Q${gx - 4} ${gy + 10} ${gx + 8} ${gy + 6}`, '#5a4030', 1.2) + [[gx - 6, gy + 3], [gx, gy + 6], [gx + 6, gy + 5]].map(([x, y]) => P(`M${x - 2} ${y} L${x + 2} ${y} L${x} ${y + 8} Z`, '#f6f2e6', { stroke: '#8a7a5a', sw: 0.8 })).join('') + P(`M${gx - 6} ${gy - 8} C${gx - 14} ${gy - 4} ${gx - 14} ${gy + 4} ${gx - 8} ${gy + 2} C${gx - 10} ${gy - 2} ${gx - 6} ${gy - 4} ${gx - 6} ${gy - 8} Z`, '#a8a8b8', { sw: 1 }); break;
+      case 'wild': s += sp(3).map(([x, y], k) => leafAt(x + (k % 2 ? 6 : -2), y + 4, k % 2 ? '#5fd39a' : '#2f8a5c')).join('') + S(`M${gx - 4} ${gy - 6} C${gx + 6} ${gy - 2} ${gx - 6} ${gy + 4} ${gx + 4} ${gy + 8}`, '#3f7a3a', 2) + halo(hx, hy, 10, '#7fe39a', 0.35); break;
+      case 'storm': s += [[hx, hy - 4], [gx + 10, gy - 14], [hx - 16, hy + 10]].map(([x, y], k) => `<path class="r-spark" style="animation-delay:-${k * 0.7}s" d="M${x} ${y} l6 -9 l-2 7 l7 -9" fill="none" stroke="#bfe8ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`).join('') + halo(hx, hy, 12, '#7fd8ff', 0.45); break;
+      case 'starblade': s += halo(gx, gy, 16, '#9fe8ff', 0.6) + (segD ? gl(segD, 1.6, '#dff8ff', 0.6) : '') + sp(7).map(([x, y], k) => tw(x + (k % 2 ? 1.5 : -1.5), y, 2.2 + (k % 3) * 0.6, k % 3 ? '#fff' : '#ffe2a0', k)).join('') +
+        `<g class="r-spin" style="transform-origin:${gx}px ${gy}px">${[0, 120, 240].map(a => { const p = axis(gx, gy, a); const [x, y] = p(16, 0).split(' ').map(Number); return `<path d="${starD(x, y, 3.4, 4, 0.3)}" fill="#dff8ff"/>`; }).join('')}<circle cx="${gx}" cy="${gy}" r="16" fill="none" stroke="#9fe8ff" stroke-width="0.8" opacity="0.6" stroke-dasharray="2 5"/></g>` + `<path d="${starD(gx, gy, 7, 4, 0.3)}" fill="#fff" stroke="#9fe8ff" stroke-width="0.8"/>`; break;
+    }
+    return s;
+  }
+
+  // egyedi páncélok: [vállvért (jobb, helyi koord.), törzs, köpeny-típus]
+  const UNIQ_P_CAPE = { 'Éjszövet Köpeny': 'u_ejszovet', 'Csillaghullás-köpeny': 'u_csillaghullas', 'Csillagfátyol Köntös': 'u_fatyol' };
+  function uniqPauldron(name, side, id, L) {
+    const ox = side > 0 ? 205 : 115, oy = 195, k = 1.12, kx = side > 0 ? k : -k, D = d => aff(d, ox, oy, kx, k);
+    const sh = (d, fill, o) => shaded(id, D(d), fill, Object.assign({ off: [-3, -3], rim: 1.6, sw: 1.8 }, o || {}));
+    const g = { id: id };
+    switch (name) {
+      case 'Holdpáncél': return sh(crescentP(2, -4, 24, -100, 0.5), '#e8eeff', { off: [-4, -3] }) + sh('M-20 4 C-18 -10 2 -15 15 -8 C21 -2 21 8 15 13 C5 16 -9 14 -20 4 Z', '#c8d2ee') + glowLine(g, D('M-14 4 C-6 9 6 9 13 5'), '#bfe0ff', 1.2) + `<circle cx="${f2(ox + 1 * kx)}" cy="${f2(oy - 1 * k)}" r="${f2(3 * k)}" fill="#dff4ff" stroke="#6a78a8" stroke-width="0.8"/>`;
+      case 'Éjszövet Köpeny': return sh('M-24 8 C-22 -14 4 -22 20 -10 C28 -2 28 14 22 22 L16 16 L10 24 L2 16 L-6 22 L-12 14 L-20 18 Z', '#241c48', { off: [-4, -3] }) + [[-8, -6], [6, -10], [12, 4], [-2, 8]].map(([x, y], i) => `<circle class="r-twinkle" style="animation-delay:-${i * 0.5}s" cx="${f2(ox + x * kx)}" cy="${f2(oy + y * k)}" r="${i % 2 ? 1 : 1.4}" fill="#e8ecff"/>`).join('') + S(D('M-8 -6 L6 -10 L12 4'), '#9fb0ff', 0.7, { op: 0.6 });
+      case 'Sárkánypikkely Mellvért': return [16, 6, -4].map((yy, j) => sh(`M-21 ${yy - 14} C-14 ${yy - 26} 12 ${yy - 28} 22 ${yy - 14} C22 ${yy - 6} 14 ${yy} 0 ${yy} C-12 ${yy} -21 ${yy - 6} -21 ${yy - 14} Z`, ['#6e1a2a', '#8a2232', '#a82a3a'][j], { rim: 1.2 }) + S(D(`M-16 ${yy - 13} C-8 ${yy - 21} 8 ${yy - 22} 17 ${yy - 13}`), '#e0b44a', 1.2, { op: 0.9 })).join('') +
+        sh(spikeP(2, -16, 22, -64, 4.2, -4), '#f0d080', { rim: 1.2 }) + sh(spikeP(12, -10, 16, -30, 3.6, -3), '#f0d080', { rim: 1.2 }) + sh(spikeP(-8, -16, 14, -100, 3.2, 2), '#f0d080', { rim: 1.2 });
+      case 'Csillagfátyol Köntös': return sh('M-20 4 C-18 -10 2 -15 15 -8 C21 -2 21 8 15 13 C5 16 -9 14 -20 4 Z', '#e6dcff') + `<path d="${D('M-22 0 C-10 -14 10 -16 24 -4 C30 12 26 30 18 44 C10 30 -4 20 -22 0 Z')}" fill="#d8ccff" opacity="0.5" stroke="#b8a8f0" stroke-width="1"/>` + [[0, 10], [10, 26], [16, 6]].map(([x, y], i) => `<path class="r-twinkle" style="animation-delay:-${i * 0.6}s;transform-origin:${f2(ox + x * kx)}px ${f2(oy + y * k)}px" d="${starD(ox + x * kx, oy + y * k, 2.4, 4, 0.3)}" fill="#fff"/>`).join('');
+      case 'Csillaghullás-köpeny': return sh('M-22 6 C-20 -14 4 -20 20 -8 C26 -2 26 10 20 16 C8 20 -10 18 -22 6 Z', '#1c2458') + sh(starD(ox + 2 * kx, oy - 2 * k, 10, 5, 0.42), '#ffe2a0', { rim: 1 }) + [[18, -14, 2.6], [24, -24, 1.8], [-14, -10, 1.6]].map(([x, y, r], i) => `<path class="r-twinkle" style="animation-delay:-${i * 0.6}s;transform-origin:${f2(ox + x * kx)}px ${f2(oy + y * k)}px" d="${starD(ox + x * kx, oy + y * k, r * 1.4, 4, 0.3)}" fill="#fff4cf"/>`).join('') + `<g opacity="0.35"><circle class="r-glow" cx="${f2(ox + 2 * kx)}" cy="${f2(oy - 2 * k)}" r="12" fill="#ffe2a0" filter="url(#${id}-blur3)"/></g>`;
+    }
+    return '';
+  }
+  function uniqTorso(name, id, L, isRobe, back) {
+    const g = { id: id }, male = L.sex === 'ferfi', sh = (d, fill, o) => shaded(id, d, fill, Object.assign({ off: [-4, -3], rim: 1.6, sw: 1.8 }, o || {}));
+    const tw = (x, y, r, k, c) => `<path class="r-twinkle" style="animation-delay:-${(k * 0.43 % 2).toFixed(2)}s;transform-origin:${x}px ${y}px" d="${starD(x, y, r, 4, 0.3)}" fill="${c || '#fff'}"/>`;
+    const yb = isRobe ? 396 : 300;
+    let s = '';
+    switch (name) {
+      case 'Holdpáncél':
+        s += sh(PLATE, '#dfe6f8') + sh(BELT, '#8a96c0', { rim: 1, off: [-2, -2] });
+        if (!back) s += `<path d="${crescentP(160, 220, 14, 90, 0.45)}" fill="#f4f8ff" stroke="#6a78a8" stroke-width="1.2"/>` + `<g opacity="0.35"><circle class="r-glow" cx="160" cy="218" r="18" fill="#bfe0ff" filter="url(#${id}-blur6)"/></g>` + glowLine(g, crescentP(160, 220, 14, 90, 0.45), '#bfe0ff', 1, 0.35) + [136, 148, 160, 172, 184].map((x, i) => `<circle cx="${x}" cy="266" r="3" fill="${i === 2 ? '#f4f8ff' : '#26304e'}" stroke="#dfe6f8" stroke-width="1.2"/>`).join('') + S('M136 204 C148 198 172 198 184 204', '#ffffff', 1.4, { op: 0.6 });
+        if (!isRobe) s += [130, 190].map(x => sh(`M${x - 9} 270 L${x + 9} 270 L${x + 7} 300 C${x + 3} 304 ${x - 3} 304 ${x - 7} 300 Z`, '#cdd6f0', { rim: 1.1, off: [-2, -2] }) + `<path d="${crescentP(x, 286, 4, 90, 0.5)}" fill="#26304e"/>`).join('');
+        s += sh('M132 192 C140 180 150 176 160 182 C170 176 180 180 188 192 C176 198 144 198 132 192 Z', '#e8eeff', { rim: 1.2 });
+        break;
+      case 'Éjszövet Köpeny': // vállra vetett éjszín köpeny, csillagképek, ezüst holdcsat
+        s += sh('M118 190 C130 182 190 182 202 190 C206 214 196 238 186 250 L176 232 L168 248 L160 232 L152 248 L144 232 L134 250 C124 238 114 214 118 190 Z', '#241c48', { off: [-5, -4] });
+        s += [[130, 210], [140, 226], [150, 214], [176, 206], [186, 222], [170, 230]].map(([x, y], i) => tw(x, y, 1.8 + (i % 2), i)).join('') + S('M130 210 L140 226 L150 214 M176 206 L186 222 L170 230', '#9fb0ff', 0.7, { op: 0.55 });
+        if (!back) s += `<path d="${crescentP(160, 196, 7, 0, 0.5)}" fill="#e8ecff" stroke="#3a3f78" stroke-width="1"/>` + `<g opacity="0.4"><circle class="r-glow" cx="160" cy="196" r="9" fill="#9fb0ff" filter="url(#${id}-blur3)"/></g>`;
+        s += sh('M122 194 C120 176 140 168 160 172 C180 168 200 176 198 194 C186 186 134 186 122 194 Z', '#30265e', { rim: 1.2 });
+        break;
+      case 'Sárkánypikkely Mellvért': { // pikkelyminta a mellen, arany szegély, sárkányszem-csat
+        const pid = id + '-scale';
+        s += `<pattern id="${pid}" width="10" height="8" patternUnits="userSpaceOnUse"><rect width="10" height="8" fill="#6e1a2a"/><path d="M0 0 C0 6 10 6 10 0 M-5 4 C-5 10 5 10 5 4 M5 4 C5 10 15 10 15 4" fill="#a82a3a" stroke="#3a0a14" stroke-width="0.9"/><path d="M2 1.5 C3 3.5 7 3.5 8 1.5" fill="none" stroke="#e86a6a" stroke-width="0.7" opacity="0.7"/></pattern>`;
+        const PL = 'M128 194 C146 186 174 186 192 194 L190 250 C178 262 142 262 130 250 Z';
+        s += sh(PL, `url(#${pid})`, { base: '#8a2232' }) + S(PL, '#e0b44a', 2.2) + sh(BELT, '#3a1a20', { rim: 1, off: [-2, -2] }) + S('M121 259 C146 265 174 265 199 259', '#e0b44a', 1.4);
+        if (!back) s += `<ellipse cx="160" cy="266" rx="8" ry="5.5" fill="#ffb02a" stroke="#e0b44a" stroke-width="1.6"/><ellipse cx="160" cy="266" rx="1.6" ry="5" fill="#2a0a0a"/>` + `<g opacity="0.35"><circle class="r-glow" cx="160" cy="266" r="10" fill="#ff8a2a" filter="url(#${id}-blur3)"/></g>` + [[140, 200, -125], [180, 200, -55]].map(([x, y, a]) => sh(spikeP(x, y, 12, a, 3.4), '#e0b44a', { rim: 1, off: [-1.5, -1.5], sw: 1.1 })).join('');
+        if (!isRobe) s += [128, 146, 174, 192].map(x => sh(`M${x - 8} 270 L${x + 8} 270 L${x + 6} 298 L${x} 304 L${x - 6} 298 Z`, `url(#${pid})`, { base: '#8a2232', rim: 1.1, off: [-2, -2] }) + S(`M${x - 8} 270 L${x + 8} 270`, '#e0b44a', 1.6)).join('');
+        break;
+      }
+      case 'Csillagfátyol Köntös': { // áttetsző csillagfátyol a ruhán, holdcsat, csillagok
+        s += `<path d="M120 190 C138 182 182 182 200 190 C212 260 222 340 228 ${yb + 8} C196 ${yb + 18} 124 ${yb + 18} 92 ${yb + 8} C98 340 108 260 120 190 Z" fill="#d8ccff" opacity="0.35" stroke="#b8a8f0" stroke-width="1.2"/>`;
+        s += S(`M126 200 C120 260 112 320 104 ${yb} M194 200 C200 260 208 320 216 ${yb}`, '#ffffff', 1.2, { op: 0.4 });
+        s += [[132, 230], [190, 250], [124, 290], [200, 300], [140, 340], [182, 360], [118, 370], [204, 380], [160, 320]].filter(q => q[1] < yb).map(([x, y], i) => tw(x, y, 2.4 + (i % 3) * 0.8, i, i % 3 ? '#fff' : '#ffe2a0')).join('');
+        s += S('M122 262 C146 270 174 270 198 262', '#c8b8ff', 4) + S('M122 262 C146 270 174 270 198 262', '#ffffff', 1, { op: 0.7 });
+        if (!back) s += `<path d="${crescentP(160, 200, 8, 90, 0.5)}" fill="#fff" stroke="#8a78c8" stroke-width="1"/><path d="${starD(160, 200, 3.4, 4, 0.35)}" fill="#ffe2a0"/>` + `<g opacity="0.45"><circle class="r-glow" cx="160" cy="200" r="14" fill="#d8ccff" filter="url(#${id}-blur6)"/></g>`;
+        break;
+      }
+      case 'Csillaghullás-köpeny': // mitikus: csillagos mellény, hullócsillag-csat; a köpeny hátul (capeSvg)
+        s += sh('M118 190 C130 182 190 182 202 190 C204 210 198 226 190 238 C176 230 144 230 130 238 C122 226 116 210 118 190 Z', '#1c2458', { off: [-5, -4] }) + sh(BELT, '#1c2458', { rim: 1, off: [-2, -2] }) + S('M121 259 C146 265 174 265 199 259', '#ffe2a0', 1.4);
+        s += [[130, 206], [146, 220], [176, 212], [188, 226], [160, 230]].map(([x, y], i) => tw(x, y, 2 + (i % 2), i, i % 2 ? '#ffe2a0' : '#fff')).join('');
+        if (!back) s += S('M182 200 L196 186 M178 206 L198 194 M180 212 L194 206', '#ffe2a0', 1.2, { op: 0.6 }) + `<g opacity="0.45"><circle class="r-glow" cx="160" cy="200" r="16" fill="#ffe2a0" filter="url(#${id}-blur6)"/></g>` + `<path d="${starD(160, 200, 10)}" fill="#ffe9a8" stroke="#c4902a" stroke-width="1.2"/>` + gemSvg(160, 266, 4.4, '#9fe8ff', id, true);
+        break;
+    }
+    return male ? `<g transform="translate(160 0) scale(1.12 1) translate(-160 0)">${s}</g>` : s;
+  }
+  function uniqAmulet(name, id, L) {
+    const yy = 216, chain = c => S(`M144 190 C146 204 154 ${yy - 9} 160 ${yy - 9} C166 ${yy - 9} 174 204 176 190`, dark(c, 0.4), 2.4) + S(`M144 190 C146 204 154 ${yy - 9} 160 ${yy - 9} C166 ${yy - 9} 174 204 176 190`, c, 1.2, { extra: ' stroke-dasharray="2 1.4"' });
+    switch (name) {
+      case 'Az Éj Lehelete': return chain('#8a7ab8') + [0, 1, 2].map(k => `<ellipse class="r-smoke" style="animation-delay:-${k * 1.1}s" cx="${160 + (k - 1) * 7}" cy="${yy - 10 - k * 6}" rx="7" ry="4.6" fill="#6a3aa8" opacity="0.6" filter="url(#${id}-blur3)"/>`).join('') +
+        `<g opacity="0.5"><circle class="r-glow" cx="160" cy="${yy}" r="16" fill="#9b6bff" filter="url(#${id}-blur6)"/></g><circle cx="160" cy="${yy}" r="9.5" fill="#140a26" stroke="#c0a0ff" stroke-width="2"/><circle class="r-glow" cx="160" cy="${yy}" r="4.6" fill="#b88cff"/><circle cx="157" cy="${yy - 3}" r="1.8" fill="#fff" opacity="0.85"/>`;
+      case 'Ezüstszarv-amulett': return chain('#cfd6ea') + `<g opacity="0.45"><circle class="r-glow" cx="160" cy="${yy + 2}" r="15" fill="#dfe9ff" filter="url(#${id}-blur6)"/></g>` +
+        shaded(id, `M156 ${yy - 7} C146 ${yy - 2} 148 ${yy + 12} 162 ${yy + 15} C154 ${yy + 9} 152 ${yy} 159 ${yy - 5} Z`, '#eef2ff', { off: [-2, -2], rim: 1, stroke: '#5a6898', sw: 1.2 }) + shaded(id, `M164 ${yy - 7} C174 ${yy - 2} 172 ${yy + 12} 158 ${yy + 15} C166 ${yy + 9} 168 ${yy} 161 ${yy - 5} Z`, '#dfe6f8', { off: [-2, -2], rim: 1, stroke: '#5a6898', sw: 1.2 }) + gemSvg(160, yy + 3, 3.6, '#9fe8ff', id, true) + `<circle cx="160" cy="${yy - 8}" r="2.6" fill="#cfd6ea" stroke="#5a6898" stroke-width="0.9"/>`;
+    }
+    return '';
+  }
+  // egyedi fejfedők: az alap fejfedő (a takarási szabályok miatt) és a díszítés
+  const UNIQ_H_BASE = { 'Hajnalkorona': 'abroncs', 'Viharsisak': 'sisak', 'Ködlátó Csuklya': 'csuklya', 'Holdfény Diadém': 'diadem', 'Holdkorona-ékkő': 'diadem' };
+  function uniqHelmDecor(name, hw, id, back) {
+    const G = HWG[hw] || HWG.nincs, br = G.brow, g = { id: id };
+    const sh = (d, fill, o) => shaded(id, d, fill, Object.assign({ off: [-2, -2], rim: 1.2, sw: 1.5 }, o || {}));
+    const tw = (x, y, r, k, c) => `<path class="r-twinkle" style="animation-delay:-${(k * 0.43 % 2).toFixed(2)}s;transform-origin:${f2(x)}px ${f2(y)}px" d="${starD(x, y, r, 4, 0.3)}" fill="${c || '#fff'}"/>`;
+    let s = '';
+    switch (name) {
+      case 'Hajnalkorona': { // sugaras aranykorona, mögötte napkorong-glória
+        const us = [-0.9, -0.6, -0.3, 0, 0.3, 0.6, 0.9];
+        s += `<g opacity="0.5"><circle class="r-glow" cx="160" cy="56" r="50" fill="#ffd27a" filter="url(#${id}-blur12)"/></g>`;
+        us.forEach((u, i) => { const p = hwPoint(G, u, true), len = [16, 22, 28, 36, 28, 22, 16][i]; s += sh(spikeP(p[0], p[1] + 2, len, p[2], 3.6), '#f2c650', { stroke: '#8a5a1a' }); });
+        const bd = `M${G.band[0].join(' ')} C${G.band[1].join(' ')} ${G.band[2].join(' ')} ${G.band[3].join(' ')}`;
+        s += S(bd, '#8a5a1a', 8) + S(bd, '#f2c650', 5.6) + S(bd, '#fff0b0', 1.2, { op: 0.8 });
+        if (!back) s += gemSvg(160, hwPoint(G, 0, true)[1] - 1, 5, '#ff7a3a', id, true) + [-0.55, 0.55].map(u => { const p = hwPoint(G, u, true); return `<circle cx="${f2(p[0])}" cy="${f2(p[1])}" r="2.4" fill="#fff4cf" stroke="#8a5a1a" stroke-width="0.7"/>`; }).join('');
+        break;
+      }
+      case 'Viharsisak': { // szárnyas acélsisak villámtaréjjal
+        [[104, 106, -1], [216, 106, 1]].forEach(([x, y, sd]) => {
+          for (let j = 2; j >= 0; j--) { const a = sd > 0 ? -50 + j * 18 : -130 - j * 18, len = 34 - j * 7; s += sh(leafP(x, y, len, a, 5.6 - j), mix('#cfd6ea', '#5a6488', j * 0.2), { rim: 1 }); }
+        });
+        const top = hwPoint(G, 0)[1];
+        s += `<g opacity="0.4"><circle class="r-glow" cx="160" cy="${top - 10}" r="16" fill="#7fd8ff" filter="url(#${id}-blur6)"/></g>` + P(`M160 ${top + 6} L150 ${top - 12} L158 ${top - 12} L152 ${top - 30} L168 ${top - 8} L161 ${top - 8} L166 ${top + 6} Z`, '#dff6ff', { stroke: '#2a7ab8', sw: 1.2 }) +
+          `<path class="r-spark" d="M140 ${top - 4} L134 ${top - 12} L139 ${top - 11} L134 ${top - 20}" fill="none" stroke="#bfe8ff" stroke-width="1.6"/><path class="r-spark" style="animation-delay:-1.1s" d="M182 ${top - 2} L188 ${top - 10} L183 ${top - 9} L188 ${top - 18}" fill="none" stroke="#bfe8ff" stroke-width="1.6"/>`;
+        if (!back) s += gemSvg(br[0], br[1] - 4, 4.4, '#5ab4ff', id, true);
+        break;
+      }
+      case 'Ködlátó Csuklya': // ködfoszlányok a csuklya körül, izzó harmadik szem a homlokon, ezüst szegély
+        s += [[112, 140], [208, 132], [130, 64], [196, 70]].map(([x, y], k) => `<ellipse class="r-smoke" style="animation-delay:-${k * 0.9}s" cx="${x}" cy="${y}" rx="16" ry="8" fill="#d8eef0" opacity="0.5" filter="url(#${id}-blur6)"/>`).join('');
+        if (!back) s += S('M114 150 C110 112 128 84 160 82 C192 84 210 112 206 150', '#cfe6ea', 2, { op: 0.9 }) + `<ellipse cx="${br[0]}" cy="${br[1] + 6}" rx="8" ry="4.6" fill="#0e2a30" stroke="#cfe6ea" stroke-width="1.2"/><circle class="r-glow" cx="${br[0]}" cy="${br[1] + 6}" r="3" fill="#7ff3e0"/><g opacity="0.35"><circle class="r-glow" cx="${br[0]}" cy="${br[1] + 6}" r="10" fill="#7ff3e0" filter="url(#${id}-blur3)"/></g>`;
+        break;
+      case 'Holdfény Diadém': // ezüst holdsarló-tiara, lógó holdkő, kis sarlók oldalt
+        if (!back) {
+          s += `<g opacity="0.4"><circle class="r-glow" cx="160" cy="76" r="16" fill="#cfe0ff" filter="url(#${id}-blur6)"/></g>` + sh(crescentP(160, 78, 11, 90, 0.5), '#eef3ff') + [-0.6, 0.6].map(u => { const p = hwPoint(G, u, true); return sh(crescentP(p[0], p[1] - 4, 5, 90, 0.5), '#dfe6f8'); }).join('');
+          s += S(`M160 89 L160 96`, '#cfd6ea', 1) + `<ellipse cx="160" cy="100" rx="2.6" ry="3.6" fill="#dff4ff" stroke="#6a78a8" stroke-width="0.8"/>`;
+        } else s += sh(crescentP(160, 78, 11, 90, 0.5), '#dfe6f8');
+        break;
+      case 'Holdkorona-ékkő': { // mitikus: lebegő holdsarló-korona, óriás holdkő, keringő szikrák
+        s += `<g opacity="0.35"><circle class="r-glow" cx="160" cy="62" r="40" fill="#bfe0ff" filter="url(#${id}-blur12)"/></g>`;
+        s += `<g class="r-float">` + [-0.8, -0.4, 0, 0.4, 0.8].map((u, i) => { const p = hwPoint(G, u, true); return sh(crescentP(p[0], p[1] - 18 - (i === 2 ? 6 : 0), i === 2 ? 9 : 6, p[2] + 180, 0.55), i === 2 ? '#f4f8ff' : '#dfe6f8', { rim: 1 }); }).join('') + `</g>`;
+        if (!back) s += gemSvg(160, 82, 7, '#9fe8ff', id, true);
+        s += [[124, 56], [196, 50], [160, 34], [110, 82], [212, 80]].map(([x, y], k) => tw(x, y, 3, k, k % 2 ? '#ffe2a0' : '#fff')).join('');
+        break;
+      }
+    }
+    return s;
+  }
+
+  // ---------- új szárnyak (a régiek mellé) ----------
+  function wingsExtra(w, id) {
+    const B = (d, f) => both(d).map(f).join('');
+    switch (w) {
+      case 'toll': { // fehér-szürke tollszárny: telt sziluett, evezőtollak, rétegzett fedőtollak
+        const tips = [[20, 118], [18, 148], [26, 176], [44, 200], [68, 218], [96, 230], [124, 236], [150, 236]];
+        let d = 'M156 210 C132 150 80 106 20 118';
+        for (let i = 1; i < tips.length; i++) { const q = tips[i - 1], r = tips[i]; d += ` Q${f2((q[0] + r[0]) / 2 - 10)} ${f2((q[1] + r[1]) / 2 + 12)} ${r[0]} ${r[1]}`; }
+        d += ' Z';
+        let s = B(d, x => shaded(id, x, '#e9ebf3', { off: [-5, -4], rim: 1.6, stroke: '#767c96', sw: 1.8, dark: 0.3 }));
+        s += B(tips.slice(1, -1).map(t => `M${t[0]} ${t[1]} L${f2((t[0] * 0.45 + 150 * 0.55))} ${f2((t[1] * 0.45 + 196 * 0.55))}`).join(' '), x => S(x, '#9aa0ba', 1.2, { op: 0.8 }));
+        // fedőtollak két sorban, a csont íve mentén
+        const arc = t => bez([156, 210], [130, 140], [80, 112], [26, 122], t);
+        [[0.92, 22, 9, '#f6f7fb'], [0.7, 16, 8, '#ffffff']].forEach(([span, len, w, col], row) => {
+          for (let i = 7; i >= 0; i--) { const t = 0.08 + span * i / 7, [x, y] = arc(t), a = 100 + 70 * t; s += B(leafP(x + row * 2, y + 4 + row * 2, len + 8 * (1 - t), a, w), x2 => shaded(id, x2, col, { off: [-2, -2], rim: 1, stroke: '#8a90a8', sw: 1.1 })); }
+        });
+        return s + B('M156 210 C132 150 80 108 22 120', x => S(x, '#ffffff', 2.4, { op: 0.7 }));
+      }
+      case 'kristaly': { // cián kristályszilánkok legyezője, belül fény
+        const sh = [[196, 108, 14], [211, 124, 16], [227, 118, 15], [243, 96, 13], [181, 84, 12], [166, 62, 10]];
+        let s = `<g opacity="0.18"><ellipse class="r-glow" cx="160" cy="190" rx="118" ry="70" fill="#7fe8ff" filter="url(#${id}-blur6)"/></g>`;
+        sh.forEach(([a, len, w]) => { s += B(shardP(156, 214, len, a, w), d => `<path d="${d}" fill="#9fe9ff" fill-opacity="0.72" stroke="#2a8fb8" stroke-width="1.6" stroke-linejoin="round"/>`) + B(shardHi(156, 214, len, a, w), d => S(d, '#ffffff', 1.2, { op: 0.85 })) + B(shardP(156, 214, len * 0.55, a, w * 0.45), d => `<path d="${d}" fill="#e6fbff" opacity="0.55"/>`); });
+        return s + `<g class="r-float">` + B(shardP(46, 156, 12, 210, 3), d => `<path d="${d}" fill="#bff4ff" stroke="#2a8fb8" stroke-width="1"/>`) + B(shardP(70, 96, 9, 240, 2.4), d => `<path d="${d}" fill="#bff4ff" stroke="#2a8fb8" stroke-width="1"/>`) + `</g>`;
+      }
+      case 'lang': { // lángszárny: felfelé csapó lángnyelvek, vibrál
+        const tips = [[34, 98], [26, 134], [34, 166], [52, 192], [80, 210], [110, 222], [140, 228]];
+        const mk = (k, sh) => { let d = `M156 214 C136 160 92 104 ${f2(160 - (160 - tips[0][0]) * k)} ${f2(214 - (214 - tips[0][1]) * k)}`; for (let i = 1; i < tips.length; i++) { const a = tips[i - 1], b = tips[i], ax = 160 - (160 - a[0]) * k, ay = 214 - (214 - a[1]) * k, bx = 160 - (160 - b[0]) * k, by = 214 - (214 - b[1]) * k; d += ` Q${f2((ax + bx) / 2 + 18 * k)} ${f2((ay + by) / 2 + 2 * k + sh)} ${f2(bx)} ${f2(by)}`; } return d + ' Z'; };
+        const L1 = mk(1, 0), L2 = mk(0.74, 2), L3 = mk(0.48, 2);
+        return `<g opacity="0.2"><ellipse class="r-glow" cx="160" cy="180" rx="130" ry="80" fill="#ff7a2a" filter="url(#${id}-blur6)"/></g>` + ['l', 'r'].map((sd, i) => { const f = i ? mirror : (d => d); return `<g class="r-flame" style="transform-origin:${i ? 164 : 156}px 214px;animation-delay:-${i * 0.3}s"><path d="${f(L1)}" fill="#e8402a" stroke="#8a1a10" stroke-width="1.6" stroke-linejoin="round" opacity="0.92"/><path d="${f(L2)}" fill="#ff8a3a"/><path d="${f(L3)}" fill="#ffd27a"/></g>`; }).join('') +
+          [0, 1, 2, 3].map(k => `<circle class="r-p" style="animation-delay:-${k * 0.8}s;animation-duration:2.4s" cx="${[60, 96, 230, 262][k]}" cy="${[150, 120, 128, 160][k]}" r="1.8" fill="#ffcf5a"/>`).join('');
+      }
+      case 'holdezust': { // ezüst sarlópengék hármasa, bevésett holdsarlókkal
+        let s = `<ellipse cx="160" cy="190" rx="120" ry="64" fill="#cfe0ff" opacity="0.14" filter="url(#${id}-blur6)"/>`;
+        [[[26, 108], 40, 30], [[34, 160], 32, 26], [[66, 210], 24, 20]].forEach(([tp, bulge, th]) => {
+          const p = axis(156, 214, Math.atan2(tp[1] - 214, tp[0] - 156) / DEG), L = Math.hypot(tp[0] - 156, tp[1] - 214);
+          const d = `M156 214 Q${p(L * 0.5, -bulge)} ${p(L, 0)} Q${p(L * 0.55, -bulge + th)} 156 214 Z`;
+          s += B(d, x => shaded(id, x, '#dde4f4', { off: [-4, -4], rim: 1.6, stroke: '#5a6890', sw: 1.8 })) + B(`M${p(L * 0.12, -bulge * 0.2)} Q${p(L * 0.5, -bulge * 0.86)} ${p(L * 0.95, -1)}`, x => S(x, '#ffffff', 1.6, { op: 0.85 }));
+          [0.34, 0.56, 0.76].forEach(u => { const [cx, cy] = p(L * u, -bulge * 0.5 + th * 0.22 * (1 - Math.abs(u - 0.5))).split(' ').map(Number); s += B(crescentP(cx, cy, 3.6 - u * 1.2, -90, 0.5), x => `<path d="${x}" fill="#7a86b0" opacity="0.9"/>`); });
+        });
+        return s;
+      }
+      case 'csillag': { // csillagos éjszaka-hártya bordákkal
+        const d = 'M156 214 C130 156 84 116 26 112 C40 132 40 150 30 168 C48 166 60 176 58 196 C76 186 94 194 100 214 C114 204 134 208 150 232 Z';
+        const gid = id + '-wst';
+        let s = `<linearGradient id="${gid}" x1="1" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#2a2468"/><stop offset="1" stop-color="#0e1238"/></linearGradient>`;
+        s += B(d, x => `<path d="${x}" fill="url(#${gid})" stroke="#0a0c28" stroke-width="2" stroke-linejoin="round"/>`) + B('M156 214 C120 170 80 140 28 114 M154 218 C120 190 80 170 32 168 M152 222 C120 204 90 198 60 196 M150 226 C130 214 116 212 100 214', x => S(x, '#5a6ab8', 1.4, { op: 0.8 }));
+        const st = [[48, 128, 2.4], [80, 140, 1.8], [64, 160, 2], [100, 176, 1.6], [120, 190, 2.2], [86, 196, 1.4], [44, 150, 1.4], [128, 168, 1.4]];
+        st.forEach(([x, y, r], k) => { s += [[x, y], [320 - x, y]].map(([X, Y]) => `<path class="r-twinkle" style="animation-delay:-${(k * 0.37 % 2).toFixed(2)}s;transform-origin:${f2(X)}px ${Y}px" d="${starD(X, Y, r * 1.6, 4, 0.3)}" fill="${k % 3 ? '#ffffff' : '#ffe2a0'}"/>`).join(''); });
+        return s + B('M48 128 L64 160 L80 140 L100 176', x => S(x, '#9fb0ff', 0.6, { op: 0.6 }));
+      }
+      case 'arny': { // füstös árnyszárny: elmosott foszlányok, sötét magvonalak
+        const wisps = ['M156 214 C126 150 82 110 30 118 C60 128 84 150 100 176 C70 160 44 162 24 176 C56 176 86 192 110 214 C92 210 74 216 64 232 C96 222 130 222 154 236 Z'];
+        let s = B(wisps[0], x => `<path d="${x}" fill="#24163c" opacity="0.9" filter="url(#${id}-blur3)"/>`) + B(wisps[0], x => `<path d="${x}" fill="#3a2460" opacity="0.75"/>`);
+        s += B('M154 216 C124 160 84 124 34 120 M150 222 C120 188 80 170 30 176 M146 228 C120 214 90 214 68 230', x => S(x, '#1a0e2e', 2.2, { op: 0.8 }));
+        s += [0, 1, 2].map(k => B(`M${[40, 30, 70][k]} ${[118, 176, 232][k]} C${[24, 14, 54][k]} ${[110, 172, 236][k]} ${[16, 8, 44][k]} ${[124, 186, 248][k]} ${[8, 0, 34][k]} ${[112, 180, 254][k]}`, x => `<path class="r-smoke" style="animation-delay:-${k * 0.9}s" d="${x}" fill="none" stroke="#4a2a6e" stroke-width="5" stroke-linecap="round" opacity="0.6" filter="url(#${id}-blur3)"/>`)).join('');
+        return `<ellipse cx="160" cy="190" rx="120" ry="70" fill="#9b6bff" opacity="0.1" filter="url(#${id}-blur6)"/>` + s;
+      }
+    }
+    return '';
+  }
+
   // ---------- a teljes hős ----------
   function hero(h, opts) {
     opts = opts || {};
     const L = Object.assign(defaultLook(h.classId), h.rig || h.lookV2 || {});
     const cls = h.classId || 'magus';
+    RUNE_I = 0; // a rúnák sorrendje minden rajzolásnál ugyanaz
+    // egyedi fejfedő: a saját alapformáját hozza (így a haj / fül / szarv takarása is ahhoz igazodik)
+    const uH = L.uniqH && UNIQ_H_BASE[uniqName(L.uniqH)] ? uniqName(L.uniqH) : null;
+    if (uH) L.headwear = UNIQ_H_BASE[uH];
+    const UW = L.uniqW && UNIQ_W[uniqName(L.uniqW)];
+    // fegyverfény: wGlowLv 1 halvány, 2 erős, 3 erős (ritkaságszín), 4 + szikrák; nélküle a régi viselkedés
+    const gLv = L.wGlowLv ? Math.max(1, Math.min(4, Math.round(+L.wGlowLv) || 1)) : 0; // a fény csak a fejlesztésből jön (az egyedi fegyvernél is)
+    const wGlowC = gLv && UW ? UW.glow : L.wGlow || (gLv ? SET_ACC[L.wset] || '#c79bff' : null); // az egyedi fegyver a saját színében izzik
+    const wSpark = gLv ? (gLv >= 4 || !!L.wSpark) : !!L.wSpark;
+    const gSD = gLv ? [0, 2, 3.2, 4.2, 5][gLv] : (wSpark ? 4.5 : 3.2), gOP = gLv ? [0, 0.45, 0.8, 0.95, 1][gLv] : (wSpark ? 0.95 : 0.8);
     const id = 'r' + (++UID);
     const male = L.sex === 'ferfi';
     // férfi: szélesebb váll és mellkas, kicsit magasabb; nő: keskenyebb váll
@@ -994,7 +1748,8 @@
       <linearGradient id="${id}-hairF" gradientUnits="userSpaceOnUse" x1="0" y1="50" x2="0" y2="140"><stop offset="0" stop-color="${L.hair}"/><stop offset="0.6" stop-color="${L.hair}"/><stop offset="1" stop-color="${L.tip ? mix(L.hair, tip, 0.7) : L.hair}"/></linearGradient>
       <pattern id="${id}-chain" width="6" height="5" patternUnits="userSpaceOnUse"><path d="M0 2.5 C1.5 0 4.5 0 6 2.5 C4.5 5 1.5 5 0 2.5 Z" fill="none" stroke="${m}" stroke-width="1"/></pattern>
       <filter id="${id}-blur3" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter>
-      ${L.wGlow ? `<filter id="${id}-wglow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur in="SourceAlpha" stdDeviation="${L.wSpark ? 4.5 : 3.2}" result="b"/><feFlood flood-color="${L.wGlow}" flood-opacity="${L.wSpark ? 0.95 : 0.8}"/><feComposite in2="b" operator="in" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : ''}
+      ${wGlowC ? `<filter id="${id}-wglow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur in="SourceAlpha" stdDeviation="${gSD}" result="b"/><feFlood flood-color="${wGlowC}" flood-opacity="${gOP}"/><feComposite in2="b" operator="in" result="g"/><feMerge><feMergeNode in="g"/>${gLv === 1 ? '' : '<feMergeNode in="g"/>'}<feMergeNode in="SourceGraphic"/></feMerge></filter>` : ''}
+      ${UW && UW.blade ? `<linearGradient id="${id}-umetal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${light(UW.blade, 0.55)}"/><stop offset="0.45" stop-color="${UW.blade}"/><stop offset="0.5" stop-color="${dark(UW.blade, 0.25)}"/><stop offset="1" stop-color="${UW.blade}"/></linearGradient>` : ''}
       <filter id="${id}-blur6" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>
       <filter id="${id}-blur12" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="12"/></filter>
       <clipPath id="${id}-headclip"><path d="${HEADS[L.face] || HEADS.ovalis}"/></clipPath>
@@ -1003,7 +1758,7 @@
     </defs>`;
     // a ritka fegyver fénye (lila: halvány izzás; legendás: arany fény és szikrák)
     const star = (x, y, r) => `<path d="M${x} ${y - r} L${x + r * 0.28} ${y - r * 0.28} L${x + r} ${y} L${x + r * 0.28} ${y + r * 0.28} L${x} ${y + r} L${x - r * 0.28} ${y + r * 0.28} L${x - r} ${y} L${x - r * 0.28} ${y - r * 0.28} Z" fill="#fff6c8"/>`;
-    const wWrap = svg => !L.wGlow ? svg : `<g filter="url(#${id}-wglow)">${svg}</g>` + (L.wSpark ? `<g class="r-glow">${star(GRIP[0] + 14, GRIP[1] - 58, 5)}${star(GRIP[0] - 12, GRIP[1] - 96, 4)}${star(GRIP[0] + 6, GRIP[1] - 132, 6)}</g>` : '');
+    const wWrap = svg => !wGlowC ? svg : `<g filter="url(#${id}-wglow)">${svg}</g>` + (wSpark ? `<g class="r-glow">${star(GRIP[0] + 14, GRIP[1] - 58, 5)}${star(GRIP[0] - 12, GRIP[1] - 96, 4)}${star(GRIP[0] + 6, GRIP[1] - 132, 6)}</g>` : '');
     const hairStroke = line(L.hair);
     const hairP = (d, grad, off) => shaded(id, d, `url(#${id}-${grad || 'hair'})`, { base: L.hair, off: off || [-6, -5], stroke: hairStroke, dark: 0.3 });
 
@@ -1024,7 +1779,7 @@
     // hátsó rétegek
     const auraB = auraBack(L.aura, id);
     const wingsB = turned ? `<g${T(`translate(${fx(160 - (14 + 34 * (1 - ac)) * sn)} 0) scale(${fx(sg * (0.35 + 0.65 * ac))} 1) translate(-160 0)`)}>${wingsSvg(L.wings, id)}</g>` : wingsSvg(L.wings, id);
-    const capeB = `<g${T(`translate(${fx(160 - 8 * sn)} 0) scale(${fx(sg * bodyW)} 1) translate(-160 0)`)}><g class="r-cape" style="transform-origin:160px 192px">${capeSvg(L.cape, L, id)}</g></g>`;
+    const capeB = `<g${T(`translate(${fx(160 - 8 * sn)} 0) scale(${fx(sg * bodyW)} 1) translate(-160 0)`)}><g class="r-cape" style="transform-origin:160px 192px">${capeSvg((uniqP(L) && UNIQ_P_CAPE[uniqP(L)]) || L.cape, L, id)}</g></g>`;
     const tailB = `<g${T(`translate(${fx(160 - (10 + 30 * (1 - ac)) * sn)} 0) scale(${fx(sg * (0.45 + 0.55 * ac))} 1) translate(-160 0)`)}>${tailSvg(L.tail, L, id)}</g>`;
     const quiverB = `<g${T(`translate(${fx(160 - 6 * sn)} 0) scale(${fx(sg * bodyW)} 1) translate(-160 0)`)}>${quiverBack(cls, L)}</g>`;
     let hairBack = '', backSel = '', hairExtra = '';
@@ -1099,12 +1854,14 @@
     const PAUL = 'M183 196 C186 180 212 176 224 194 C226 205 219 213 208 213 C195 213 185 207 183 196 Z';
     const paulC = { harcos: null, alakvalto: '#8a6a4a', vadasz: '#6a4630', orgyilkos: dark(L.c1, 0.2) }[cls];
     const paul = (d) => !male ? '' : cls === 'harcos' ? shaded(id, d, metalFill(id), { base: m, off: [-4, -3] }) : shaded(id, d, paulC || dark(L.c2, 0.08), { off: [-4, -3] });
-    const paulR = paul(PAUL) + (male && cls === 'harcos' ? `<path d="M190 200 C196 190 212 188 220 198" fill="none" stroke="${dark(m, 0.45)}" stroke-width="1.4"/><circle cx="204" cy="190" r="2" fill="${light(m, 0.4)}"/>` : male && cls === 'alakvalto' ? S('M186 204 l-3 6 M194 210 l-1 6 M204 212 l0 6 M214 210 l2 6', '#5a4030', 2) : '');
-    const paulL = paul(mirror(PAUL)) + (male && cls === 'harcos' ? `<path d="${mirror('M190 200 C196 190 212 188 220 198')}" fill="none" stroke="${dark(m, 0.45)}" stroke-width="1.4"/><circle cx="116" cy="190" r="2" fill="${light(m, 0.4)}"/>` : male && cls === 'alakvalto' ? S(mirror('M186 204 L183 210 M194 210 L193 216 M204 212 L204 218 M214 210 L216 216'), '#5a4030', 2) : '');
+    const gA = L.gset && SET_ACC[L.gset] && !uniqP(L) ? gearCtx(L, id, L.gset, L.gtier) : null, aType = ARMOR_TYPE[cls] || 'v';
+    const gearPaul = side => uniqP(L) ? uniqPauldron(uniqP(L), side, id, L) : gA ? setPauldron(gA, aType, side) : null;
+    const paulR = gearPaul(1) != null ? gearPaul(1) : paul(PAUL) + (male && cls === 'harcos' ? `<path d="M190 200 C196 190 212 188 220 198" fill="none" stroke="${dark(m, 0.45)}" stroke-width="1.4"/><circle cx="204" cy="190" r="2" fill="${light(m, 0.4)}"/>` : male && cls === 'alakvalto' ? S('M186 204 l-3 6 M194 210 l-1 6 M204 212 l0 6 M214 210 l2 6', '#5a4030', 2) : '');
+    const paulL = gearPaul(-1) != null ? gearPaul(-1) : paul(mirror(PAUL)) + (male && cls === 'harcos' ? `<path d="${mirror('M190 200 C196 190 212 188 220 198')}" fill="none" stroke="${dark(m, 0.45)}" stroke-width="1.4"/><circle cx="116" cy="190" r="2" fill="${light(m, 0.4)}"/>` : male && cls === 'alakvalto' ? S(mirror('M186 204 L183 210 M194 210 L193 216 M204 212 L204 218 M214 210 L216 216'), '#5a4030', 2) : '');
     const AS = male ? ' translate(204 192) scale(1.08) translate(-204 -192)' : '', ASL = male ? ' translate(116 192) scale(1.08) translate(-116 -192)' : '';
     const armDist = 44 + armShift;
-    let armR = `<g class="r-arm-r" style="transform-origin:${198 + armShift}px 196px"><g transform="translate(${armShift} 0)${AS}">${shaded(id, ARM_R, sleeve, { off: [-4, -3] })}${shaded(id, CUFF_R, cuffC, { base: cls === 'harcos' ? m : L.c2, off: [-3, -2], rim: 1.4 })}${paulR}<g class="r-weapon${REV_GRIP[cls + L.weapon] ? ' rev' : ''}" style="transform-origin:${212 + armShift}px 282px"><g transform="rotate(${fx((WEAPON_ROT[cls + L.weapon] || 0) + (turned ? 22 * sn * sg : 0))} ${GRIP[0]} ${GRIP[1]})">${wWrap(weaponSvg(cls, +L.weapon, c < -0.2 ? Object.assign({}, L, { _back: true }) : L, id))}</g></g>${hand(HAND_R, THUMB_R, 1)}</g></g>`;
-    let armL = `<g class="r-arm-l" style="transform-origin:${122 - armShift}px 196px"><g transform="translate(${-armShift} 0)${ASL}">${shaded(id, ARM_L, sleeve, { off: [-4, -3] })}${shaded(id, CUFF_L, cuffC, { base: cls === 'harcos' ? m : L.c2, off: [-3, -2], rim: 1.4 })}${paulL}<g class="r-lgrip" style="transform-origin:107px 279px">${cls === 'vadasz' && +L.weapon < 2 ? '' : (L.wGlow ? `<g filter="url(#${id}-wglow)">${leftGripSvg(cls, +L.weapon, L, id)}</g>` : leftGripSvg(cls, +L.weapon, L, id))}</g>${cls === 'vadasz' && +L.weapon < 2 ? `<g class="r-nock" opacity="0"><path d="M107 280 L107 374" stroke="#c8a46a" stroke-width="2.4" stroke-linecap="round"/><path d="M103 372 L107 384 L111 372 Z" fill="#cfd6ea" stroke="#5a5f78" stroke-width="0.8"/><path d="M104 280 L107 286 L110 280 M104 285 L107 291 L110 285" fill="none" stroke="#e8e6f2" stroke-width="1.4"/><circle class="r-pull" cx="107" cy="281" r="0.1" fill="none"/></g>` : ''}${hand(HAND_L, THUMB_L, -1)}<g class="r-offhand">${L.wGlow ? `<g filter="url(#${id}-wglow)">` : ''}${leftItemSvg(cls, +L.weapon, c < -0.2 ? Object.assign({}, L, { _back: true }) : L, id)}${L.wGlow ? '</g>' : ''}</g></g></g>`;
+    let armR = `<g class="r-arm-r" style="transform-origin:${198 + armShift}px 196px"><g transform="translate(${armShift} 0)${AS}">${shaded(id, ARM_R, sleeve, { off: [-4, -3] })}${shaded(id, CUFF_R, cuffC, { base: cls === 'harcos' ? m : L.c2, off: [-3, -2], rim: 1.4 })}${gA ? setBracer(gA, aType, 1) : ''}${paulR}<g class="r-weapon${REV_GRIP[cls + L.weapon] ? ' rev' : ''}" style="transform-origin:${212 + armShift}px 282px"><g transform="rotate(${fx((WEAPON_ROT[cls + L.weapon] || 0) + (turned ? 22 * sn * sg : 0))} ${GRIP[0]} ${GRIP[1]})">${wWrap(weaponSvg(cls, +L.weapon, c < -0.2 ? Object.assign({}, L, { _back: true }) : L, id))}</g></g>${hand(HAND_R, THUMB_R, 1)}</g></g>`;
+    let armL = `<g class="r-arm-l" style="transform-origin:${122 - armShift}px 196px"><g transform="translate(${-armShift} 0)${ASL}">${shaded(id, ARM_L, sleeve, { off: [-4, -3] })}${shaded(id, CUFF_L, cuffC, { base: cls === 'harcos' ? m : L.c2, off: [-3, -2], rim: 1.4 })}${gA ? setBracer(gA, aType, -1) : ''}${paulL}<g class="r-lgrip" style="transform-origin:107px 279px">${cls === 'vadasz' && +L.weapon < 2 ? '' : (wGlowC ? `<g filter="url(#${id}-wglow)">${leftGripSvg(cls, +L.weapon, L, id)}</g>` : leftGripSvg(cls, +L.weapon, L, id))}</g>${cls === 'vadasz' && +L.weapon < 2 ? `<g class="r-nock" opacity="0"><path d="M107 280 L107 374" stroke="#c8a46a" stroke-width="2.4" stroke-linecap="round"/><path d="M103 372 L107 384 L111 372 Z" fill="#cfd6ea" stroke="#5a5f78" stroke-width="0.8"/><path d="M104 280 L107 286 L110 280 M104 285 L107 291 L110 285" fill="none" stroke="#e8e6f2" stroke-width="1.4"/><circle class="r-pull" cx="107" cy="281" r="0.1" fill="none"/></g>` : ''}${hand(HAND_L, THUMB_L, -1)}<g class="r-offhand">${wGlowC ? `<g filter="url(#${id}-wglow)">` : ''}${leftItemSvg(cls, +L.weapon, c < -0.2 ? Object.assign({}, L, { _back: true }) : L, id)}${wGlowC ? '</g>' : ''}</g></g></g>`;
     if (turned) { armR = `<g transform="${sideT(armDist, 10 * sn)}">${armR}</g>`; armL = `<g transform="${sideT(-armDist, 10 * sn)}">${armL}</g>`; }
     const zArmR = turned ? sideZ(armDist) : 0, zArmL = turned ? sideZ(-armDist) : 0;
     let neck = male ? P('M145 160 L175 160 L177 194 L143 194 Z', L.skin) + `<path d="M145 160 L175 160 L175 184 C166 191 154 191 145 184 Z" fill="${dark(L.skin, 0.3)}" opacity="0.55"/>` + S('M157 188 C159 186 161 186 163 188', dark(L.skin, 0.4), 1.3, { op: 0.7 })
@@ -1274,6 +2031,15 @@
         S(pmap('M106 104 C126 92 194 92 214 104', hairMap), dark(mm, 0.45), 1.6, { op: 0.8 }) + S(pmap('M120 60 C132 46 148 40 158 40', hairMap), light(mm, 0.6), 3, { op: 0.6 }) +
         [[112, 104], [128, 98], [192, 98], [208, 104], [110, 136], [210, 136]].map(([x, y]) => feat(x, y, `<circle cx="${x}" cy="${y}" r="2.2" fill="${light(mm, 0.4)}" stroke="${dark(mm, 0.5)}" stroke-width="0.8"/>`, 0.15)).join('') +
         feat(160, 120, shaded(id, 'M155 100 L165 100 L163.5 136 L160 141 L156.5 136 Z', metalFill(id), { base: mm, stroke: dark(mm, 0.55), off: [-2, -2], rim: 1.2 }), 0.1);
+    }
+    // szett- és egyedi fejfedő-díszek (a fejfedő fölé; forgatáskor a fej hengerén)
+    if (uH || (L.hset && SET_ACC[L.hset])) {
+      const dec = back => uH ? uniqHelmDecor(uH, L.headwear, id, back) : setHelmDecor(gearCtx(L, id, L.hset, L.htier), L.headwear, back);
+      const HWK = HWG[L.headwear] ? L.headwear : 'nincs';
+      if (!turned) hw += dec(false);
+      else if (HWK === 'suveg') hw += `<g transform="translate(${fx(160 + 6 * sn)} 0) scale(${fx(sg * (0.82 + 0.18 * ac))} 1) translate(-160 0)">${dec(c < 0)}</g>`;
+      else if (c >= 0) hw += cylSvg(dec(false), (x, y) => cylX(x, Math.max(Rh(y), 12), th));
+      else hw += `<g transform="translate(${fx(160 + 6 * sn)} 0) scale(${fx(sg * (0.82 + 0.18 * ac) * (L.headwear === 'sisak' ? 1.06 : 1))} 1) translate(-160 0)">${dec(true)}</g>`;
     }
     // rövid haj hajvonala a fej körül: a fül fölött ívben, hátul a tarkón lejjebb (csak a látható félhengeren)
     const shortLine = () => {
