@@ -496,7 +496,74 @@
   }
   ['equip', 'tactic', 'skillMove', 'upgrade', 'reroll', 'pathPick'].forEach(n => wrap(n, save => recalibrate(save)));
   wrap('upgrade', save => bump(save.hero, 'upgrades'));
-  ['gift', 'pathPick', 'shopOpen', 'shopReroll', 'shopBuy', 'towerFight', 'towerRush', 'arenaFind', 'arenaFight', 'teamFind', 'teamFight', 'eventFight', 'eventClaim', 'achClaim'].forEach(n => G.FREE_DURING_EXPEDITION.push(n));
+  // ===================== Holdkrónika (fő történet) =====================
+  // 10 fejezet; a következő a fejezet szintjétől nyílik. Minden fejezet végén egyedi főellenfél, egyszeri jutalommal.
+  // A vereség nem visz el semmit, de naponta legfeljebb STORY_TRIES vereség fér bele (különben a próbálkozás ingyen lenne).
+  const STORY_TRIES = 3;
+  const STORY_RARITY = ['zold', 'kek', 'kek', 'kek', 'lila', 'kek', 'lila', 'kek', 'lila', 'legendas'];
+  // a finálé jutalma egyedi, névvel ellátott legendás tárgy
+  const STORY_FINAL = { name: 'Csillagszív-lámpás', line: 'Ozsvát lámpása. A fénye már nem lopott: a holdé, és most a tiéd is.' };
+  // a főellenfelek ereje (független ellenőrzéssel kalibrálva, minden kaszt átlaga): a fejezet szintjén, reálisan fejlesztett
+  // felszereléssel kb. 60–72% győzelmi esély, lemaradt felszereléssel 31–56%; az 1. fejezet barátságos (~78%).
+  const STORY_BOSS = [{ lm: 0.5, pw: 0.96 }, { lm: 3.77, pw: 1.1 }, { lm: 8.58, pw: 1.1 }, { lm: 14.54, pw: 1.1 }, { lm: 20.5, pw: 1.1 },
+    { lm: 25.8, pw: 1.1 }, { lm: 32, pw: 1.1 }, { lm: 39, pw: 1.1 }, { lm: 45.5, pw: 1.1 }, { lm: 50.5, pw: 1.1 }];
+  function storyChapters() { return (D.STORY && D.STORY.chapters) || []; }
+  function storyState(save, now) {
+    const today = day(now);
+    let s = save.story;
+    if (!s) s = { done: 0, choices: {}, day: today, losses: 0 };
+    if (s.day !== today) { s.day = today; s.losses = 0; }
+    s.choices = s.choices || {};
+    return s;
+  }
+  function storyBoss(i) {
+    const ch = storyChapters()[i];
+    const b = STORY_BOSS[i] || { lm: ch && ch.level, pw: 1.1 };
+    return ch ? E.monsterFighter(b.lm, { power: b.pw, name: ch.boss.name }) : null;
+  }
+  function storyReward(h, i) {
+    const ch = storyChapters()[i], L = Math.min(h.level, ch.level + 3);
+    return { silver: Math.round(E.silverBase(L) * 3), dust: Math.round((6 + L) * 3), item: E.gateRarity(STORY_RARITY[i] || 'kek', h.level) };
+  }
+  function storyNext(save) {
+    const s = save.story || { done: 0 }, ch = storyChapters()[s.done];
+    if (!ch) fail('state', 'A Holdkrónika minden fejezetét befejezted.');
+    if (save.hero.level < ch.level) fail('state', `A következő fejezet a ${ch.level}. szinttől nyílik.`);
+    return ch;
+  }
+  A.storyChoice = (save, a, ctx) => {
+    const s = storyState(save, ctx.now); save.story = s;
+    const ch = storyNext(save);
+    if (!ch.choice) fail('state', 'Ebben a fejezetben nincs döntés.');
+    if (s.choices[ch.id]) fail('state', 'Itt már döntöttél.');
+    if (a.v !== 'a' && a.v !== 'b') fail('arg', 'Érvénytelen választás.');
+    s.choices[ch.id] = a.v;
+    return { reply: ch.choice[a.v].reply };
+  };
+  A.storyFight = (save, a, ctx) => {
+    const s = storyState(save, ctx.now); save.story = s;
+    const ch = storyNext(save), i = s.done, h = save.hero;
+    if (ch.choice && !s.choices[ch.id]) fail('state', 'Előbb dönts a fejezetben.');
+    if (s.losses >= STORY_TRIES) fail('state', 'Mára elég volt a harcból ezzel az ellenféllel. Holnap újra próbálhatod.');
+    if (h.inventory.length >= E.INVENTORY_MAX) fail('state', 'Tele a táskád: előbb csinálj helyet, hogy a fejezet jutalma beférjen.');
+    const mon = storyBoss(i), heroF = E.fighterFromHero(h);
+    const f = E.simulateFight(heroF, mon, h.tactic, E.newSeed(), true);
+    const out = { chapter: i + 1, win: f.win, region: ch.region, boss: ch.boss.name };
+    if (!f.win) s.losses++;
+    else {
+      const rw = storyReward(h, i), rng = E.mulberry32(E.newSeed());
+      s.done = i + 1;
+      h.silver += rw.silver; out.silver = rw.silver;
+      out.dust = E.addDust(save, h, rw.dust, ctx.now);
+      // a fejezet tárgya sosem bomlik szét automatikusan (a táska helyét a harc előtt ellenőriztük)
+      const it = E.makeItem(rng, Object.assign({ rarity: rw.item, level: h.level, classId: h.classId, hero: h }, i === storyChapters().length - 1 && rw.item === 'legendas' ? STORY_FINAL : {}));
+      h.inventory.push(it); G.itemEvent(save, it, ctx, `Holdkrónika, ${i + 1}. fejezet`); out.item = it;
+      G.personal(save, ctx.now, `<b>${G.esc(h.name)}</b> befejezte a Holdkrónika ${i + 1}. fejezetét: ${G.esc(ch.title)}.`, 'win');
+    }
+    return { fight: { log: f.log, win: f.win, timeout: f.timeout, rounds: f.rounds, heroF: heroF, mon: mon }, out: out };
+  };
+
+  ['gift', 'pathPick', 'shopOpen', 'shopReroll', 'shopBuy', 'towerFight', 'towerRush', 'storyChoice', 'storyFight', 'arenaFind', 'arenaFight', 'teamFind', 'teamFight', 'eventFight', 'eventClaim', 'achClaim'].forEach(n => G.FREE_DURING_EXPEDITION.push(n));
   const run0 = G.run;
   G.run = function (save, action, args, ctx) {
     const r = run0(save, action, args, ctx);
@@ -506,6 +573,7 @@
 
   G.extra = {
     weekKey: weekKey, day: day, giftState: giftState, giftPreview: giftPreview, GIFT: GIFT, SHOP_PRICE: SHOP_PRICE, SHOP_REROLLS: SHOP_REROLLS, shopRerollCost: shopRerollCost,
+    storyState: storyState, storyBoss: storyBoss, storyReward: storyReward, storyChapters: storyChapters, STORY_TRIES: STORY_TRIES,
     towerState: towerState, rushLimit: rushLimit, towerMonster: towerMonster, towerReward: towerReward, towerRegion: towerRegion, TOWER_TRIES: TOWER_TRIES,
     EVENTS: EVENTS, EVENT_TIERS: EVENT_TIERS, EVENT_TRIES: EVENT_TRIES, currentEvent: currentEvent, eventState: eventState,
     ghostFighter: ghostFighter, botHero: botHero, snap: snap, ARENA_FIGHTS: ARENA_FIGHTS, arenaState: arenaState, TEAM_RUNS: TEAM_RUNS, teamState: teamState, allyShare: allyShare,

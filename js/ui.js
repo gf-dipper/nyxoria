@@ -344,6 +344,7 @@
     const g = [
       { name: 'Kaland', items: [
         { id: 'kaland', name: 'Tábor', ic: 'kaland', sub: 'Kalandok és őrjárat; egy kaland egy fáklya', go: ['screen', 'kaland'] },
+        { id: 'holdkronika', name: 'Holdkrónika', ic: 'kronika', sub: 'A fő történet, fejezetről fejezetre', go: ['screen', 'holdkronika'], badge: storyBadge() },
         { id: 'orjarat', name: 'Őrjárat', ic: 'orjarat', sub: 'Amíg nem vagy itt, a hősöd felderít', go: ['goto', 'patrol'], badge: patrolReady ? ['Kész', 'az őrjárat véget ért, átveheted a jutalmat', 'ok'] : null }
       ] },
       { name: 'Naponta', items: [
@@ -738,6 +739,47 @@
           ${left > 0 ? '' : '<p class="small muted" style="margin-top:6px">Éjfélkor újra 5 próbálkozásod lesz.</p>'}</div></div>
         <ol class="nx-ladder" aria-label="Emeletek">${ladder}</ol></div></section>`;
   }
+  // ---------- Holdkrónika ----------
+  function storyBadge() {
+    if (!S.save || !X || !D.STORY) return null;
+    const st = X.storyState(S.save, now()), ch = X.storyChapters()[st.done];
+    return ch && hero().level >= ch.level && st.losses < X.STORY_TRIES ? ['Új', 'új fejezet vár a Holdkrónikában', 'warn'] : null;
+  }
+  function storyTxt(t) { return esc(String(t || '').replace(/\{nev\}/g, hero().name)); }
+  function storyScenes(ch, choices) {
+    const C = D.STORY.characters || {}, idx = D.STORY.chapters.indexOf(ch);
+    const nm = w => w.later && idx >= w.later.from ? w.later.name : w.name;
+    return ch.scenes.filter(sc => { if (!sc.if) return true; const p = sc.if.split(':'); return choices[p[0]] === p[1]; }).map(sc => {
+      const who = sc.who && C[sc.who];
+      return `<div class="st-scene${who ? '' : ' nar'}">${who ? `<b class="st-who">${esc(nm(who))}</b>` : ''}<p>${storyTxt(sc.text)}</p></div>`;
+    }).join('');
+  }
+  function renderStory() {
+    if (!D.STORY) return '<section class="panel"><h1>Holdkrónika</h1><p class="muted">Hamarosan.</p></section>';
+    const h = hero(), st = X.storyState(S.save, now()), chs = X.storyChapters(), i = st.done, ch = chs[i];
+    const head = `<div class="nx-ch-head"><div><h1>Holdkrónika</h1><p class="small muted">A Nyxoria fő története. Nagyjából ötszintenként új fejezet nyílik; mindegyik végén egy különleges ellenfél vár, és egyszeri, bőséges jutalom.</p></div>
+      <div class="nx-ch-stats"><span><small>Fejezetek</small><b>${i} / ${chs.length}</b></span>${ch && h.level >= ch.level ? `<span><small>Mai vereségkeret</small><b>${X.STORY_TRIES - st.losses} / ${X.STORY_TRIES}</b></span>` : ''}</div></div>`;
+    let res = '';
+    if (S.storyRes) { const r = S.storyRes, c0 = chs[r.i]; res = `<div class="result-box ${r.win ? 'good' : 'bad'} st-res"><span class="tiny">${r.i + 1}. fejezet · ${r.win ? 'Győzelem' : 'Most nem sikerült'}</span><p style="margin-top:6px">${storyTxt(r.win ? c0.win : c0.lose)}</p>${r.win && c0.reward ? `<p class="small" style="margin-top:8px;color:var(--fakla-300)">${storyTxt(c0.reward)}</p>` : ''}${r.win && r.out ? `<div class="gains" style="justify-content:flex-start;margin-top:8px">${rewardChips({ silver: r.out.silver, dust: r.out.dust })}</div>${r.out.item ? `<div style="margin-top:10px">${itemHtml(r.out.item, { delta: true })}</div>` : ''}` : ''}</div>`; }
+    let body = '';
+    if (!ch) body = `<div class="result-box good"><h2>Vége… egyelőre</h2><p class="muted" style="margin-top:6px">A Holdkrónika minden fejezetét végigjártad. Bubó szerint a hold még tartogat meglepetéseket.</p></div>`;
+    else if (h.level < ch.level) body = `<div class="st-locked"><span class="tiny">${i + 1}. fejezet · ${esc(region(ch.region).name)}</span><h2>${esc(ch.title)}</h2><p class="muted">${storyTxt(ch.teaser)}</p><p class="small" style="margin-top:8px">A ${ch.level}. szinttől nyílik. Most ${h.level}. szintű vagy.</p></div>`;
+    else {
+      const chosen = st.choices[ch.id], left = X.STORY_TRIES - st.losses, mon = X.storyBoss(i), c = chanceOf(mon), rw = X.storyReward(h, i);
+      const choice = ch.choice ? (chosen ? `<div class="st-scene st-chosen"><b class="st-who">Te döntöttél</b><p>${esc(ch.choice[chosen].label)}</p><p class="muted" style="margin-top:4px">${storyTxt(ch.choice[chosen].reply)}</p></div>`
+        : `<div class="st-choice"><p><b>${storyTxt(ch.choice.prompt)}</b></p><div class="event-choices"><button class="btn ev-opt" data-act="story-choice" data-v="a"><span>${esc(ch.choice.a.label)}</span></button><button class="btn ev-opt" data-act="story-choice" data-v="b"><span>${esc(ch.choice.b.label)}</span></button></div></div>`) : '';
+      const ready = !ch.choice || chosen;
+      const boss = ready ? `<div class="nx-ch-fight st-boss"><div class="nx-ch-mon">${A.monsterSvg(mon.name, ch.region, { guard: true })}</div>
+          <div><span class="tiny">A fejezet ellenfele</span><h2>${esc(ch.boss.name)}</h2><p style="margin-top:4px">${storyTxt(ch.boss.intro)}</p><p class="small muted" style="margin-top:6px">${mon.level}. szintű · ${pct(c)} győzelmi esély (${chanceWord(c)})</p>
+          <div class="gains" style="justify-content:flex-start;margin-top:8px">${rewardChips(rw)}</div>
+          ${h.inventory.length >= E.INVENTORY_MAX ? '<p class="small" style="margin-top:10px;color:var(--veszely-400)">Tele a táskád. Csinálj helyet, hogy a fejezet jutalma beférjen.</p>' : ''}
+          <button class="btn fakla lg" style="margin-top:12px" data-act="story-fight" ${left > 0 && h.inventory.length < E.INVENTORY_MAX ? '' : 'disabled'}>${ni('kronika')}${left > 0 ? 'Harcba!' : 'Mára elég volt'}</button>
+          ${left > 0 ? '<p class="small muted" style="margin-top:6px">A taktikát a Tábor kalandjainál állíthatod. A vereség nem visz el semmit.</p>' : '<p class="small muted" style="margin-top:6px">Éjfélkor újra próbálhatod. Addig erősödj a kalandokon.</p>'}</div></div>` : '';
+      body = `<article class="st-ch"><span class="tiny">${i + 1}. fejezet · ${esc(region(ch.region).name)}</span><h2>${esc(ch.title)}</h2><div class="st-scenes">${storyScenes(ch, st.choices)}${choice}</div>${boss}</article>`;
+    }
+    const past = chs.slice(0, i).map((c0, k) => `<details class="st-past"><summary><span class="tiny">${k + 1}. fejezet</span> ${esc(c0.title)} <span class="ok">✓</span></summary><div class="st-scenes">${storyScenes(c0, st.choices)}${c0.choice && st.choices[c0.id] ? `<div class="st-scene st-chosen"><b class="st-who">Te döntöttél</b><p>${esc(c0.choice[st.choices[c0.id]].label)}</p></div>` : ''}<div class="st-scene nar"><p>${storyTxt(c0.win)}</p></div></div></details>`).reverse().join('');
+    return `<section class="panel nx-ch">${head}${res}${body}${past ? `<div class="st-pastlist"><h3>Az eddigi fejezetek</h3>${past}</div>` : ''}</section>`;
+  }
   function renderEvent() {
     tip('esemeny');
     const x = X.eventState(S.save, now()), ev = x.ev, s = x.s, left = X.EVENT_TRIES - s.tries, h = hero();
@@ -932,6 +974,7 @@
     else if (S.screen === 'boss') main = renderBoss();
     else if (S.screen === 'kozosseg') main = renderCommunity();
     else if (S.screen === 'torony' && X) main = renderTower();
+    else if (S.screen === 'holdkronika' && X) main = renderStory();
     else if (S.screen === 'esemeny' && X) main = renderEvent();
     else if (S.screen === 'bolt' && X) main = renderShop();
     else if (S.screen === 'eredmenyek' && X) main = renderAch();
@@ -1269,10 +1312,10 @@
       // a harc eredményét a krónika csak a harc végén árulja el (az utolsó pár másodperc bejegyzései addig rejtve)
       chronCut: now() - 3000,
       kind: kind, fight: fight, heroF: fight.heroF, mon: fight.mon, idx: 0, done: false, mounted: false, timer: null,
-      heroName: h.name, monName: fight.mon.name, pet: fight.allies && fight.allies.length ? fight.allies.join(' és ') : petName(h), special: D.MONSTER_SPECIALS[Math.floor(Math.random() * D.MONSTER_SPECIALS.length)],
+      heroName: h.name, monName: fight.mon.name, pet: fight.allies && fight.allies.length ? fight.allies.join(' és ') : petName(h), special: (extra && extra.special) || D.MONSTER_SPECIALS[Math.floor(Math.random() * D.MONSTER_SPECIALS.length)],
       // Aréna: az ellenfél hőse (kinézettel) rajzolódik a szörny helyére
       oppHero: extra && extra.opp ? { name: extra.opp.name, classId: extra.opp.classId, rig: safeRig({ classId: extra.opp.classId, rig: extra.opp.rig, look: extra.opp.look, people: extra.opp.people }) } : null,
-      region: rid, guard: kind === 'guard', boss: !!fight.boss, hp: fight.heroF.hpStart, mhp: fight.mon.hpStart, round: 1, logHtml: '', extra: extra || {}, dealt: 0
+      region: rid, guard: kind === 'guard' || kind === 'story', boss: !!fight.boss, hp: fight.heroF.hpStart, mhp: fight.mon.hpStart, round: 1, logHtml: '', extra: extra || {}, dealt: 0
     };
     tip('harc');
   }
@@ -1871,6 +1914,8 @@
     'profile-open'(v) { S.profileView = null; const m = S.modal = { type: 'info', kind: 'profile' }; render(); remote('profile', { name: v }).then(r => { if (S.modal !== m) return; S.profileView = r.result; render(); }).catch(e => { if (S.modal === m) S.modal = null; handleError(e); render(); }); },
     'guild-claim'(v) { guildCall('guildClaim', { i: +v }, r => `+${fmt(r.silver)} Holdezüst · +${fmt(r.dust)} Csillagpor`); },
     'tower-rush'() { act('towerRush', {}, r => toast(r.to === r.from ? `${azN(r.lost)} ${r.lost}. emeleten elbuktál.` : `${r.from + 1}–${r.to}. emelet megvan${r.lost ? ` (${azN(r.lost)} ${r.lost}. emeleten elbuktál)` : ''}: +${fmt(r.silver)} Holdezüst · +${fmt(r.dust)} Csillagpor${r.items.length ? ' · ' + r.items.map(i => i.name).join(', ') : ''}`)); },
+    'story-choice'(v) { act('storyChoice', { v: v }); },
+    'story-fight'() { S.storyRes = null; act('storyFight', {}, r => { const i = r.out.chapter - 1; startCombat('story', r.fight, { out: r.out, region: r.out.region, special: (X.storyChapters()[i] || { boss: {} }).boss.special, after: () => { S.storyRes = { i: i, win: r.out.win, out: r.out }; render(); scrollTop(); } }); scrollTop(); }); },
     'tower-fight'() { act('towerFight', {}, r => { startCombat('tower', r.fight, { out: r.out, region: r.out.region, after: afterChallenge('tower') }); scrollTop(); }); },
     'event-fight'() { act('eventFight', {}, r => { startCombat('event', r.fight, { out: r.out, region: r.out.region, after: afterChallenge('event') }); scrollTop(); }); },
     'event-claim'(v) { act('eventClaim', { i: +v }, r => toast(r.item ? `Átvetted: ${r.item.name}` : r.silver ? `+${fmt(r.silver)} Holdezüst` : `+${fmt(r.dust)} Csillagpor`)); },

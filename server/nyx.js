@@ -645,7 +645,7 @@ const X = G.extra;
 const GUILD_MAX = 20, GUILD_COST = 1000;
 const GUILD_GOALS = [{ w: 50, silver: 3, dust: 40 }, { w: 150, silver: 6, dust: 80 }, { w: 350, silver: 10, dust: 150 }]; // heti közös győzelmek; jutalom: × alap-Holdezüst, Csillagpor
 const GUILD_EMBLEMS = ['hold', 'csillag', 'kard', 'pajzs', 'farkas', 'fa', 'korona', 'lang'];
-const WIN_ACTIONS = ['fight', 'arenaFight', 'teamFight', 'eventFight']; // a torony emeletei nem számítanak (túl sok, túl könnyű „győzelem”)
+const WIN_ACTIONS = ['fight', 'arenaFight', 'teamFight', 'eventFight', 'storyFight']; // a torony emeletei nem számítanak (túl sok, túl könnyű „győzelem”)
 const weekNow = () => X.weekKey(Date.now());
 function heroSnap(save, uid) { return X.snap(save.hero, uid, save.arena ? save.arena.rating : 1000); }
 
