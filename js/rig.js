@@ -879,7 +879,7 @@
       case 'vadasz1': // reflexíj: visszahajló végek
         return S('M90 196 C82 202 80 196 84 190 M90 362 C82 356 80 362 84 368', '#3a2418', 5) + S('M90 196 C118 230 118 328 90 362', '#3a2418', 7) + S('M90 196 C118 230 118 328 90 362', '#5a3a20', 4) +
           P('M100 268 L114 268 L114 290 L100 290 Z', '#2f6b4f', { sw: 1.2 }) + S('M86 192 L86 366', '#efe4cc', 1.1);
-      case 'orgyilkos0': case 'orgyilkos1': case 'alakvalto0':
+      case 'orgyilkos0': case 'orgyilkos1': case 'orgyilkos2': case 'alakvalto0': // páros fegyverek: a bal kézben a tükörképe
         return `<g transform="matrix(-1 0 0 1 320 0)"><g transform="rotate(${WEAPON_ROT[cls + v] || 0} ${GRIP[0]} ${GRIP[1]})">${weaponSvg(cls, v, L, id)}</g></g>`;
     }
     return '';
