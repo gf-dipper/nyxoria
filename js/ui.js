@@ -388,7 +388,7 @@
   }
   function railHtml() {
     return `<nav class="nx-rail col-left" aria-label="Főmenü"><div class="nx-rail-scroll">${menuGroups().map((g, i) => `<section class="nx-grp" aria-labelledby="nxg-${i}"><h2 id="nxg-${i}">${g.name}</h2><ul>${g.items.map(it => navBtn(it)).join('')}</ul></section>`).join('')}</div>
-      <div class="nx-rail-foot"><button class="icon-btn" data-act="info" data-v="sugo" aria-label="Súgó" title="Súgó">${ni('sugo')}<small>Súgó</small></button><button class="icon-btn" data-act="info" data-v="hiba" aria-label="Hiba bejelentése" title="Hiba bejelentése">${ni('hiba')}<small>Hiba</small></button><button class="icon-btn" data-act="info" data-v="discord" aria-label="Discord-szerver" title="Discord-szerver">${ni('discord')}<small>Discord</small></button><button class="icon-btn" data-act="screen" data-v="beallitas" aria-label="Beállítások" title="Beállítások"${S.screen === 'beallitas' ? ' aria-current="page"' : ''}>${ni('beallitas')}<small>Beállítás</small></button></div></nav>`;
+      <div class="nx-rail-foot"><button class="icon-btn" data-act="help-open" aria-label="Súgó" title="Súgó"${S.screen === 'sugo' ? ' aria-current="page"' : ''}>${ni('sugo')}<small>Súgó</small></button><button class="icon-btn" data-act="info" data-v="hiba" aria-label="Hiba bejelentése" title="Hiba bejelentése">${ni('hiba')}<small>Hiba</small></button><button class="icon-btn" data-act="info" data-v="discord" aria-label="Discord-szerver" title="Discord-szerver">${ni('discord')}<small>Discord</small></button><button class="icon-btn" data-act="screen" data-v="beallitas" aria-label="Beállítások" title="Beállítások"${S.screen === 'beallitas' ? ' aria-current="page"' : ''}>${ni('beallitas')}<small>Beállítás</small></button></div></nav>`;
   }
   function newTopbar() {
     const h = hero(), t = E.torchState(S.save, now()), need = E.xpNeeded ? E.xpNeeded(h.level) : 0, xpP = need ? Math.min(100, Math.round(h.xp / need * 100)) : 0;
@@ -483,7 +483,7 @@
       <h3 class="nx-h3">A legutóbbi frissítésben</h3><ul class="nx-list">${li('Ösvények, profil, céhháború', 'A 15. szinttől ösvényt választhatsz, a hősöd profilját mások is megnézhetik, a céhek pedig hetente megmérkőznek egymással.')}${li('Új grafika', 'Új hősök, szörnyek és tájak, minden mozdul.')}${li('Új harc', 'A hős és a szörny odamegy egymáshoz, minden képességnek saját látványa van.')}${li('Új karakterkészítő', 'Forgatható hős, rengeteg választás, és a kinézetet bármikor átszabhatod.')}</ul>`,
       `<button class="btn block" data-act="owl-reset">Bubó tippjei elölről</button>${close}`);
     if (kind === 'menu') return wrap('Menü', 'Minden, ami a táborban elérhető', menuGroups().map(g => `<section class="nx-grp sheet"><h3>${g.name}</h3><ul>${g.items.map(it => navBtn(it, true)).join('')}</ul></section>`).join('') +
-      `<section class="nx-grp sheet"><h3>Egyéb</h3><ul>${[{ name: 'Súgó', ic: 'sugo', sub: 'Bubó elmagyarázza', go: ['info', 'sugo'] }, { name: 'Hiba bejelentése', ic: 'hiba', sub: 'Zárt teszt: minden észrevétel számít', go: ['info', 'hiba'] }, { name: 'Discord-szerver', ic: 'discord', sub: 'Csevegés, bejelentések, segítség', go: ['info', 'discord'] }, { name: 'Beállítások', ic: 'beallitas', sub: 'Harc sebessége, Bubó, fiók', go: ['screen', 'beallitas'] }].concat(ONLINE && S.me && S.me.admin ? [{ name: 'Admin', ic: 'karakter', sub: 'Játékosok, bejelentések, világ', go: ['screen', 'admin'] }] : []).map(it => navBtn(it, true)).join('')}</ul></section>`, ' ');
+      `<section class="nx-grp sheet"><h3>Egyéb</h3><ul>${[{ name: 'Súgó', ic: 'sugo', sub: 'Minden a játékról, képekkel', go: ['screen', 'sugo'] }, { name: 'Hiba bejelentése', ic: 'hiba', sub: 'Zárt teszt: minden észrevétel számít', go: ['info', 'hiba'] }, { name: 'Discord-szerver', ic: 'discord', sub: 'Csevegés, bejelentések, segítség', go: ['info', 'discord'] }, { name: 'Beállítások', ic: 'beallitas', sub: 'Harc sebessége, Bubó, fiók', go: ['screen', 'beallitas'] }].concat(ONLINE && S.me && S.me.admin ? [{ name: 'Admin', ic: 'karakter', sub: 'Játékosok, bejelentések, világ', go: ['screen', 'admin'] }] : []).map(it => navBtn(it, true)).join('')}</ul></section>`, ' ');
     return '';
   }
   // címképernyő: munkamenetenként egyszer, a játék indulásakor
@@ -516,7 +516,7 @@
         ${main}
         <nav class="nx-tmenu" aria-label="Címképernyő">
           ${h ? `<button class="btn" data-act="screen" data-v="beallitas">${ni('beallitas')}Beállítások</button>` : ''}
-          <button class="btn" data-act="info" data-v="sugo">${ni('sugo')}Súgó</button>
+          <button class="btn" data-act="help-open">${ni('sugo')}Súgó</button>
           <button class="btn" data-act="info" data-v="discord">${ni('discord')}Discord</button>
           ${h || !SOON.length ? '' : `<button class="btn" data-act="info" data-v="keszulo">${ni('keszulo')}Hamarosan</button>`}
         </nav>
@@ -739,6 +739,75 @@
           ${left > 0 && t.floor < X.rushLimit(h) ? `<button class="btn ghost" style="margin-top:8px" data-act="tower-rush">Gyors mászás ${azN(X.rushLimit(h))} ${X.rushLimit(h)}. emeletig</button><p class="small muted" style="margin-top:4px">A hősödnél jóval gyengébb emeleteket egyben, harcjelenet nélkül vívja meg.</p>` : ''}
           ${left > 0 ? '' : '<p class="small muted" style="margin-top:6px">Éjfélkor újra 5 próbálkozásod lesz.</p>'}</div></div>
         <ol class="nx-ladder" aria-label="Emeletek">${ladder}</ol></div></section>`;
+  }
+  // ---------- Súgó (teljes oldal, képekkel) ----------
+  function helpTok(t) {
+    const P = (X && X.QUEST_SLOTS) || 3, map = {
+      TORCH_MAX: E.TORCH.max, TORCH_MIN: Math.round(E.TORCH.regenMs / 60000), RESTED_MAX: E.TORCH.restedMax, // a BOSS_HITS és a HERO_SLOTS a szerveren él (3–3); ha ott változik, itt is át kell írni
+      GATE_KEK: E.RARITY_GATE.kek, GATE_LILA: E.RARITY_GATE.lila, GATE_LEG: E.RARITY_GATE.legendas,
+      PITY_LILA: E.PITY_PURPLE, PITY_LEG: E.PITY_LEGEND, INV_MAX: E.INVENTORY_MAX, REFUND: Math.round(E.REFUND * 100), PATH_LEVEL: D.PATH_LEVEL,
+      TOWER_TRIES: X ? X.TOWER_TRIES : 5, EVENT_TRIES: X ? X.EVENT_TRIES : 3, ARENA_FIGHTS: X ? X.ARENA_FIGHTS : 5, TEAM_RUNS: X ? X.TEAM_RUNS : 3, STORY_TRIES: X ? X.STORY_TRIES : 3, QUEST_SLOTS: P,
+      ELITE_MIN: E.ELITE ? E.ELITE.minLevel : 5, ELITE_PCT: E.ELITE ? Math.round(E.ELITE.chance * 100) : 20, MOON_MIN: E.MOONS.felhold.minLevel, BOSS_HITS: 3, HERO_SLOTS: 3
+    };
+    return String(t || '').replace(/\{([A-Z_]+)\}/g, (m, k) => map[k] != null ? map[k] : m);
+  }
+  function sampleHero(cls, i) { const P = D.PEOPLE_ORDER || ['ember']; try { return G.createSave({ name: 'Minta', classId: cls, people: P[(i || 0) % P.length] }, 0).hero; } catch (e) { return hero(); } }
+  function helpFig(key) {
+    const h = hero(), r = region(S.save.offers && S.save.offers[1] ? S.save.offers[1].region : 'kodlap');
+    const tile = (it, plus) => `<span class="item-ic painted r-${it.rarity}">${NXI ? NXI.item(it) : ''}${plus ? `<span class="plus">+${plus}</span>` : ''}</span>`;
+    const mk = (rar, slot) => E.makeItem(E.mulberry32(7 + rar.length), { rarity: rar, slot: slot, level: h.level, classId: h.classId });
+    const box = (inner, cls) => `<div class="hf ${cls || ''}">${inner}</div>`;
+    switch (key) {
+      case 'hero': return box(`<div class="hf-hero">${A.heroSvg(h, { full: true })}</div>`);
+      case 'classes': return box(Object.keys(D.CLASSES).slice(0, 8).map(c => `<figure class="hf-mini"><div class="hf-pt">${A.heroSvg(sampleHero(c, Object.keys(D.CLASSES).indexOf(c)))}</div><figcaption>${esc(D.CLASSES[c].name)}</figcaption></figure>`).join(''), 'grid4');
+      case 'camp': case 'patrol': return box(`<div class="hf-scene">${A.sceneSvg(key === 'camp' ? 'tabor' : 'erdo', 4)}</div>`);
+      case 'offers': return box(['konnyu', 'kozepes', 'nehez'].map(d => `<div class="hf-offer${d === 'kozepes' ? ' rec' : ''}">${d === 'kozepes' ? '<span class="hf-rec">AJÁNLOTT</span>' : ''}<span class="diff-pill d-${d}">${E.DIFF[d].name}</span><b class="d-${d}">${pct(E.DIFF[d].target)}</b><small>esély</small></div>`).join(''), 'row nowrap');
+      case 'clearing': return box(['harc', 'kutatas', 'esemeny'].map(t => `<div class="hf-card t-${t}"><span class="ic">${I[t]}</span><b>${{ harc: 'Harc', kutatas: 'Kutatás', esemeny: 'Esemény' }[t]}</b></div>`).join(''), 'row');
+      case 'events': return box(Object.keys(KIND_NAME).map(k => `<span class="hf-badge${k === 'arany' ? ' gold' : ''}">${KIND_NAME[k]}</span>`).join(''), 'wrap');
+      case 'guard': return box(`<div class="portrait md elite">${A.monsterSvg('Öreg Brekus, a lápkirály', 'kodlap', true)}</div><div><span class="elite-tag">Elit</span><p class="small muted" style="margin-top:6px">Az elit őrzőt rózsaszín keret jelzi.</p></div>`, 'row');
+      case 'combat': return box(`<div class="hf-pt lg">${A.heroSvg(h)}</div><b class="hf-vs">VS</b><div class="hf-pt lg">${A.monsterSvg('Nádi farkas', 'kodlap', false)}</div>`, 'row center');
+      case 'tactics': return box(`<div class="seg">${['roham', 'kiegy', 'kitartas'].map(id => `<button aria-pressed="${h.tactic === id}" tabindex="-1">${D.TACTICS[id].name}</button>`).join('')}</div>`, 'center');
+      case 'items': return box(D.RARITY_ORDER.map((r, i) => `<figure class="hf-mini">${tile(mk(r, D.SLOT_ORDER[i % D.SLOT_ORDER.length]))}<figcaption class="r-${r}">${esc(D.RARITIES[r].name)}</figcaption></figure>`).join(''), 'row');
+      case 'upgrade': return box(`${tile(mk('lila', 'fegyver'), 5)}<span class="hf-arrow">←</span><span class="gain">${I.dust}Csillagpor</span><span class="gain">${I.silver}Holdezüst</span>`, 'row center');
+      case 'moons': return box(E.MOON_ORDER.map((m, i) => `<figure class="hf-mini"><span class="hf-moon m${i}"></span><figcaption>${esc(E.MOONS[m].name)}</figcaption></figure>`).join(''), 'row');
+      case 'torches': return box(`<div class="hf-torches">${Array.from({ length: E.TORCH.max }, (_, i) => `<span class="torch ${i < 5 ? 'on' : 'off'}">${I.torch}</span>`).join('')}</div><span class="gain">${I.rested}Frissesség</span>`, 'col center');
+      case 'currencies': return box([[I.silver, 'Holdezüst'], [I.dust, 'Csillagpor'], [I.torch.replace('<svg', '<svg width="14" height="20"'), 'Fáklya'], [I.rested, 'Frissesség'], [I.xp, 'Tapasztalat']].map(([ic, n]) => `<span class="gain">${ic}${n}</span>`).join(''), 'wrap');
+      case 'paths': { const P = (D.PATHS && D.PATHS[h.classId]) || []; return box(P.map(p => `<div class="hf-card"><b>${esc(p.name)}</b></div>`).join('') || '', 'col'); }
+      case 'story': { const c = D.STORY && D.STORY.chapters[0]; return box(c ? `<div class="portrait md">${A.monsterSvg(c.boss.name, c.region, true)}</div><div><span class="tiny">1. fejezet</span><b style="display:block">${esc(c.title)}</b></div>` : '', 'row'); }
+      case 'quests': return box(`<div class="qcard" style="width:100%"><div class="q-giver"><b>Teca néni, a fogadósné</b></div><b>A titkos fűszer</b><div class="q-prog"><div class="bar"><i style="width:50%"></i></div><span class="small">1 / 2</span></div></div>`);
+      case 'tower': return box(`<ol class="nx-ladder hf-ladder">${[4, 3, 2, 1].map(f => `<li class="${f === 2 ? 'here' : f < 2 ? 'done' : ''}"><span class="fl">${f}.</span><span class="fn">${f === 2 ? 'itt tartasz' : f < 2 ? 'megvan' : 'még előtted'}</span></li>`).join('')}</ol>`);
+      case 'event': case 'boss': return box(`<div class="portrait md">${A.monsterSvg(key === 'boss' ? 'A Fenevad' : 'Ködkirálynő', key === 'boss' ? 'holdfeny' : 'kodlap', true)}</div>`, 'center');
+      case 'arena': return box(`<div class="hf-pt lg">${A.heroSvg(h)}</div><b class="hf-vs">VS</b><div class="hf-pt lg flip">${A.heroSvg(sampleHero(h.classId === 'harcos' ? 'magus' : 'harcos'))}</div>`, 'row center');
+      case 'team': return box(['harcos', 'gyogyito', 'vadasz'].map((c, i) => `<div class="hf-pt">${A.heroSvg(sampleHero(c, i + 1))}</div>`).join('') + `<b class="hf-vs">VS</b><div class="hf-pt lg">${A.monsterSvg('Griffkirály', 'szirtek', true)}</div>`, 'row center');
+      case 'guild': return box(`<span class="hf-emblem">${I.shield}</span>`, 'center');
+      case 'album': return box(['Iszapmanó', 'Holdfarkas', 'Kőgólem', 'Szirti griff'].map((n, i) => `<div class="hf-pt${i > 1 ? ' unk' : ''}">${A.monsterSvg(n, ['kodlap', 'holdfeny', 'arnyromok', 'szirtek'][i], false)}</div>`).join(''), 'row');
+      case 'gift': return box(`<span class="hf-big">${icx('misc', 'lada', I.item)}</span>`, 'center');
+      case 'shop': return box(['kek', 'zold', 'kek'].map((r, i) => tile(mk(r, D.SLOT_ORDER[i + 2]))).join('') + `<span class="gain">${I.silver}Holdezüst</span>`, 'row center');
+      case 'heroes': return box(`<div class="hf-pt">${A.heroSvg(h)}</div><div class="hf-slot">+</div><div class="hf-slot">+</div>`, 'row center');
+      case 'settings': return box(`<span class="hf-big">${I.gear}</span>`, 'center');
+      default: return '';
+    }
+  }
+  function helpBlocks(sec) {
+    return sec.blocks.map(b => b.tip ? `<div class="advice hf-tip">${A.OWL.replace('width="64" height="64"', 'width="34" height="34"')}<div>${esc(helpTok(b.tip))}</div></div>`
+      : `${b.h ? `<h3>${esc(b.h)}</h3>` : ''}${b.p ? `<p>${esc(helpTok(b.p))}</p>` : ''}${b.list ? `<ul>${b.list.map(x => `<li>${esc(helpTok(x))}</li>`).join('')}</ul>` : ''}`).join('');
+  }
+  function helpText(sec) { return (sec.title + ' ' + sec.short + ' ' + sec.blocks.map(b => [b.h, b.p, b.tip].concat(b.list || []).join(' ')).join(' ')).toLowerCase(); }
+  function renderHelp() {
+    const H = D.HELP, q = (S.helpQ || '').trim().toLowerCase();
+    const secs = H.sections.filter(x => ONLINE || !x.online);
+    const match = x => !q || helpTok(helpText(x)).indexOf(q) >= 0;
+    const shown = secs.filter(match);
+    const byId = {}; secs.forEach(x => byId[x.id] = x);
+    const toc = H.groups.map(g => { const items = g.ids.map(id => byId[id]).filter(x => x && match(x)); return items.length ? `<div class="hp-grp"><h4>${esc(g.title)}</h4>${items.map(x => `<a href="#hp-${x.id}" data-act="help-go" data-v="${x.id}">${esc(x.title)}</a>`).join('')}</div>` : ''; }).join('');
+    const faq = (H.faq || []).filter(f => !q || helpTok(f.q + ' ' + f.a).toLowerCase().indexOf(q) >= 0);
+    const body = shown.map(x => `<section class="panel hp-sec" id="hp-${x.id}"><div class="hp-txt"><h2>${esc(x.title)}</h2><p class="hp-short">${esc(helpTok(x.short))}</p>${helpBlocks(x)}${x.go ? `<button class="btn ghost sm" data-act="screen" data-v="${x.go}" style="margin-top:10px">Megnézem a játékban →</button>` : ''}</div>
+        <figure class="hp-fig">${helpFig(x.fig)}${x.figCaption ? `<figcaption>${esc(x.figCaption)}</figcaption>` : ''}</figure></section>`).join('');
+    return `<section class="panel hp-head"><div class="row" style="gap:14px;align-items:center">${A.OWL.replace('width="64" height="64"', 'width="56" height="56"')}<div><h1>Súgó</h1><p class="muted">${esc(helpTok(H.intro))}</p></div></div>
+        <label class="hp-search"><span class="sr-only">Keresés a súgóban</span><input type="search" id="help-q" placeholder="Keresés: pl. fáklya, legendás, elit…" value="${esc(S.helpQ || '')}" autocomplete="off"></label>
+        <select class="hp-jump" data-act="help-jump" aria-label="Ugrás egy témához"><option value="">Ugrás egy témához…</option>${H.groups.map(g => `<optgroup label="${esc(g.title)}">${g.ids.map(id => byId[id]).filter(x => x && match(x)).map(x => `<option value="${x.id}">${esc(x.title)}</option>`).join('')}</optgroup>`).join('')}${faq.length ? '<option value="gyik">Gyakori kérdések</option>' : ''}</select></section>
+      <div class="hp-layout"><nav class="hp-toc" aria-label="Tartalom">${toc || '<p class="small muted">Nincs találat.</p>'}${faq.length ? '<div class="hp-grp"><h4>Kérdések</h4><a href="#hp-gyik" data-act="help-go" data-v="gyik">Gyakori kérdések</a></div>' : ''}</nav>
+      <div class="hp-body">${body}${faq.length ? `<section class="panel hp-sec hp-faq" id="hp-gyik"><div class="hp-txt"><h2>Gyakori kérdések</h2>${faq.map(f => `<details><summary>${esc(helpTok(f.q))}</summary><p>${esc(helpTok(f.a))}</p></details>`).join('')}</div></section>` : ''}${!body && !faq.length ? '<section class="panel"><p class="muted">Erre nincs találat. Próbálj egy másik szót!</p></section>' : ''}</div></div>`;
   }
   // ---------- Bestiárium (a gyűjtőalbumban) ----------
   const WEEKLY_BOSSES = [['A Fenevad', 'holdfeny'], ['Ködkirálynő', 'kodlap'], ['A Holdfaló', 'ejkatlan'], ['Árnyékcsőr', 'arnyromok'], ['A Hamuszarvú', 'szirtek'], ['Csillagrém', 'szirtek'], ['A Mocsárkirály', 'kodlap'], ['Éjanya', 'ejkatlan']];
@@ -1021,6 +1090,7 @@
     else if (S.screen === 'torony' && X) main = renderTower();
     else if (S.screen === 'holdkronika' && X) main = renderStory();
     else if (S.screen === 'megbizasok' && X) main = renderQuests();
+    else if (S.screen === 'sugo' && D.HELP) main = renderHelp();
     else if (S.screen === 'esemeny' && X) main = renderEvent();
     else if (S.screen === 'bolt' && X) main = renderShop();
     else if (S.screen === 'eredmenyek' && X) main = renderAch();
@@ -1045,7 +1115,7 @@
           ? `<div class="nx-herotop"><div class="nx-herostack l">${heroCard(true)}${torchPanel()}${eq.replace('<section class="panel"', '<section class="panel nx-eqp"')}</div><div class="nx-herostack r">${main.slice(0, k)}${statsPanel()}${sk.replace('<section class="panel"', '<section class="panel nx-skp"')}</div></div>`
           : `<div class="nx-herotop"><div class="nx-herostack l">${heroCard(true)}${torchPanel()}</div><div class="nx-herostack r">${main.slice(0, k)}${statsPanel()}</div></div>` + rest;
       }
-      const wide = S.screen === 'admin'; // az admin felületnek kell a hely: ott nincs jobb oldali sáv
+      const wide = S.screen === 'admin' || S.screen === 'sugo'; // az admin felületnek kell a hely: ott nincs jobb oldali sáv
       app.innerHTML = newTopbar() + `<div class="layout nx-layout${wide ? ' nx-wide' : ''}">${railHtml()}<main class="main" id="main">${main}</main>${wide ? '' : rightPanel()}</div>` +
         newBottomnav() + modalHtml() + owlHtml() + devbar();
     } else app.innerHTML = topbar() + `<div class="layout${showLeft ? ' show-left' : ''}">${heroPanel()}<main class="main" id="main">${main}</main>${rightPanel()}</div>` +
@@ -1124,7 +1194,7 @@
       <div id="patrol-anchor">${patrolPanel()}</div>
       <section class="panel">
         <div class="tactic-row"><div><h3>Taktika</h3><p class="tactic-desc">${D.TACTICS[h.tactic].desc} Az „ajánlott” illik a kasztodhoz.</p></div><div class="seg" role="group" aria-label="Taktika">${tacticSeg}</div></div>
-        <hr class="divider"><div class="tactic-row"><div><h3>Hold-fokozat</h3><p class="tactic-desc">Erősebb szörnyek, több Csillagpor. Tapasztalatot nem ad többet.</p></div>${moonRow}</div>
+        <hr class="divider"><div class="tactic-row"><div><h3>Hold-fokozat</h3><p class="tactic-desc">Erősebb szörnyek, cserébe sokkal több Csillagpor, több Holdezüst és egy kevés plusz tapasztalat.</p></div>${moonRow}</div>
       </section>`;
   }
 
@@ -1964,6 +2034,9 @@
     'tower-rush'() { act('towerRush', {}, r => toast(r.to === r.from ? `${azN(r.lost)} ${r.lost}. emeleten elbuktál.` : `${r.from + 1}–${r.to}. emelet megvan${r.lost ? ` (${azN(r.lost)} ${r.lost}. emeleten elbuktál)` : ''}: +${fmt(r.silver)} Holdezüst · +${fmt(r.dust)} Csillagpor${r.items.length ? ' · ' + r.items.map(i => i.name).join(', ') : ''}`)); },
     'quest-claim'(v) { act('questClaim', { id: v }, r => { S.questDone = { text: r.done || 'Köszönöm!', silver: r.silver, dust: r.dust, xp: r.xp }; if (r.levelUps && r.levelUps.length) S.modal = { type: 'level', ups: r.levelUps }; render(); }); },
     'quest-drop'(v) { S.questDone = null; act('questDrop', { id: v }); },
+    'help-open'() { if (D.HELP) { S.screen = 'sugo'; S.helpQ = ''; render(); scrollTop(); } else actions.info('sugo'); },
+    'help-jump'(v, t) { const id = t && t.value; if (id) actions['help-go'](id); },
+    'help-go'(v) { const el = document.getElementById('hp-' + v); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
     'story-choice'(v) { act('storyChoice', { v: v }); },
     'story-fight'() { S.storyRes = null; act('storyFight', {}, r => { const i = r.out.chapter - 1; startCombat('story', r.fight, { out: r.out, region: r.out.region, special: (X.storyChapters()[i] || { boss: {} }).boss.special, after: () => { S.storyRes = { i: i, win: r.out.win, out: r.out }; render(); scrollTop(); } }); scrollTop(); }); },
     'tower-fight'() { act('towerFight', {}, r => { startCombat('tower', r.fight, { out: r.out, region: r.out.region, after: afterChallenge('tower') }); scrollTop(); }); },
@@ -2090,6 +2163,13 @@
   document.addEventListener('change', ev => {
     const t = ev.target;
     if (t.matches && t.matches('input[data-act], select[data-act]')) { const fn = actions[t.dataset.act]; if (fn) fn(t.dataset.v, t); }
+  });
+  // súgó: keresés gépelés közben (a fókusz és a kurzor megmarad az újrarajzolás után)
+  let helpT = 0;
+  document.addEventListener('input', ev => {
+    if (ev.target.id !== 'help-q') return;
+    clearTimeout(helpT);
+    helpT = setTimeout(() => { const v = ev.target.value, pos = ev.target.selectionStart; S.helpQ = v; render(); const n = el('help-q'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) { /* régi böngésző */ } } }, 160);
   });
   document.addEventListener('keydown', ev => {
     if (ev.key === 'Enter' && ev.target.id === 'c-name') actions['c-next']();
