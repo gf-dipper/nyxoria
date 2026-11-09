@@ -2624,25 +2624,21 @@ import postgres from 'npm:postgres@3.4.9';
   const GLOW_OK = ['#c79bff', '#ffd76a'];
   // a legendás páncél a kaszt saját színét kapja arannyal (különben minden kaszt egyforma krémszínű lenne)
   const LEG_PAL = { harcos: '#8e2448', orgyilkos: '#24203a', vadasz: '#2f6b4f', magus: '#2c3a8c', idezo: '#1f6f8a', alakvalto: '#3f5a2a', dalnok: '#8e2448', gyogyito: '#e8e6f2' };
-  // a zöld fegyver csak a nem világító változatok közül jöhet (a varázskönyv, a napjogar, a méregtüske stb. maga is fénylik)
-  const GLOW_WEAPON = { magus: [0, 2], gyogyito: [0], orgyilkos: [2], idezo: [0, 1], alakvalto: [1] };
   const RAR_RANK = { szurke: 0, zold: 1, kek: 2, lila: 3, legendas: 4 };
   function strHash(t) { let h = 0; t = String(t || ''); for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0; return h; }
   // a kinézet kulcsa: ritkaság.változat (+ .m, ha mitikus) – a tárgy nevéből, így ugyanaz a tárgy mindig ugyanúgy néz ki
   function lookKey(it) {
     if (!it || !GEAR_PAL[it.rarity]) return null;
-    const n = { fegyver: 3, pancel: 6 }[it.slot] || 1;
+    const n = { pancel: 3 }[it.slot] || 1; // a fegyver típusa és a ruha szabása a játékosé; a ritkaság a színt, fényt, díszt adja
     return it.rarity + '.' + (strHash(it.name) % n) + (it.mythic ? '.m' : '');
   }
   function lookPiece(slot, key, classId) {
     const p = String(key || '').split('.'), r = p[0], v = +p[1] || 0, myth = p[2] === 'm', out = {};
     if (!GEAR_PAL[r]) return out;
     if (slot === 'fegyver') {
-      const glowy = GLOW_WEAPON[classId] || [], plain = [0, 1, 2].filter(x => glowy.indexOf(x) < 0);
-      out.weapon = r === 'zold' ? plain[v % plain.length] : v % 3;
       if (GEAR_GLOW[r]) out.wGlow = GEAR_GLOW[r]; if (r === 'legendas') out.wSpark = true;
     }
-    if (slot === 'pancel') { const pal = r === 'legendas' ? [LEG_PAL[classId] || GEAR_PAL.legendas[v % 3][0], '#e0b44a'] : GEAR_PAL[r][v % 3]; out.outfit = Math.floor(v / 3) % 2; out.c1 = pal[0]; out.c2 = pal[1]; out.metal = GEAR_METAL[r]; out.cape = GEAR_CAPE[r]; }
+    if (slot === 'pancel') { const pal = r === 'legendas' ? [LEG_PAL[classId] || GEAR_PAL.legendas[v % 3][0], '#e0b44a'] : GEAR_PAL[r][v % 3]; out.c1 = pal[0]; out.c2 = pal[1]; out.metal = GEAR_METAL[r]; out.cape = GEAR_CAPE[r]; }
     if (slot === 'sisak') { out.headwear = GEAR_HELM[HELM_FAMILY[classId] || 'varazs'][r]; out._metal = GEAR_METAL[r]; }
     if (slot === 'amulett') out.aura = r === 'lila' ? 'holdfeny' : r === 'legendas' ? 'csillagpor' : 'nincs';
     if (slot === 'gyuru') out.earring = RAR_RANK[r] >= 3 ? 'kristaly' : RAR_RANK[r] === 2 ? 'karika' : 'nincs';
@@ -2700,7 +2696,7 @@ import postgres from 'npm:postgres@3.4.9';
     const motto = String(opts.motto || '').trim().slice(0, 40);
     const hero = E.newHero({ name: name, classId: opts.classId, people: opts.people, look: cleanLook(opts.look), origin: origin, trait: trait, motto: motto, now: now });
     // az új kliens a teljes új kinézetet küldi; a régi kliens csak a régit (akkor a rajzoló átalakítja)
-    if (opts.rig) hero.rig = cleanRig(opts.rig, hero.classId);
+    if (opts.rig) { hero.rig = cleanRig(opts.rig, hero.classId); hero.rig.aura = 'nincs'; hero.rig.wings = 'nincs'; } // a szárny és az aura kiérdemelhető, nem választható
     const save = E.newSave(hero, now);
     save.version = SAVE_VERSION;
     save.patrol = null; save.patrolDay = null; save.buffs = {};
@@ -2793,7 +2789,7 @@ import postgres from 'npm:postgres@3.4.9';
   };
 
   // a kinézet átszabása bármikor (a név, a faj és a kaszt nem változik)
-  A.restyle = (save, a) => { const r = cleanRig(Object.assign({}, migrateLook(save.hero), a.rig && typeof a.rig === 'object' ? a.rig : {}), save.hero.classId); delete r.wGlow; delete r.wSpark; save.hero.rig = r; };
+  A.restyle = (save, a) => { const old = migrateLook(save.hero), r = cleanRig(Object.assign({}, old, a.rig && typeof a.rig === 'object' ? a.rig : {}), save.hero.classId); delete r.wGlow; delete r.wSpark; r.aura = old.aura; r.wings = old.wings; save.hero.rig = r; };
   A.tactic = (save, a) => { if (!D.TACTICS[a.v]) fail('arg', 'Ismeretlen taktika.'); save.hero.tactic = a.v; };
   A.moon = (save, a) => {
     if (!E.MOONS[a.v]) fail('arg', 'Ismeretlen Hold-fokozat.');

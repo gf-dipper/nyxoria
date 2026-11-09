@@ -55,20 +55,18 @@
   const icon = n => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${IC[n]}</svg>`;
 
   const STEPS = [
-    { id: 'alap', name: 'Alap', desc: RESTYLE ? 'Nem, testalkat és bőrszín. A kaszt és a faj nem változik.' : 'Nem, kaszt, faj és testalkat. Ezzel kezdődik minden.', zoom: 'full', keys: ['sex', 'body', 'height', 'skin'],
-      groups: RESTYLE ? [['sex'], ['opt', 'body'], ['opt', 'height'], ['color', 'skin']] : [['sex'], ['class'], ['people'], ['opt', 'body'], ['opt', 'height'], ['color', 'skin']] },
+    { id: 'alap', name: 'Alap', desc: RESTYLE ? 'Nem, testalkat, bőrszín és farok. A kaszt és a faj nem változik.' : 'Nem, kaszt, faj, testalkat és farok. Ezzel kezdődik minden.', zoom: 'full', keys: ['sex', 'body', 'height', 'skin', 'tail'],
+      groups: RESTYLE ? [['sex'], ['opt', 'body'], ['opt', 'height'], ['color', 'skin'], ['opt', 'tail']] : [['sex'], ['class'], ['people'], ['opt', 'body'], ['opt', 'height'], ['color', 'skin'], ['opt', 'tail']] },
     { id: 'arc', name: 'Arc', desc: 'Arcforma, szemek és az, hogy milyen képet vág a hősöd.', zoom: 'face', keys: ['face', 'eyeShape', 'eye', 'eye2', 'eyeGlow', 'brows', 'nose', 'mouth', 'mark'],
       groups: [['opt', 'face'], ['opt', 'eyeShape'], ['color', 'eye'], ['color', 'eye2', true], ['toggle', 'eyeGlow'], ['opt', 'brows'], ['opt', 'nose'], ['opt', 'mouth'], ['opt', 'mark']] },
     { id: 'haj', name: 'Haj', desc: 'Válassz frizurát és hajszínt. A haj végét külön is átszínezheted.', zoom: 'upper', keys: ['hairFront', 'hairBack', 'hair', 'tip', 'beard'],
       groups: [['opt', 'hairStyle'], ['color', 'hair'], ['color', 'tip', true], ['opt', 'beard']] },
     { id: 'fej', name: 'Fej', desc: 'Fül, szarv és ékszerek: ettől lesz igazán egyedi.', zoom: 'face', keys: ['ears', 'horns', 'hornColor', 'headwear', 'earring'],
       groups: [['opt', 'ears'], ['opt', 'horns'], ['color', 'hornColor'], ['opt', 'headwear'], ['opt', 'earring']] },
-    { id: 'ruha', name: 'Öltözet', desc: 'Ez a kezdő ruhád. Később a felvett páncél dönti el, mit viselsz: minél ritkább, annál díszesebb. Ezt a ruhát a Ruhatárban bármikor visszaveheted.', zoom: 'full', keys: ['outfit', 'c1', 'c2', 'metal', 'cape'],
+    { id: 'ruha', name: 'Öltözet', desc: 'A ruhád szabása végig a tiéd marad. A színét, a díszeit és a köpenyt később a felvett páncél adja: minél ritkább, annál díszesebb. Ezeket a színeket a Ruhatárban bármikor visszaveheted.', zoom: 'full', keys: ['outfit', 'c1', 'c2', 'metal', 'cape'],
       groups: [['opt', 'outfit'], ['color', 'c1'], ['color', 'c2'], ['metal'], ['opt', 'cape']] },
-    { id: 'fegyver', name: 'Fegyver', desc: 'A kezdő fegyvered. Ha jobb fegyvert szerzel, az látszik majd a kezedben; ezt a Ruhatárban visszaválaszthatod.', zoom: 'full', keys: ['weapon'],
+    { id: 'fegyver', name: 'Fegyver', desc: 'A kedvenc fegyvered: ez marad a kezedben végig. A ritkább fegyverek ugyanezt a fegyvert díszítik fel: a lila halványan izzik, a legendás aranyban ragyog.', zoom: 'full', keys: ['weapon'],
       groups: [['opt', 'weapon']] },
-    { id: 'varazs', name: 'Varázs', desc: 'A farok a tiéd marad. Az aura és a szárny a ritka amulettekből és a mitikus tárgyakból jön; amit itt választasz, az a Ruhatárban, az amulettnél választható.', zoom: 'full', keys: ['aura', 'wings', 'tail'],
-      groups: [['opt', 'aura'], ['opt', 'wings'], ['opt', 'tail']] },
     RESTYLE ? { id: 'nev', name: 'Összegzés', desc: 'Nézd át, mit raktál össze, és mentsd el.', zoom: 'full', keys: [], groups: [['summary']] }
       : { id: 'nev', name: 'Név', desc: 'Adj nevet a hősödnek, mondd el, honnan jött, és nézd át, mit raktál össze.', zoom: 'full', keys: [], groups: [['name'], ['story'], ['summary']] }
   ];
@@ -140,7 +138,8 @@
     else L[key] = /^\d+$/.test(v) ? +v : v;
     return { cls, look: L, people };
   }
-  function tidy(L) { if (FACE_HIDERS.indexOf(L.headwear) >= 0) L.headwear = 'nincs'; if (L.mark === 'harcifestek') L.mark = 'nincs'; return L; }
+  // a szárnyat és az aurát a ritka tárgyakból lehet kiérdemelni, ezért a készítő (és a Meglepetés) nem ad ilyet
+  function tidy(L) { if (FACE_HIDERS.indexOf(L.headwear) >= 0) L.headwear = 'nincs'; if (L.mark === 'harcifestek') L.mark = 'nincs'; if (!RESTYLE) { L.aura = 'nincs'; L.wings = 'nincs'; } else if (typeof C !== 'undefined' && C && C.look) { L.aura = C.look.aura; L.wings = C.look.wings; } return L; }
   function randomName(sex, avoid) { const list = sex === 'ferfi' ? MALE : FEMALE; let n; do n = pick(list); while (n === avoid && list.length > 1); return n; }
 
   // ---------- előzmények ----------
@@ -389,7 +388,7 @@
     $('#cbody').setAttribute('aria-labelledby', 'ctab-' + s.id);
     $('#ccnt').textContent = `${s.i + 1}/${STEPS.length}. lépés`;
     $('#ctitle').textContent = s.name; $('#cdesc').textContent = s.desc;
-    $('#crstep').title = s.id === 'nev' ? 'Új névötlet' : s.id === 'alap' ? 'Nem, faj, testalkat és bőrszín újrasorsolása (a kaszt marad)' : 'Csak ennek a lépésnek a beállításait sorsolja újra';
+    $('#crstep').title = s.id === 'nev' ? 'Új névötlet' : s.id === 'alap' ? 'Nem, faj, testalkat, bőrszín és farok újrasorsolása (a kaszt marad)' : 'Csak ennek a lépésnek a beállításait sorsolja újra';
     $('#crstep').setAttribute('aria-label', s.id === 'nev' ? 'Névötlet' : `Sorsolás ennél a lépésnél: ${s.name}`);
     $('#cprev').disabled = s.i === 0;
     const nx = $('#cnext');
@@ -509,7 +508,7 @@
       ['Fej', [/fül$/i.test(nm('ears')) ? nm('ears') : nm('ears') + ' fül', L.horns !== 'nincs' ? nm('horns').toLowerCase() : '', L.headwear !== 'nincs' ? nm('headwear').toLowerCase() : '', L.earring !== 'nincs' ? nm('earring').toLowerCase() + ' fülbevaló' : ''].filter(Boolean).join(', '), 'fej'],
       ['Öltözet', `${nm('outfit')} · ${nm('c1').toLowerCase()}, ${nm('c2').toLowerCase()}${L.cape !== 'nincs' ? ' · köpeny: ' + nm('cape').toLowerCase() : ''}`, 'ruha'],
       ['Fegyver', nm('weapon'), 'fegyver'],
-      ['Varázs', [L.aura !== 'nincs' ? nm('aura') + ' aura' : '', L.wings !== 'nincs' ? nm('wings').toLowerCase() : '', L.tail !== 'nincs' ? nm('tail').toLowerCase() : ''].filter(Boolean).join(', ') || 'Nincs', 'varazs']
+      ['Farok', L.tail !== 'nincs' ? nm('tail') : 'Nincs', 'alap']
     ];
     const keep = el.querySelector('[data-th]');
     el.innerHTML = `${keep ? keep.outerHTML : tileImg('_me', '')}<div class="who"><b>${R.esc(C.name || 'Névtelen hős')}</b><span>${nm('people')} ${nm('class').toLowerCase()}, ${nm('sex').toLowerCase()}</span></div>` +
@@ -619,10 +618,8 @@
           if (!RESTYLE) { const p = pick(D.PEOPLE_ORDER); C.people = p; next.ears = PEOPLE[p].ears; if (rnd() < 0.5) next.skin = PEOPLE[p].skin; }
           if (next.sex === 'no') next.beard = 'nincs';
         }
-        if (s === 'varazs') {
+        if (s === 'alap') {
           const keys = o => Object.keys(R.OPTIONS[o].items).filter(v => v !== 'nincs');
-          next.aura = rnd() < 0.65 ? pick(keys('aura')) : 'nincs';
-          next.wings = rnd() < 0.4 ? pick(keys('wings')) : 'nincs';
           next.tail = rnd() < 0.35 ? (next.ears === 'roka' || next.ears === 'macska' ? next.ears : pick(keys('tail'))) : 'nincs';
         }
         if (s === 'ruha' && C.classId === 'orgyilkos' && rnd() < 0.5) next.outfit = 1;
