@@ -506,7 +506,7 @@
           <button class="btn" data-act="info" data-v="discord">${ni('discord')}Discord</button>
           ${h || !SOON.length ? '' : `<button class="btn" data-act="info" data-v="keszulo">${ni('keszulo')}Hamarosan</button>`}
         </nav>
-        ${loginMode ? '<p class="small muted" style="margin-top:14px">Csak a Nyxoria Discord-szerver tagjai léphetnek be. A játék a Discord-neved, a profilképed és a szervereid listája alapján ellenőrzi ezt, mást nem lát.</p>' : ONLINE && S.me ? `<div class="nx-account"><span>Belépve Discorddal: <b>${esc(S.me.name || '')}</b></span><button class="nx-lnk" data-act="logout">Kijelentkezés</button></div>` : (!ONLINE ? '<p class="small muted" style="margin-top:14px">Gyakorló mód: a hősöd ebben a böngészőben van elmentve.</p>' : '')}
+        ${loginMode ? '<p class="small muted" style="margin-top:14px">A Discord-fiókoddal léphetsz be. A játék csak a Discord-nevedet és a profilképedet használja.</p>' : ONLINE && S.me ? `<div class="nx-account"><span>Belépve Discorddal: <b>${esc(S.me.name || '')}</b></span><button class="nx-lnk" data-act="logout">Kijelentkezés</button></div>` : (!ONLINE ? '<p class="small muted" style="margin-top:14px">Gyakorló mód: a hősöd ebben a böngészőben van elmentve.</p>' : '')}
         <div class="nx-tfoot"><span>Zárt teszt</span><button class="nx-lnk" data-act="info" data-v="hiba">Hiba bejelentése</button></div>
       </div>
       <aside class="nx-news" aria-labelledby="nx-news-t"><h2 id="nx-news-t">A legutóbbi frissítésben</h2><ul><li>Új kihívások: Holdtorony, heti esemény és Aréna.</li><li>Csapatküldetések és céhek: játsszatok együtt!</li><li>Napi ajándék, vándorkereskedő, eredmények és gyűjtőalbum.</li></ul></aside></main>`;
@@ -834,7 +834,7 @@
         <p class="muted" style="margin-top:8px">Rövid kalandok, közös heti szörny és ritka zsákmány. Napi pár perc is elég, de órákra is elmerülhetsz benne.</p>
         ${S.loginError ? `<div class="advice" style="margin-top:14px;text-align:left">${A.OWL.replace('width="64" height="64"', 'width="34" height="34"')}<div>${esc(S.loginError)}</div></div>` : ''}
         <button class="btn discord lg block" style="margin-top:18px" data-act="login">${I.discord}Belépés Discorddal</button>
-        <p class="small muted" style="margin-top:12px">Csak a Nyxoria Discord-szerver tagjai léphetnek be. A játék a Discord-neved, a profilképed és a szervereid listája alapján ellenőrzi ezt, mást nem lát.</p>
+        <p class="small muted" style="margin-top:12px">A Discord-fiókoddal léphetsz be. A játék csak a Discord-nevedet és a profilképedet használja.</p>
       </div></div></div>`;
   }
 
