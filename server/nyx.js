@@ -297,6 +297,7 @@ async function bossHit(user, args) {
     h.silver += silver;
     const ups = E.addXp(h, xp);
     G.levelEvents(save, ups, ctx);
+    save.album = save.album || { mon: {}, items: {} }; save.album.seen = save.album.seen || {}; save.album.seen[b.name] = 1; // a bestiáriumba
     G.personal(save, now, `<b>${G.esc(h.name)}</b> ${G.fmt(dmg)} sebzést vitt be a heti szörnynek (${G.esc(b.name)}).`, 'win');
     await tx`insert into boss_participants (boss_id, user_id, damage, hits, day, hits_day) values (${b.id}, ${user.id}, ${dmg}, 1, ${today}, 1)
              on conflict (boss_id, user_id) do update set damage = boss_participants.damage + ${dmg}, hits = boss_participants.hits + 1,

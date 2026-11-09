@@ -484,6 +484,122 @@
     }
   });
   wrap('patrolClaim', save => bump(save.hero, 'patrols'));
+
+  // ===================== Megbízások (mellékküldetések) és bestiárium =====================
+  // Egyszerre 3 megbízás; amit átvettél, annak a helyére másnap jön új. Naponta egyet lemondhatsz (azonnal jön helyette másik).
+  // A haladást a meglévő műveletek számolják (a harc, kártya, esemény, torony, aréna után). Minden a mentés quests mezőjében él.
+  const QUEST_SLOTS = 3;
+  // effort: kb. hány átlagos kalandnyi „plusz figyelmet” kér egy egység; a jutalom ehhez arányos (lásd questReward)
+  const QUEST_TYPES = {
+    guardWin:   { n: [2, 3], effort: 0.5, min: 1 },
+    eliteWin:   { n: [1, 1], effort: 2.0, min: 5 },
+    hardWin:    { n: [1, 2], effort: 1.6, min: 5 },
+    clearFight: { n: [3, 5], effort: 0.25, min: 1 },
+    searchOk:   { n: [2, 3], effort: 0.45, min: 1 },
+    shrine:     { n: [1, 1], effort: 2.0, min: 1 },
+    vendor:     { n: [1, 1], effort: 2.0, min: 1 },
+    riddle:     { n: [1, 1], effort: 2.0, min: 1 },
+    towerWin:   { n: [1, 2], effort: 0.5, min: 7 },
+    arenaWin:   { n: [2, 2], effort: 0.6, min: 1 }
+  };
+  const REGION_IN = { kodlap: 'a Ködlápon', holdfeny: 'a Holdfény-erdőben', arnyromok: 'az Árnyromokban', szirtek: 'a Csillaghullás-szirteken', ejkatlan: 'az Éjkatlanban' };
+  function questTpls() { return (D.QUESTS && D.QUESTS.templates) || []; }
+  // a megbízás tájegysége az, amelyiket a Közepes ajánlat épp kínál (a valódi szörnyszint kb. 1,15–1,3 × a hős szintje);
+  // ennél későbbi tájegység is beszámít, hogy a megbízás ne ragadhasson be, ha a hős közben továbblép
+  const regIdx = id => D.REGIONS.findIndex(r => r.id === id);
+  function questLm(save) { const o = (save.offers || []).filter(x => x.diff === 'kozepes')[0]; return o ? o.lm : Math.max(1, save.hero.level * 1.15); }
+  function questRegion(save) { const o = (save.offers || []).filter(x => x.diff === 'kozepes')[0]; return o ? o.region : E.regionFor(questLm(save), 'kozepes').id; }
+  // független ellenőrzéssel hangolva: a napi 3 megbízás kb. 10–20% plusz egy átlagos játéknaphoz képest
+  function questReward(h, q, lm) {
+    const T = QUEST_TYPES[q.type], e = T.effort * q.n, L = h.level; lm = lm || Math.max(1, L * 1.15);
+    return { silver: Math.round(E.silverBase(lm) * 0.9 * e), dust: Math.round((8 + 1.5 * lm) * 0.35 * e), xp: Math.round(E.xpBase(L) * 0.45 * e) };
+  }
+  function newQuest(save, rng, avoid) {
+    const h = save.hero;
+    const types = Object.keys(QUEST_TYPES).filter(t => h.level >= QUEST_TYPES[t].min && avoid.indexOf(t) < 0);
+    const type = types[Math.floor(rng() * types.length)] || 'clearFight', T = QUEST_TYPES[type];
+    const tpls = questTpls().filter(t => t.type === type), tpl = tpls[Math.floor(rng() * tpls.length)];
+    const n = T.n[0] + Math.floor(rng() * (T.n[1] - T.n[0] + 1));
+    const q = { id: E.newSeed(rng).toString(36), type: type, tpl: tpl ? tpl.id : null, n: n, prog: 0 };
+    if (type === 'guardWin') q.region = questRegion(save);
+    return q;
+  }
+  function questState(save, now) {
+    const today = day(now), h = save.hero;
+    let s = save.quests;
+    if (!s) s = { list: [], day: null, dropped: 0 };
+    if (s.day !== today) {
+      s = JSON.parse(JSON.stringify(s)); // tiszta függvény: a mentést csak a hívó írja vissza
+      s.day = today; s.dropped = 0;
+      const rng = E.mulberry32(E.newSeed());
+      while (s.list.length < QUEST_SLOTS) s.list.push(newQuest(save, rng, s.list.map(q => q.type)));
+    }
+    return s;
+  }
+  function questText(q, k) {
+    const t = questTpls().filter(x => x.id === q.tpl)[0];
+    if (!t) return '';
+    const reg = q.region ? (D.REGIONS.filter(r => r.id === q.region)[0] || {}).name || '' : '';
+    const num = ['nulla', 'egy', 'két', 'három', 'négy', 'öt'][q.n] || q.n;
+    return String(t[k] || '').replace(/\{n\}/g, num).replace(/\{regioban\}/g, REGION_IN[q.region] || reg).replace(/\{regio\}/g, reg);
+  }
+  function questBump(save, type, cnt, region) {
+    const s = save.quests; if (!s || !s.list) return;
+    s.list.forEach(q => { if (q.type === type && q.prog < q.n && (!q.region || regIdx(region) >= regIdx(q.region))) q.prog = Math.min(q.n, q.prog + (cnt || 1)); });
+  }
+  function killNote(save, name) {
+    if (!name) return;
+    save.album = save.album || { mon: {}, items: {} };
+    const k = save.album.kills = save.album.kills || {};
+    k[name] = (k[name] || 0) + 1;
+  }
+  A.questClaim = (save, a, ctx) => {
+    const s = questState(save, ctx.now); save.quests = s;
+    const i = s.list.findIndex(q => q.id === a.id);
+    if (i < 0) fail('state', 'Ez a megbízás már nincs meg.');
+    const q = s.list[i], h = save.hero;
+    if (q.prog < q.n) fail('state', 'Ez még nincs kész.');
+    const rw = questReward(h, q, questLm(save));
+    h.silver += rw.silver;
+    const dust = E.addDust(save, h, rw.dust, ctx.now);
+    const lv = E.addXp(h, rw.xp); G.levelEvents(save, lv, ctx);
+    s.list.splice(i, 1); bump(h, 'quests');
+    G.personal(save, ctx.now, `<b>${G.esc(h.name)}</b> teljesített egy megbízást: ${G.esc(questText(q, 'title'))}.`, 'win');
+    return { silver: rw.silver, dust: dust, xp: rw.xp, done: questText(q, 'done'), levelUps: lv || [] };
+  };
+  A.questDrop = (save, a, ctx) => {
+    const s = questState(save, ctx.now); save.quests = s;
+    if (s.dropped >= 1) fail('state', 'Ma már lemondtál egy megbízást. Holnap újra lehet.');
+    const i = s.list.findIndex(q => q.id === a.id);
+    if (i < 0) fail('state', 'Ez a megbízás már nincs meg.');
+    s.dropped++;
+    s.list[i] = newQuest(save, E.mulberry32(E.newSeed()), s.list.map(q => q.type).concat([s.list[i].type]));
+    return { ok: true };
+  };
+  A.questView = (save, a, ctx) => { save.quests = questState(save, ctx.now); return { ok: true }; };
+  // haladás a meglévő műveletekből
+  wrap('fight', save => {
+    const exp = save.expedition, res = save.pendingResult;
+    if (!exp || !res || !res.win) return;
+    questBump(save, 'guardWin', 1, exp.offer.region);
+    if (exp.offer.elite) questBump(save, 'eliteWin', 1);
+    if (exp.offer.diff === 'nehez') questBump(save, 'hardWin', 1);
+    killNote(save, exp.offer.guard);
+  });
+  wrap('card', save => {
+    const exp = save.expedition, o = exp && exp.lastOut;
+    if (!o || exp.phase !== 'cardResult') return;
+    if (o.type === 'harc' && o.win) { questBump(save, 'clearFight', 1); killNote(save, o.monster); }
+    if (o.type === 'kutatas' && o.success) questBump(save, 'searchOk', 1);
+  });
+  wrap('event', save => {
+    const o = save.expedition && save.expedition.lastOut; if (!o) return;
+    if (o.kind === 'szentely') questBump(save, 'shrine', 1);
+    if (o.kind === 'arus' && o.cost > 0) questBump(save, 'vendor', 1); // csak ha tényleg vettél valamit
+    if (o.kind === 'rejtveny') questBump(save, 'riddle', 1);
+  });
+  wrap('towerFight', (save, a, ctx, r) => { if (r && r.out && r.out.win) questBump(save, 'towerWin', 1); }); // a gyors mászás nem számít
+  wrap('arenaFight', (save, a, ctx, r) => { if (r && r.out && r.out.win) questBump(save, 'arenaWin', 1); });
   // kaland közben a felszerelés/taktika cseréje csak felfelé igazíthatja a szörnyeket (gyenge szettel indulni, aztán átöltözni nem éri meg)
   function recalibrate(save) {
     const exp = save.expedition, h = save.hero;
@@ -558,14 +674,16 @@
       // a fejezet tárgya sosem bomlik szét automatikusan (a táska helyét a harc előtt ellenőriztük)
       const it = E.makeItem(rng, Object.assign({ rarity: rw.item, level: h.level, classId: h.classId, hero: h }, i === storyChapters().length - 1 && rw.item === 'legendas' ? STORY_FINAL : {}));
       h.inventory.push(it); G.itemEvent(save, it, ctx, `Holdkrónika, ${i + 1}. fejezet`); out.item = it;
+      killNote(save, ch.boss.name);
       G.personal(save, ctx.now, `<b>${G.esc(h.name)}</b> befejezte a Holdkrónika ${i + 1}. fejezetét: ${G.esc(ch.title)}.`, 'win');
     }
     return { fight: { log: f.log, win: f.win, timeout: f.timeout, rounds: f.rounds, heroF: heroF, mon: mon }, out: out };
   };
 
-  ['gift', 'pathPick', 'shopOpen', 'shopReroll', 'shopBuy', 'towerFight', 'towerRush', 'storyChoice', 'storyFight', 'arenaFind', 'arenaFight', 'teamFind', 'teamFight', 'eventFight', 'eventClaim', 'achClaim'].forEach(n => G.FREE_DURING_EXPEDITION.push(n));
+  ['gift', 'pathPick', 'shopOpen', 'shopReroll', 'shopBuy', 'towerFight', 'towerRush', 'storyChoice', 'storyFight', 'questClaim', 'questDrop', 'questView', 'arenaFind', 'arenaFight', 'teamFind', 'teamFight', 'eventFight', 'eventClaim', 'achClaim'].forEach(n => G.FREE_DURING_EXPEDITION.push(n));
   const run0 = G.run;
   G.run = function (save, action, args, ctx) {
+    try { if (save.hero && ctx && ctx.now) save.quests = questState(save, ctx.now); } catch (e) { /* a megbízások sosem akaszthatják meg a játékot */ }
     const r = run0(save, action, args, ctx);
     try { albumNote(save); } catch (e) { /* az album sosem akaszthatja meg a játékot */ }
     return r;
@@ -573,6 +691,7 @@
 
   G.extra = {
     weekKey: weekKey, day: day, giftState: giftState, giftPreview: giftPreview, GIFT: GIFT, SHOP_PRICE: SHOP_PRICE, SHOP_REROLLS: SHOP_REROLLS, shopRerollCost: shopRerollCost,
+    questState: questState, questReward: questReward, questLm: questLm, questText: questText, QUEST_TYPES: QUEST_TYPES, QUEST_SLOTS: QUEST_SLOTS,
     storyState: storyState, storyBoss: storyBoss, storyReward: storyReward, storyChapters: storyChapters, STORY_TRIES: STORY_TRIES,
     towerState: towerState, rushLimit: rushLimit, towerMonster: towerMonster, towerReward: towerReward, towerRegion: towerRegion, TOWER_TRIES: TOWER_TRIES,
     EVENTS: EVENTS, EVENT_TIERS: EVENT_TIERS, EVENT_TRIES: EVENT_TRIES, currentEvent: currentEvent, eventState: eventState,

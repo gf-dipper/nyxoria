@@ -349,6 +349,7 @@
       ] },
       { name: 'Naponta', items: [
         { id: 'ajandek', name: 'Napi ajándék', ic: 'ajandek', sub: 'Minden nap egy ajándék', go: ['info', 'gift'], badge: giftBadge() },
+        { id: 'megbizasok', name: 'Megbízások', ic: 'kronika', sub: 'Kérések a tábor lakóitól', go: ['screen', 'megbizasok'], badge: questBadge() },
         { id: 'bolt', name: 'Vándorkereskedő', ic: 'bolt', sub: 'Naponta új áru Holdezüstért', go: ['screen', 'bolt'] }
       ] },
       { name: 'Kihívások', items: [
@@ -739,6 +740,50 @@
           ${left > 0 ? '' : '<p class="small muted" style="margin-top:6px">Éjfélkor újra 5 próbálkozásod lesz.</p>'}</div></div>
         <ol class="nx-ladder" aria-label="Emeletek">${ladder}</ol></div></section>`;
   }
+  // ---------- Bestiárium (a gyűjtőalbumban) ----------
+  const WEEKLY_BOSSES = [['A Fenevad', 'holdfeny'], ['Ködkirálynő', 'kodlap'], ['A Holdfaló', 'ejkatlan'], ['Árnyékcsőr', 'arnyromok'], ['A Hamuszarvú', 'szirtek'], ['Csillagrém', 'szirtek'], ['A Mocsárkirály', 'kodlap'], ['Éjanya', 'ejkatlan']];
+  function bestiary(al, mons, monHtml) {
+    if (!D.QUESTS || !D.QUESTS.lore) return `<section class="panel"><h2>Gyűjtőalbum: legyőzött őrzők (${mons.length})</h2><ul class="nx-album mons">${monHtml}</ul></section>`;
+    const K = al.kills || {}, M = al.mon || {}, L = D.QUESTS.lore;
+    const seen = n => (K[n] || 0) > 0 || !!M[n] || !!(al.seen || {})[n] || (S.bossMine || []).some(m => m.name === n && m.damage > 0);
+    const card = (n, rid, tag) => seen(n)
+      ? `<li class="bst"><span class="pt">${A.monsterSvg(n, rid, { guard: tag !== 'mon' })}</span><div><b>${esc(n)}</b><span class="tiny">${tag === 'guard' ? 'Őrző' : tag === 'story' ? 'Holdkrónika' : tag === 'boss' ? 'Heti szörny' : 'Szörny'}${K[n] ? ` · legyőzve ${K[n]}×` : ''}</span><p class="small muted">${esc(L[n] || '')}</p></div></li>`
+      : `<li class="bst unk"><span class="pt">${A.monsterSvg(n, rid, { guard: tag !== 'mon' })}</span><div><b>???</b><span class="tiny">${tag === 'guard' ? 'Őrző' : tag === 'story' ? 'Holdkrónika' : tag === 'boss' ? 'Heti szörny' : 'Szörny'}</span><p class="small muted">Még nem találkoztál vele.</p></div></li>`;
+    const groups = D.REGIONS.map(r => { const list = r.monsters.map(n => [n, 'mon']).concat(r.guards.map(n => [n, 'guard'])); return { title: r.name, items: list.map(([n, t]) => card(n, r.id, t)), have: list.filter(([n]) => seen(n)).length, all: list.length }; });
+    const sp = (D.STORY ? D.STORY.chapters.map(c => [c.boss.name, c.region, 'story']) : []).concat(WEEKLY_BOSSES.map(([n, r]) => [n, r, 'boss']));
+    groups.push({ title: 'Különleges ellenfelek', items: sp.map(([n, r, t]) => card(n, r, t)), have: sp.filter(([n]) => seen(n)).length, all: sp.length });
+    const tot = groups.reduce((a, g) => a + g.have, 0), all = groups.reduce((a, g) => a + g.all, 0);
+    return `<section class="panel"><h2>Bestiárium (${tot} / ${all})</h2><p class="small muted">Minden lény, akivel a kalandjaid során összefutottál. Akit legyőzöl, annak a leírása is előkerül.</p>
+      ${groups.map(g => `<details class="bst-grp"><summary>${esc(g.title)} <span class="small muted">${g.have} / ${g.all}</span></summary><ul class="nx-album bst-list">${g.items.join('')}</ul></details>`).join('')}</section>`;
+  }
+  // ---------- Megbízások ----------
+  function questBadge() {
+    if (!S.save || !X || !D.QUESTS) return null;
+    const s = X.questState(S.save, now()), n = s.list.filter(q => q.prog >= q.n).length;
+    return n ? [String(n), `${n} teljesített megbízás vár átvételre`, 'ok'] : null;
+  }
+  function renderQuests() {
+    if (!D.QUESTS) return '<section class="panel"><h1>Megbízások</h1><p class="muted">Hamarosan.</p></section>';
+    if (!S.save.quests || S.save.quests.day !== X.day(now())) { // a napi megbízásokat a szerver sorsolja ki
+      if (S.qTried && S.qTried.d === X.day(now()) && now() - S.qTried.t < 60000) return '<section class="panel"><h1>Megbízások</h1><p class="muted">Most nem sikerült betölteni a megbízásokat. Próbáld újra kicsit később.</p></section>';
+      if (!S.qLoading) { S.qLoading = true; S.qTried = { d: X.day(now()), t: now() }; setTimeout(() => act('questView', {}).finally(() => { S.qLoading = false; }), 0); }
+      return '<section class="panel"><h1>Megbízások</h1><p class="muted">A tábor lakói épp összegyűlnek…</p></section>';
+    }
+    const h = hero(), s = S.save.quests, GV = D.QUESTS.givers;
+    const cards = s.list.map(q => {
+      const t = D.QUESTS.templates.filter(x => x.id === q.tpl)[0] || {}, g = GV[t.giver] || { name: 'Valaki a táborból' }, rw = X.questReward(h, q, X.questLm(S.save)), done = q.prog >= q.n, P = Math.round(q.prog / q.n * 100);
+      return `<article class="qcard${done ? ' done' : ''}"><div class="q-giver"><b>${esc(g.name)}</b>${g.line ? `<span class="small muted">${esc(g.line)}</span>` : ''}</div>
+        <h3>${esc(X.questText(q, 'title'))}</h3><p>${esc(X.questText(q, 'text'))}</p>
+        <div class="q-prog"><div class="bar"><i style="width:${P}%"></i></div><span class="small">${q.prog} / ${q.n}</span></div>
+        <div class="gains" style="justify-content:flex-start">${rewardChips(rw)}</div>
+        <div class="row" style="gap:8px;margin-top:10px">${done ? `<button class="btn primary" data-act="quest-claim" data-v="${q.id}">Átveszem a jutalmat</button>` : `<button class="btn ghost sm" data-act="quest-drop" data-v="${q.id}" ${s.dropped >= 1 ? 'disabled title="Naponta egy megbízást mondhatsz le"' : ''}>Lemondom</button>`}</div></article>`;
+    }).join('');
+    const empty = QUEST_EMPTY(s);
+    return `<section class="panel nx-ch"><div class="nx-ch-head"><div><h1>Megbízások</h1><p class="small muted">A tábor lakói kérnek tőled ezt-azt. A haladás magától számolódik, miközben kalandozol. Amit teljesítesz, annak a helyére másnap jön új; naponta egyet lemondhatsz.</p></div></div>
+      ${S.questDone ? `<div class="result-box good" style="margin-top:12px"><p>${esc(S.questDone.text)}</p><div class="gains" style="justify-content:flex-start;margin-top:8px">${rewardChips(S.questDone)}</div></div>` : ''}
+      <div class="qgrid">${cards}${empty}</div></section>`;
+  }
+  function QUEST_EMPTY(s) { const n = X.QUEST_SLOTS - s.list.length; return n > 0 ? Array(n).fill('<article class="qcard empty"><p class="muted">Holnap új megbízás érkezik ide.</p></article>').join('') : ''; }
   // ---------- Holdkrónika ----------
   function storyBadge() {
     if (!S.save || !X || !D.STORY) return null;
@@ -823,7 +868,7 @@
     const itemHtml2 = items.length ? items.map(n => { const x = al.items[n], r = x.r === 'mitikus' ? 'legendas' : x.r; return `<li><span class="item-ic painted r-${r}${x.r === 'mitikus' ? ' mythic' : ''}">${NXI ? NXI.item({ name: n, slot: x.slot, rarity: r, mythic: x.r === 'mitikus' }) : ''}</span><span class="r-${r}">${esc(n)}</span></li>`; }).join('') : '<p class="small muted">A kék, lila, legendás és mitikus tárgyaid ide kerülnek.</p>';
     return `<section class="panel"><div class="nx-ch-head"><div><h1>Eredmények</h1><p class="small muted">Minden eredménynek több fokozata van, mindegyikért jutalom jár.</p></div><div class="nx-ch-stats"><span><small>Album</small><b>${X.albumCount(S.save)} lap</b></span></div></div>
       <div class="nx-achs">${cards}</div></section>
-      <section class="panel"><h2>Gyűjtőalbum: legyőzött őrzők (${mons.length})</h2><ul class="nx-album mons">${monHtml}</ul></section>
+      ${bestiary(al, mons, monHtml)}
       <section class="panel"><h2>Gyűjtőalbum: ritka tárgyak (${items.length})</h2><ul class="nx-album">${itemHtml2}</ul></section>`;
   }
 
@@ -975,6 +1020,7 @@
     else if (S.screen === 'kozosseg') main = renderCommunity();
     else if (S.screen === 'torony' && X) main = renderTower();
     else if (S.screen === 'holdkronika' && X) main = renderStory();
+    else if (S.screen === 'megbizasok' && X) main = renderQuests();
     else if (S.screen === 'esemeny' && X) main = renderEvent();
     else if (S.screen === 'bolt' && X) main = renderShop();
     else if (S.screen === 'eredmenyek' && X) main = renderAch();
@@ -1916,6 +1962,8 @@
     'profile-open'(v) { S.profileView = null; const m = S.modal = { type: 'info', kind: 'profile' }; render(); remote('profile', { name: v }).then(r => { if (S.modal !== m) return; S.profileView = r.result; render(); }).catch(e => { if (S.modal === m) S.modal = null; handleError(e); render(); }); },
     'guild-claim'(v) { guildCall('guildClaim', { i: +v }, r => `+${fmt(r.silver)} Holdezüst · +${fmt(r.dust)} Csillagpor`); },
     'tower-rush'() { act('towerRush', {}, r => toast(r.to === r.from ? `${azN(r.lost)} ${r.lost}. emeleten elbuktál.` : `${r.from + 1}–${r.to}. emelet megvan${r.lost ? ` (${azN(r.lost)} ${r.lost}. emeleten elbuktál)` : ''}: +${fmt(r.silver)} Holdezüst · +${fmt(r.dust)} Csillagpor${r.items.length ? ' · ' + r.items.map(i => i.name).join(', ') : ''}`)); },
+    'quest-claim'(v) { act('questClaim', { id: v }, r => { S.questDone = { text: r.done || 'Köszönöm!', silver: r.silver, dust: r.dust, xp: r.xp }; if (r.levelUps && r.levelUps.length) S.modal = { type: 'level', ups: r.levelUps }; render(); }); },
+    'quest-drop'(v) { S.questDone = null; act('questDrop', { id: v }); },
     'story-choice'(v) { act('storyChoice', { v: v }); },
     'story-fight'() { S.storyRes = null; act('storyFight', {}, r => { const i = r.out.chapter - 1; startCombat('story', r.fight, { out: r.out, region: r.out.region, special: (X.storyChapters()[i] || { boss: {} }).boss.special, after: () => { S.storyRes = { i: i, win: r.out.win, out: r.out }; render(); scrollTop(); } }); scrollTop(); }); },
     'tower-fight'() { act('towerFight', {}, r => { startCombat('tower', r.fight, { out: r.out, region: r.out.region, after: afterChallenge('tower') }); scrollTop(); }); },
