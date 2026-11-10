@@ -35,7 +35,7 @@
   var DIFF = {
     konnyu:  { name: 'Könnyű',  band: [0.85, 0.95], target: 0.90, xp: 0.8, itemChance: 0.40, silver: 0.8, dust: 0.8 },
     kozepes: { name: 'Közepes', band: [0.65, 0.80], target: 0.72, xp: 1.0, itemChance: 0.55, silver: 1.0, dust: 1.0 },
-    nehez:   { name: 'Nehéz',   band: [0.30, 0.45], target: 0.38, xp: 1.2, itemChance: 0.70, silver: 1.25, dust: 1.3 }
+    nehez:   { name: 'Nehéz',   band: [0.30, 0.45], target: 0.38, xp: 1.5, itemChance: 0.85, silver: 1.5, dust: 1.6 }
   };
   var DIFF_ORDER = ['konnyu', 'kozepes', 'nehez'];
   var MOONS = {
@@ -60,16 +60,16 @@
   var TORCH = { max: 8, regenMs: 90 * 60 * 1000, restedMax: 16 };
   var DUST_WEEKLY = 1500, WEEK_MS = 7 * 24 * 3600 * 1000; // DUST_WEEKLY: a régi, fix keret (már csak tájékoztatásul); az új: dustCap(szint)
   // Ritkaság-kapuk és lila esély (független szimulációval hangolva: első lila kb. a 16. szinten, utána heti ~2–3, teljes lila szett kb. a 32. szint körül)
-  var PITY_PURPLE = 80;   // ennyi (Közepes/Nehéz kalandos vagy csapatos) tárgysorsolásból legalább egy lila, de csak a lila kapu után
+  var PITY_PURPLE = 40;   // ennyi (Közepes/Nehéz kalandos vagy csapatos) tárgysorsolásból legalább egy lila, de csak a lila kapu után
   var RARITY_GATE = { kek: 5, lila: 12, legendas: 25 };
-  var LILA_CHANCE = { konnyu: [0, 0], kozepes: [0.004, 0.012], nehez: [0.015, 0.045] }; // a 12. szinttől a 40.-ig nő
+  var LILA_CHANCE = { konnyu: [0, 0], kozepes: [0.012, 0.035], nehez: [0.04, 0.10] }; // a 12. szinttől a 40.-ig nő
   // Legendás: a 25. szinttől, főleg Nehéz kalandokból (első kb. a 28. szinten, teljes szett a 46–50. szint körül)
-  var LEGEND_CHANCE = { konnyu: [0, 0], kozepes: [0.001, 0.002], nehez: [0.008, 0.016] }; // a 25. szinttől az 50.-ig nő
-  var PITY_LEGEND = 300;
+  var LEGEND_CHANCE = { konnyu: [0, 0], kozepes: [0.0015, 0.004], nehez: [0.01, 0.025] }; // a 25. szinttől az 50.-ig nő
+  var PITY_LEGEND = 200;
   // a fejlesztés felső határa ritkaság szerint
   var MAX_PLUS = { szurke: 4, zold: 6, kek: 8, lila: 10, legendas: 12 };
   var REFUND = 0.7; // szétszedéskor és eladáskor a fejlesztésre költött Csillagpor ennyi része jár vissza (a heti kereten felül)
-  var MYTHIC = { base: 0.002, rampFrom: 850, guaranteed: 1000 };
+  var MYTHIC = { base: 0.01, rampFrom: 120, guaranteed: 220 };
   var INVENTORY_MAX = 40;
 
   // Referenciahős: az eredeti 4 kaszt átlaga, felszerelés nélkül
@@ -191,6 +191,7 @@
   }
 
   function mythicChance(tries) {
+    tries = tries || 0;
     if (tries + 1 >= MYTHIC.guaranteed) return 1;
     if (tries < MYTHIC.rampFrom) return MYTHIC.base;
     var f = (tries - MYTHIC.rampFrom) / (MYTHIC.guaranteed - MYTHIC.rampFrom);
@@ -212,7 +213,7 @@
   function upgradeCost(item) {
     var t = (item.plus || 0) + 1;
     if (t > maxPlus(item)) return null;
-    return Math.round(20 * Math.pow(t, 1.7) * (1 + item.level / 10));
+    return Math.round(8 * Math.pow(t, 1.7) * (1 + item.level / 10));
   }
   function upgradeSilver(item) {
     var t = (item.plus || 0) + 1;
@@ -254,7 +255,7 @@
     var c = D.CLASSES[hero.classId], L = hero.level, eq = equippedOverride || hero.equipped;
     var s = { elet: c.base.elet[0] + c.base.elet[1] * L, tam: c.base.tam[0] + c.base.tam[1] * L,
               ved: c.base.ved[0] + c.base.ved[1] * L, fur: c.base.fur[0] + c.base.fur[1] * L,
-              dmg: 0, crit: 0, dodge: 0, hp: 0, heal: 0, first: 0 };
+              dmg: 0, crit: 0, dodge: 0, hp: 0, heal: 0, first: 0, pet: c.pet || 0, fs: c.firstStrike || 1 };
     D.SLOT_ORDER.forEach(function (slot) {
       var it = eq[slot];
       if (!it) return;
@@ -275,7 +276,7 @@
   }
 
   function powerRaw(s) { // ÉLET/4 + TÁM×3 + VÉD×2 + FÜR, plusz a tárgyjellemzők becsült értéke
-    return s.elet / 4 + s.tam * 3 + s.ved * 2 + s.fur + s.tam * 3 * (s.dmg + s.crit * 0.75 + s.first * 0.2) / 100 + s.elet / 4 * (s.dodge + s.heal * 0.4) / 100; }
+    return s.elet / 4 + s.tam * 3 + s.ved * 2 + s.fur + s.tam * 3 * (s.dmg + s.crit * 0.75 + s.first * 0.2) / 100 + s.elet / 4 * (s.dodge + s.heal * 0.4) / 100 + s.tam * 3 * ((s.pet || 0) * 0.33 + ((s.fs || 1) - 1) * 0.85); }
   function power(s) { return Math.round(powerRaw(s)); }
   function lootLevel(hero, lm) { return Math.max(1, Math.min(hero.level, Math.max(hero.level - 2, Math.round(lm)))); }
 
@@ -835,6 +836,7 @@
   // ---------- Jutalmak ----------
   function torchState(save, now) {
     var t = save.torches;
+    if (!(t.last <= now)) t.last = now; // visszaállított óra (gyakorló mód): ne kelljen napokat várni
     if (t.count >= TORCH.max) {
       // tele: a túlcsorduló idő Pihent-töltéssé válik
       var extra = Math.floor((now - t.last) / TORCH.regenMs);
@@ -1046,6 +1048,29 @@
   }
 
 
+  // Fejlesztés átvitele: a viselt tárgy +N fejlesztése átkerül egy ugyanoda való másik tárgyra (Holdezüstért), így az új
+  // zsákmány nem veszít a régi, már fejlesztett darabbal szemben. A beletett Csillagpor (spent) is átmegy, semmi nem vész el.
+  function plusCost(item, n) { var t = 0, c = Object.assign({}, item); for (var p = 0; p < n; p++) { c.plus = p; t += upgradeCost(c) || 0; } return t; }
+  function transferInfo(hero, toId) {
+    var to = null; hero.inventory.forEach(function (i) { if (i.id === toId) to = i; });
+    if (!to) return null;
+    var from = hero.equipped[to.slot];
+    if (!from || !(from.plus > (to.plus || 0))) return null;
+    var cap = Math.min(from.plus, maxPlus(to)), budget = Math.max(from.spent || 0, plusCost(from, from.plus)) + (to.spent || 0), plus = to.plus || 0;
+    while (plus < cap && plusCost(to, plus + 1) <= budget) plus++;
+    if (plus <= (to.plus || 0)) return null;
+    return { from: from, to: to, plus: plus, lost: from.plus - plus, capped: cap < from.plus, silver: Math.round(silverBase(to.level) * 1.5 * plus) };
+  }
+  function transfer(hero, toId) {
+    var t = transferInfo(hero, toId);
+    if (!t) return { ok: false, reason: 'nincs' };
+    if (hero.silver < t.silver) return { ok: false, reason: 'ezüst', cost: t.silver };
+    hero.silver -= t.silver;
+    t.to.spent = (t.to.spent || 0) + (t.from.spent || 0); t.to.plus = t.plus;
+    t.from.plus = 0; t.from.spent = 0;
+    return { ok: true, plus: t.plus, silver: t.silver, name: t.to.name };
+  }
+
   // Tárgyjellemző újrasorsolása Holdezüstért: 100 × tárgyszint, minden újabb alkalom +50%
   function rerollCost(item) { return Math.round(100 * item.level * Math.pow(1.5, item.rerolls || 0)); }
   function reroll(hero, itemId, rng) {
@@ -1120,6 +1145,6 @@
     finishExpedition: finishExpedition, applyChoice: applyChoice, lossAdvice: lossAdvice,
     torchState: torchState, spendTorch: spendTorch, dustRoom: dustRoom, dustCap: dustCap, weekOf: weekOf, addDust: addDust, addXp: addXp,
     addItem: addItem, powerDelta: powerDelta, bestGear: bestGear, isUpgrade: isUpgrade, equip: equip, salvage: salvage, sell: sell, upgrade: upgrade,
-    findItem: findItem, rerollCost: rerollCost, reroll: reroll, searchChance: searchChance, mythicChance: mythicChance, newSave: newSave
+    findItem: findItem, transferInfo: transferInfo, transfer: transfer, rerollCost: rerollCost, reroll: reroll, searchChance: searchChance, mythicChance: mythicChance, newSave: newSave
   };
 })(typeof window !== 'undefined' ? window : globalThis);

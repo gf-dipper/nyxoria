@@ -261,6 +261,7 @@
             'Legfeljebb {INV_MAX} tárgy fér bele. Felveszem: a tárgy a helyére kerül, a régi a táskába.',
             'Szétszedés: Csillagport ad (ez beleszámít a heti keretbe). Eladás: Holdezüstöt ad.',
             'Mindkettőnél visszajár a fejlesztésre költött Csillagpor {REFUND}%-a, a heti kereten felül.',
+            'Fejlesztés átvitele: ha a táskádban jobb alapú tárgy van, a viselt darab +fejlesztését Holdezüstért átviheted rá. A beletett Csillagpor is átmegy, semmi nem vész el. A táskában a tárgy kártyája megmutatja, mennyit érne az átvitellel.',
             'Ha a táska tele van, az új tárgyat a játék automatikusan szétszedi, még a választott jutalomtárgyat is.',
             'Bekapcsolhatod a gyengébb szürke és zöld tárgyak automatikus szétszedését. A mitikus tárgyat sosem szedi szét magától.'
           ] },
@@ -351,6 +352,7 @@
       { id: 'kereskedo', title: 'Vándorkereskedő', short: 'Naponta új áru Holdezüstért, a szintedhez igazítva.',
         fig: 'shop', figCaption: 'Mindegyik áruból egy darab van', go: 'bolt',
         blocks: [
+          { p: 'A kereskedő kínálata a szinteddel javul: a lila tárgyak szintjétől már nem hoz zöldet, és jó eséllyel van nála lila, néha legendás darab is. Naponta egy Csillagpor-csomagot is vehetsz Holdezüstért (a heti keretbe beleszámít).' },
           { p: 'A Vándorkereskedő minden nap négy új tárgyat hoz, a szintedhez és a kasztodhoz igazítva. Mindegyikből egy darab van, és Holdezüstért veheted meg. Éjfélkor új árut hoz.' },
           { list: [
             'Az áru többnyire zöld vagy kék, nagy ritkán lila is akad.',
@@ -414,7 +416,8 @@
             'A pontszámod 1000-ről indul. Erősebb ellenfél legyőzése több pontot ér.',
             'Győzelemért pont, Holdezüst és Csillagpor jár, vereségért kevesebb Holdezüst.',
             'Minden párbaj után új ellenfelek jönnek. Ha a felkínált hármat nem szeretnéd, naponta egyszer lecserélheted őket.',
-            'A közös szerveren valódi, hasonló erejű játékosok hősei jönnek, gyakorló módban gépi ellenfelek.'
+            'A közös szerveren valódi, hasonló erejű játékosok hősei jönnek, gyakorló módban gépi ellenfelek.',
+            'A gépi ellenfelek ereje a pontszámukból adódik: minél magasabb pontszámú ellenfelet választasz, annál erősebb. Így a pontszámod oda áll be, ahol a hősöd valódi ereje van; ha erősödsz, feljebb jutsz.'
           ] }
         ] },
 

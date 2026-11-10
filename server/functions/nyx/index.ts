@@ -10,42 +10,42 @@ import postgres from 'npm:postgres@3.4.9';
   // Kasztok: alapérték + szintenkénti növekedés (játékterv, "A hős" szakasz)
   var CLASSES = {
     harcos:    { name: 'Harcos',    role: 'Elöl véd',          diff: 'könnyű',  tactic: 'kitartas', color: '#c9a45c', weapon: 'kard',
-                 base: { elet: [120, 24], tam: [11, 2.2], ved: [12, 2.4], fur: [8, 0.8] },
+                 base: { elet: [110.4, 22.1], tam: [10.67, 2.13], ved: [12, 2.4], fur: [8, 0.8] },
                  style: 'Sokat bír, a társait védi. Biztos választás, ha nem akarsz sokat gondolkodni.',
                  basic: 'kardcsapas', skills: ['lenduletes_roham', 'pajzscsapas', 'harci_kialtas', 'kitarto_allas'],
                  paths: 'Védelmező · Dühöngő · Zászlóvivő' },
     vadasz:    { name: 'Vadász',    role: 'Messziről lő',         diff: 'könnyű',  tactic: 'roham', color: '#7fb87a', weapon: 'íj',
-                 base: { elet: [90, 18], tam: [13, 2.6], ved: [7, 1.4], fur: [14, 1.4] },
+                 base: { elet: [93.6, 18.7], tam: [13.91, 2.78], ved: [7, 1.4], fur: [14, 1.4] },
                  style: 'Biztos, egyenletes sebzés, jó kitérés. Egyedül is magabiztos.',
                  basic: 'ijlovesz', skills: ['celzott_loves', 'kettos_loves', 'csapda', 'kitero_ugras'],
                  paths: 'Mesterlövész · Vadonjáró · Árnyvadász' },
     magus:     { name: 'Mágus',     role: 'Varázslattal sebez',             diff: 'közepes', tactic: 'roham', color: '#7f9cff', weapon: 'bot',
-                 base: { elet: [85, 17], tam: [14, 2.8], ved: [7, 1.4], fur: [10, 1.0] },
+                 base: { elet: [89.2, 17.9], tam: [15.54, 3.11], ved: [7, 1.4], fur: [10, 1.0] },
                  style: 'Nagy robbanások, több ellenfél egyszerre. Törékeny, de messziről üt.',
                  basic: 'holdnyil', skills: ['csillagszilank', 'fagyrog', 'magikus_pajzs', 'lancvillam'],
                  paths: 'Csillagmágus · Árnymágus · Elemek ura' },
     gyogyito:  { name: 'Gyógyító',  role: 'Gyógyít és véd',                diff: 'közepes', tactic: 'kitartas', color: '#f2e2a0', weapon: 'jogar',
-                 base: { elet: [100, 20], tam: [12, 2.4], ved: [9, 1.8], fur: [10, 1.0] },
+                 base: { elet: [102, 20.4], tam: [12.6, 2.52], ved: [9, 1.8], fur: [10, 1.0] },
                  style: 'Gyógyít és véd. Egyedül lassabb, de csapatban és bossnál aranyat ér.',
                  basic: 'fenyszuras', skills: ['gyogyito_feny', 'aldas', 'holdfeny_pajzs', 'tisztito_ima'],
                  paths: 'Holdpap · Csatapap · Csillagőrző' },
     orgyilkos: { name: 'Orgyilkos', role: 'Lesből üt nagyot',          diff: 'haladó',  tactic: 'roham', color: '#b07cff', weapon: 'tőr',
-                 base: { elet: [80, 16], tam: [12, 2.4], ved: [6, 1.2], fur: [15, 1.5] },
+                 base: { elet: [80, 14.8], tam: [12.1, 2.29], ved: [6, 1.2], fur: [15, 1.5] },
                  style: 'Gyors és kockázatos: az első ütése a legnagyobb, de keveset bír.',
                  basic: 'tordofes', skills: ['arnyekdofes', 'fustbomba', 'meregpenge', 'hatbaszuras'],
                  paths: 'Árnyéktáncos · Méregkeverő · Fejvadász', firstStrike: 1.5 },
     idezo:     { name: 'Idéző',     role: 'Lényeket idéz',        diff: 'közepes', tactic: 'roham', color: '#8fe9ff', weapon: 'lámpás',
-                 base: { elet: [85, 17], tam: [11, 2.2], ved: [7, 1.4], fur: [10, 1.0] },
+                 base: { elet: [88.4, 17.7], tam: [11.66, 2.33], ved: [7, 1.4], fur: [10, 1.0] },
                  style: 'Lényeket idéz, akik vele együtt ütnek. Sosem harcol egyedül.',
                  basic: 'szellemcsapas', skills: ['lelekrobbanas', 'vedoszellem', 'falka', 'lelekcsere'],
                  paths: 'Holdszellem-hívó · Csontidéző · Elemi idéző', pet: 0.5 },
     dalnok:    { name: 'Dalnok',    role: 'Erősít és gyengít',     diff: 'haladó',  tactic: 'kitartas', color: '#ffb38a', weapon: 'lant',
-                 base: { elet: [95, 19], tam: [11, 2.2], ved: [9, 1.8], fur: [12, 1.2] },
+                 base: { elet: [95, 19], tam: [11.22, 2.24], ved: [9, 1.8], fur: [12, 1.2] },
                  style: 'Dalaival az ellenfelet gyengíti, a csapatot erősíti. Csapatban tündököl.',
                  basic: 'lantutes', skills: ['altatodal', 'harci_indulo', 'gunydal', 'hosenek'],
                  paths: 'Harci dalnok · Altatódalnok · Krónikás' },
     alakvalto: { name: 'Alakváltó', role: 'Mindenes',                  diff: 'közepes', tactic: 'kitartas', color: '#9fd17a', weapon: 'karmok',
-                 base: { elet: [110, 22], tam: [12, 2.4], ved: [10, 2.0], fur: [9, 0.9] },
+                 base: { elet: [101.2, 20.2], tam: [11.4, 2.28], ved: [10, 2.0], fur: [9, 0.9] },
                  style: 'Medve-, farkas- vagy bagolyalakban mást tud: lehet belőle védő, sebző vagy gyógyító.',
                  basic: 'karmos_csapas', skills: ['medveforma', 'farkasforma', 'gyokerfonat', 'holdfeny_ujjaszuletes'],
                  paths: 'Medvebőrű · Farkasszívű · Bagolylelkű' }
@@ -1632,7 +1632,7 @@ import postgres from 'npm:postgres@3.4.9';
   var DIFF = {
     konnyu:  { name: 'Könnyű',  band: [0.85, 0.95], target: 0.90, xp: 0.8, itemChance: 0.40, silver: 0.8, dust: 0.8 },
     kozepes: { name: 'Közepes', band: [0.65, 0.80], target: 0.72, xp: 1.0, itemChance: 0.55, silver: 1.0, dust: 1.0 },
-    nehez:   { name: 'Nehéz',   band: [0.30, 0.45], target: 0.38, xp: 1.2, itemChance: 0.70, silver: 1.25, dust: 1.3 }
+    nehez:   { name: 'Nehéz',   band: [0.30, 0.45], target: 0.38, xp: 1.5, itemChance: 0.85, silver: 1.5, dust: 1.6 }
   };
   var DIFF_ORDER = ['konnyu', 'kozepes', 'nehez'];
   var MOONS = {
@@ -1657,16 +1657,16 @@ import postgres from 'npm:postgres@3.4.9';
   var TORCH = { max: 8, regenMs: 90 * 60 * 1000, restedMax: 16 };
   var DUST_WEEKLY = 1500, WEEK_MS = 7 * 24 * 3600 * 1000; // DUST_WEEKLY: a régi, fix keret (már csak tájékoztatásul); az új: dustCap(szint)
   // Ritkaság-kapuk és lila esély (független szimulációval hangolva: első lila kb. a 16. szinten, utána heti ~2–3, teljes lila szett kb. a 32. szint körül)
-  var PITY_PURPLE = 80;   // ennyi (Közepes/Nehéz kalandos vagy csapatos) tárgysorsolásból legalább egy lila, de csak a lila kapu után
+  var PITY_PURPLE = 40;   // ennyi (Közepes/Nehéz kalandos vagy csapatos) tárgysorsolásból legalább egy lila, de csak a lila kapu után
   var RARITY_GATE = { kek: 5, lila: 12, legendas: 25 };
-  var LILA_CHANCE = { konnyu: [0, 0], kozepes: [0.004, 0.012], nehez: [0.015, 0.045] }; // a 12. szinttől a 40.-ig nő
+  var LILA_CHANCE = { konnyu: [0, 0], kozepes: [0.012, 0.035], nehez: [0.04, 0.10] }; // a 12. szinttől a 40.-ig nő
   // Legendás: a 25. szinttől, főleg Nehéz kalandokból (első kb. a 28. szinten, teljes szett a 46–50. szint körül)
-  var LEGEND_CHANCE = { konnyu: [0, 0], kozepes: [0.001, 0.002], nehez: [0.008, 0.016] }; // a 25. szinttől az 50.-ig nő
-  var PITY_LEGEND = 300;
+  var LEGEND_CHANCE = { konnyu: [0, 0], kozepes: [0.0015, 0.004], nehez: [0.01, 0.025] }; // a 25. szinttől az 50.-ig nő
+  var PITY_LEGEND = 200;
   // a fejlesztés felső határa ritkaság szerint
   var MAX_PLUS = { szurke: 4, zold: 6, kek: 8, lila: 10, legendas: 12 };
   var REFUND = 0.7; // szétszedéskor és eladáskor a fejlesztésre költött Csillagpor ennyi része jár vissza (a heti kereten felül)
-  var MYTHIC = { base: 0.002, rampFrom: 850, guaranteed: 1000 };
+  var MYTHIC = { base: 0.01, rampFrom: 120, guaranteed: 220 };
   var INVENTORY_MAX = 40;
 
   // Referenciahős: az eredeti 4 kaszt átlaga, felszerelés nélkül
@@ -1788,6 +1788,7 @@ import postgres from 'npm:postgres@3.4.9';
   }
 
   function mythicChance(tries) {
+    tries = tries || 0;
     if (tries + 1 >= MYTHIC.guaranteed) return 1;
     if (tries < MYTHIC.rampFrom) return MYTHIC.base;
     var f = (tries - MYTHIC.rampFrom) / (MYTHIC.guaranteed - MYTHIC.rampFrom);
@@ -1809,7 +1810,7 @@ import postgres from 'npm:postgres@3.4.9';
   function upgradeCost(item) {
     var t = (item.plus || 0) + 1;
     if (t > maxPlus(item)) return null;
-    return Math.round(20 * Math.pow(t, 1.7) * (1 + item.level / 10));
+    return Math.round(8 * Math.pow(t, 1.7) * (1 + item.level / 10));
   }
   function upgradeSilver(item) {
     var t = (item.plus || 0) + 1;
@@ -1851,7 +1852,7 @@ import postgres from 'npm:postgres@3.4.9';
     var c = D.CLASSES[hero.classId], L = hero.level, eq = equippedOverride || hero.equipped;
     var s = { elet: c.base.elet[0] + c.base.elet[1] * L, tam: c.base.tam[0] + c.base.tam[1] * L,
               ved: c.base.ved[0] + c.base.ved[1] * L, fur: c.base.fur[0] + c.base.fur[1] * L,
-              dmg: 0, crit: 0, dodge: 0, hp: 0, heal: 0, first: 0 };
+              dmg: 0, crit: 0, dodge: 0, hp: 0, heal: 0, first: 0, pet: c.pet || 0, fs: c.firstStrike || 1 };
     D.SLOT_ORDER.forEach(function (slot) {
       var it = eq[slot];
       if (!it) return;
@@ -1872,7 +1873,7 @@ import postgres from 'npm:postgres@3.4.9';
   }
 
   function powerRaw(s) { // ÉLET/4 + TÁM×3 + VÉD×2 + FÜR, plusz a tárgyjellemzők becsült értéke
-    return s.elet / 4 + s.tam * 3 + s.ved * 2 + s.fur + s.tam * 3 * (s.dmg + s.crit * 0.75 + s.first * 0.2) / 100 + s.elet / 4 * (s.dodge + s.heal * 0.4) / 100; }
+    return s.elet / 4 + s.tam * 3 + s.ved * 2 + s.fur + s.tam * 3 * (s.dmg + s.crit * 0.75 + s.first * 0.2) / 100 + s.elet / 4 * (s.dodge + s.heal * 0.4) / 100 + s.tam * 3 * ((s.pet || 0) * 0.33 + ((s.fs || 1) - 1) * 0.85); }
   function power(s) { return Math.round(powerRaw(s)); }
   function lootLevel(hero, lm) { return Math.max(1, Math.min(hero.level, Math.max(hero.level - 2, Math.round(lm)))); }
 
@@ -2432,6 +2433,7 @@ import postgres from 'npm:postgres@3.4.9';
   // ---------- Jutalmak ----------
   function torchState(save, now) {
     var t = save.torches;
+    if (!(t.last <= now)) t.last = now; // visszaállított óra (gyakorló mód): ne kelljen napokat várni
     if (t.count >= TORCH.max) {
       // tele: a túlcsorduló idő Pihent-töltéssé válik
       var extra = Math.floor((now - t.last) / TORCH.regenMs);
@@ -2643,6 +2645,29 @@ import postgres from 'npm:postgres@3.4.9';
   }
 
 
+  // Fejlesztés átvitele: a viselt tárgy +N fejlesztése átkerül egy ugyanoda való másik tárgyra (Holdezüstért), így az új
+  // zsákmány nem veszít a régi, már fejlesztett darabbal szemben. A beletett Csillagpor (spent) is átmegy, semmi nem vész el.
+  function plusCost(item, n) { var t = 0, c = Object.assign({}, item); for (var p = 0; p < n; p++) { c.plus = p; t += upgradeCost(c) || 0; } return t; }
+  function transferInfo(hero, toId) {
+    var to = null; hero.inventory.forEach(function (i) { if (i.id === toId) to = i; });
+    if (!to) return null;
+    var from = hero.equipped[to.slot];
+    if (!from || !(from.plus > (to.plus || 0))) return null;
+    var cap = Math.min(from.plus, maxPlus(to)), budget = Math.max(from.spent || 0, plusCost(from, from.plus)) + (to.spent || 0), plus = to.plus || 0;
+    while (plus < cap && plusCost(to, plus + 1) <= budget) plus++;
+    if (plus <= (to.plus || 0)) return null;
+    return { from: from, to: to, plus: plus, lost: from.plus - plus, capped: cap < from.plus, silver: Math.round(silverBase(to.level) * 1.5 * plus) };
+  }
+  function transfer(hero, toId) {
+    var t = transferInfo(hero, toId);
+    if (!t) return { ok: false, reason: 'nincs' };
+    if (hero.silver < t.silver) return { ok: false, reason: 'ezüst', cost: t.silver };
+    hero.silver -= t.silver;
+    t.to.spent = (t.to.spent || 0) + (t.from.spent || 0); t.to.plus = t.plus;
+    t.from.plus = 0; t.from.spent = 0;
+    return { ok: true, plus: t.plus, silver: t.silver, name: t.to.name };
+  }
+
   // Tárgyjellemző újrasorsolása Holdezüstért: 100 × tárgyszint, minden újabb alkalom +50%
   function rerollCost(item) { return Math.round(100 * item.level * Math.pow(1.5, item.rerolls || 0)); }
   function reroll(hero, itemId, rng) {
@@ -2717,7 +2742,7 @@ import postgres from 'npm:postgres@3.4.9';
     finishExpedition: finishExpedition, applyChoice: applyChoice, lossAdvice: lossAdvice,
     torchState: torchState, spendTorch: spendTorch, dustRoom: dustRoom, dustCap: dustCap, weekOf: weekOf, addDust: addDust, addXp: addXp,
     addItem: addItem, powerDelta: powerDelta, bestGear: bestGear, isUpgrade: isUpgrade, equip: equip, salvage: salvage, sell: sell, upgrade: upgrade,
-    findItem: findItem, rerollCost: rerollCost, reroll: reroll, searchChance: searchChance, mythicChance: mythicChance, newSave: newSave
+    findItem: findItem, transferInfo: transferInfo, transfer: transfer, rerollCost: rerollCost, reroll: reroll, searchChance: searchChance, mythicChance: mythicChance, newSave: newSave
   };
 })(typeof window !== 'undefined' ? window : globalThis);
 
@@ -2989,7 +3014,7 @@ import postgres from 'npm:postgres@3.4.9';
   function offersKey(save) {
     const h = save.hero;
     const eq = D.SLOT_ORDER.map(s => h.equipped[s] ? h.equipped[s].id + ':' + (h.equipped[s].plus || 0) + ':' + (h.equipped[s].rerolls || 0) : '').join(',');
-    return [h.level, h.loadout.join('.'), save.settings.moon, eq, h.path == null ? '' : h.path].join('|'); // a taktika nem hoz új kalandot, csak az esélyt számolja újra
+    return ['v2', h.level, h.loadout.join('.'), save.settings.moon, eq, h.path == null ? '' : h.path].join('|'); // a taktika nem hoz új kalandot, csak az esélyt számolja újra
   }
   function refreshOffers(save) {
     if (save.expedition) return;
@@ -3229,6 +3254,11 @@ import postgres from 'npm:postgres@3.4.9';
     if (r.max && r.plus >= 10) ctx.events.push({ kind: 'plus10', html: `<b>${esc(save.hero.name)}</b> +${r.plus}-re, a legmagasabb szintre fejlesztett egy tárgyat!` });
     return r;
   };
+  A.transfer = (save, a) => {
+    const r = E.transfer(save.hero, String(a.id));
+    if (!r.ok) fail(r.reason === 'ezüst' ? 'cost' : 'arg', r.reason === 'ezüst' ? 'Nincs elég Holdezüst az átvitelhez.' : 'Erre a tárgyra most nincs mit átvinni.');
+    return r;
+  };
   A.reroll = (save, a) => {
     const r = E.reroll(save.hero, a.id);
     if (!r.ok) fail('cost', r.reason === 'nincs' ? 'Ennek a tárgynak nincs jellemzője.' : 'Nincs elég Holdezüst.');
@@ -3285,7 +3315,7 @@ import postgres from 'npm:postgres@3.4.9';
   };
 
   // ---------- futtatás ----------
-  const FREE_DURING_EXPEDITION = ['tactic', 'restyle', 'lookPick', 'dye', 'settings', 'tip', 'equip', 'salvage', 'sell', 'salvageWeak', 'upgrade', 'reroll', 'skillMove', 'skillOrder', 'equipIds', 'lockItem', 'patrolStart', 'patrolClaim'];
+  const FREE_DURING_EXPEDITION = ['tactic', 'restyle', 'lookPick', 'dye', 'settings', 'tip', 'equip', 'salvage', 'sell', 'salvageWeak', 'upgrade', 'reroll', 'skillMove', 'skillOrder', 'equipIds', 'lockItem', 'transfer', 'patrolStart', 'patrolClaim'];
 
   // tárgyak átállítása az új rendszerre (legendás fokozat, fejlesztés-visszatérítés): egyszer, minden régi mentésen
   function migrateItems(save) {
@@ -3433,17 +3463,19 @@ import postgres from 'npm:postgres@3.4.9';
 
   // ===================== Vándorkereskedő =====================
   // Naponta 4 új áru, a hős szintjéhez és kasztjához; mindegyikből egy darab.
-  const SHOP_PRICE = { zold: 6, kek: 14, lila: 34 }; // × a szinthez tartozó alap-Holdezüst (egy kalandnyi)
+  const SHOP_PRICE = { zold: 6, kek: 14, lila: 34, legendas: 90 }; // × a szinthez tartozó alap-Holdezüst (egy kalandnyi)
   function refreshShop(save, now) {
     const today = day(now);
     if (save.shop && save.shop.day === today) return;
     const h = save.hero, rng = E.mulberry32(E.newSeed()), slots = E.shuffle(rng, D.SLOT_ORDER.slice());
     const items = [0, 1, 2, 3].map(i => {
-      const x = rng(), rar = E.gateRarity(i === 3 && h.level >= E.RARITY_GATE.lila && x < 0.03 ? 'lila' : x < 0.55 ? 'zold' : 'kek', h.level);
+      // a kínálat a szinttel javul: a lila kaputól már nincs zöld, a negyedik helyen jó eséllyel lila (25-től néha legendás) áll
+      const x = rng(), top = i === 3 && h.level >= E.RARITY_GATE.lila;
+      const rar = E.gateRarity(top && h.level >= E.RARITY_GATE.legendas && x < 0.05 ? 'legendas' : top && x < 0.35 ? 'lila' : h.level >= E.RARITY_GATE.lila ? (x > 0.9 ? 'lila' : 'kek') : x < 0.55 ? 'zold' : 'kek', h.level);
       const it = E.makeItem(rng, { slot: slots[i], rarity: rar, level: h.level, classId: h.classId });
       return { item: it, price: Math.round(E.silverBase(h.level) * SHOP_PRICE[rar]), sold: false };
     });
-    save.shop = { day: today, items: items };
+    save.shop = { day: today, items: items, dustDay: save.shop ? save.shop.dustDay : null };
   }
   A.shopOpen = (save, a, ctx) => { refreshShop(save, ctx.now); };
   // újrapakolás Holdezüstért (naponta legfeljebb 3×): értelmes költési lehetőség a felgyűlt ezüstnek
@@ -3455,6 +3487,20 @@ import postgres from 'npm:postgres@3.4.9';
     if (h.silver < cost) fail('state', 'Ehhez nincs elég Holdezüstöd.');
     h.silver -= cost;
     save.shop.day = null; refreshShop(save, ctx.now); save.shop.rerolls = n + 1;
+  };
+  // Csillagpor-csomag Holdezüstért: naponta egy, a heti keret huszadáért (a keretbe beleszámít) – a felgyűlt ezüst értelmes helye
+  const shopDust = h => ({ dust: Math.round(E.dustCap(h.level) * 0.05), price: Math.round(E.silverBase(h.level) * 8) });
+  A.shopDust = (save, a, ctx) => {
+    refreshShop(save, ctx.now);
+    const h = save.hero, p = shopDust(h);
+    if (save.shop.dustDay === day(ctx.now)) fail('state', 'Ma már megvetted a Csillagpor-csomagot.');
+    const room = E.dustRoom(save, ctx.now);
+    if (room != null && room <= 0) fail('state', 'Ezen a héten már elérted a Csillagpor-keretet.');
+    if (h.silver < Math.round(p.price * (room != null ? Math.min(room, p.dust) : p.dust) / p.dust)) fail('state', 'Ehhez nincs elég Holdezüstöd.');
+    // ha a heti keretbe már csak kevesebb fér, annyit adunk, arányos áron
+    const amount = room != null ? Math.min(room, p.dust) : p.dust, price = Math.max(1, Math.round(p.price * amount / p.dust));
+    h.silver -= price; save.shop.dustDay = day(ctx.now);
+    return { dust: E.addDust(save, h, amount, ctx.now), silver: price };
   };
   A.shopBuy = (save, a, ctx) => {
     refreshShop(save, ctx.now);
@@ -3672,7 +3718,7 @@ import postgres from 'npm:postgres@3.4.9';
   }
   // valódi ellenfél: az erőalapú esély (a régi, kasztfüggetlen összevetés) a cél
   const fairTarget = (myF, tactic, opp) => Math.min(0.95, Math.max(0.05, E.winChance(myF, ghostFighter(opp), tactic, 200, 2024)));
-  const DUEL_V = 3;
+  const DUEL_V = 4;
   // gépi ellenfél hangolása: akkorára állítjuk, hogy ellened épp a kívánt esélyed legyen (a kasztok közti különbség így nem számít)
   function tuneFor(myF, tactic, g, target) {
     let lo = 0.3, hi = 3;
@@ -3716,6 +3762,16 @@ import postgres from 'npm:postgres@3.4.9';
   // ===================== Aréna =====================
   // Naponta 5 párbaj. Három ellenfél közül választasz (hasonló erejűek). Pontszám: Élő-rendszer (K = 32), 1000-ről indul.
   const ARENA_FIGHTS = 5;
+  // Létra: minden pontszámhoz tartozik egy erőszint. A győzelmi esély a szörnyszint ARÁNYÁVAL változik (kb. 19%-kal erősebb
+  // ellenfél ellen tizedére esik az esélyhányados), ezért a létra is arányos: 790 pont = e-szeres erő, és 150 pont
+  // különbség jelent tízszeres esélyhányadost. A gépi ellenfél ellen akkora az esélyed, mint az ilyen szintű szörny ellen,
+  // a tét pedig ugyanebből a skálából jön – így a pontszámod a hősöd valódi erejéhez áll be, és nem éri meg a könnyebbet választani.
+  const LADDER = { perE: 790, odds: 150 };
+  const arenaLadder = r => Math.max(1, Math.exp((r - 1000) / LADDER.perE));
+  const ladderRating = lv => Math.round(1000 + LADDER.perE * Math.log(Math.max(1, lv)));
+  const ladderTarget = (myF, tactic, r) => Math.min(0.92, Math.max(0.08, E.winChance(myF, E.monsterFighter(arenaLadder(r), {}), tactic, 200, 2024)));
+  const stakeExp = (mine, opp, ladder) => 1 / (1 + Math.pow(10, (opp - mine) / (ladder ? LADDER.odds : 400)));
+  const BOT_STEP = [-60, 0, 60];
   function arenaState(save, now) {
     const today = day(now), wk = weekKey(now);
     let s = save.arena || { rating: 1000, wins: 0, losses: 0, day: today, fights: 0, cands: [], week: wk, weekWins: 0 };
@@ -3731,12 +3787,22 @@ import postgres from 'npm:postgres@3.4.9';
     if (s.cands && s.cands.length) { if ((s.rerolls || 0) >= 1) fail('state', 'Ma már cseréltél ellenfeleket. Válassz a mostaniak közül.'); s.rerolls = (s.rerolls || 0) + 1; }
     let pool = (ctx.arenaPool || []).slice(0, 3);
     const rng = E.mulberry32(E.newSeed());
-    const used = pool.map(c => c.name), myF = E.fighterFromHero(h), TARGET = [0.65, 0.5, 0.35];
+    const used = pool.map(c => c.name), myF = E.fighterFromHero(h);
+    // besorolás: az első kereséskor a pontszámod a hősöd erejéhez közel kerül, hogy ne kelljen hetekig könnyű párbajokat vívnod
+    if (s.placedV !== DUEL_V) { s.placedV = DUEL_V; s.rating = Math.max(s.rating, ladderRating(E.findMonsterLevel(myF, h.tactic, 0.5, { seed: 1001, n: 240, power: 1 })) - 120); }
     while (pool.length < 3) { // gépi ellenfelek pótolják a hiányt: egy könnyebb, egy kiegyenlített, egy nehezebb
       const i = pool.length, gp = gearProfile(h), b = botHero(rng, h.level + [-1, 0, 1][i], gp.rarity, i, used, gp.level);
-      const sn = snap(b, null, 1000); sn.hero = b; sn.target = TARGET[i]; sn.tune = duelTune(myF, h.tactic, duelBase(b), TARGET[i]);
+      const br = Math.max(100, s.rating + BOT_STEP[i]), tg = ladderTarget(myF, h.tactic, br);
+      const sn = snap(b, null, br); sn.hero = b; sn.target = tg; sn.ladder = br; sn.tune = duelTune(myF, h.tactic, duelBase(b), tg);
       pool.push(sn);
     }
+    // valódi ellenfél: az ő helye a létrán a saját erejéből adódik (akkor is, ha még sosem járt az Arénában), a tét pedig
+    // ugyanabból a skálából jön, mint a gépi ellenfeleknél – így egy erős, de 1000 pontos hős legyőzése is ér pontot
+    pool.forEach(c => { if (c.hero && c.uid && c.ladder == null) {
+      const of = E.fighterFromHero(c.hero), ot = c.hero.tactic || (D.CLASSES[c.hero.classId] || {}).tactic || 'kiegy';
+      c.ladder = ladderRating(E.findMonsterLevel(of, ot, 0.5, { seed: 1001, n: 160, power: 1 }));
+      c.target = ladderTarget(myF, h.tactic, c.ladder); c.tune = duelTune(myF, h.tactic, duelBase(c.hero), c.target);
+    } });
     // minden jelöltnél kiszámoljuk a győzelmi esélyt és azt, hány pont jár a győzelemért / vész el vereségnél
     pool = pool.map(c => {
       const out = Object.assign({}, c);
@@ -3747,9 +3813,9 @@ import postgres from 'npm:postgres@3.4.9';
       // a gépi ellenfél pontszáma az esélyből adódik (Élő-képlet visszafelé), így a nyerhető pont is igazságos
       // gépi ellenfél: a pontszáma a kitűzött esélyből adódik (Élő-képlet visszafelé), így a tét mindig ehhez az esélyhez illik
       // gépi ellenfél: a pontszáma a ténylegesen mért (és kiírt) esélyből adódik, így a tét pontosan ehhez illik
-      if (c.target) { const pc = Math.min(0.95, Math.max(0.05, out.chance != null ? out.chance : c.target)); out.rating = Math.round(s.rating + 400 * Math.log10((1 - pc) / pc)); out.power = Math.round(out.power * c.tune); }
+      if (c.target) { out.rating = c.ladder != null ? c.ladder : out.rating; if (!c.uid) out.power = Math.round(out.power * c.tune); }
       // a tét a két pontszámból jön (Élő-rendszer): idővel mindenki a valódi erejének megfelelő helyre kerül
-      const ex = 1 / (1 + Math.pow(10, (out.rating - s.rating) / 400));
+      const ex = stakeExp(s.rating, out.rating, c.ladder != null);
       out.gain = Math.round(32 * (1 - ex)); out.loss = Math.round(32 * ex);
       if (c.uid) delete out.hero; // a valódi hős adatait nem tároljuk el, a harc előtt frissen töltjük be
       return out;
@@ -3765,11 +3831,11 @@ import postgres from 'npm:postgres@3.4.9';
     if (!opp) fail('state', 'Ez az ellenfél már nem elérhető. Keress újat.');
     const heroF = E.fighterFromHero(h), g0 = duelBase(opp);
     // a harc előtt a mostani felszerelésekhez hangolunk újra (keresés előtti átöltözéssel nem lehet csalni)
-    const tune = duelTune(heroF, h.tactic, g0, c.target || fairTarget(heroF, h.tactic, opp));
+    const tune = duelTune(heroF, h.tactic, g0, c.ladder != null ? ladderTarget(heroF, h.tactic, c.ladder) : c.target || fairTarget(heroF, h.tactic, opp));
     const mon = Object.assign(scaleGhost(g0, tune), { name: g0.name });
     const f = E.simulateDuel(heroF, mon, h.tactic, g0.tactic, E.newSeed(), true);
     const oppRating = c.rating;
-    const exp = 1 / (1 + Math.pow(10, (oppRating - s.rating) / 400)), delta = Math.round(32 * ((f.win ? 1 : 0) - exp));
+    const exp = stakeExp(s.rating, oppRating, c.ladder != null), delta = Math.round(32 * ((f.win ? 1 : 0) - exp));
     s.rating = Math.max(100, s.rating + delta); s.fights++;
     if (f.win) { s.wins++; s.weekWins++; } else s.losses++;
     const silver = Math.round(E.silverBase(h.level) * (f.win ? 1 : 0.3)), dust = f.win ? Math.round(6 + h.level / 2) : 0;
@@ -4006,7 +4072,7 @@ import postgres from 'npm:postgres@3.4.9';
     const lm = E.findMonsterLevel(E.fighterFromHero(h), h.tactic, E.eliteTarget(exp.offer.diff, moon, exp.offer.elite), { seed: 1000 + E.DIFF_ORDER.indexOf(exp.offer.diff), n: 240, power: moon.power });
     if (lm > exp.offer.lm) { exp.offer.lm = lm; exp.offer.level = Math.max(1, Math.round(lm)); }
   }
-  ['equip', 'equipIds', 'tactic', 'skillMove', 'skillOrder', 'upgrade', 'reroll', 'pathPick'].forEach(n => wrap(n, save => recalibrate(save)));
+  ['equip', 'equipIds', 'tactic', 'skillMove', 'skillOrder', 'upgrade', 'reroll', 'pathPick', 'transfer'].forEach(n => wrap(n, save => recalibrate(save)));
   wrap('upgrade', save => bump(save.hero, 'upgrades'));
   // ===================== Holdkrónika (fő történet) =====================
   // 10 fejezet; a következő a fejezet szintjétől nyílik. Minden fejezet végén egyedi főellenfél, egyszeri jutalommal.
@@ -4091,7 +4157,7 @@ import postgres from 'npm:postgres@3.4.9';
   };
 
   G.extra = {
-    weekKey: weekKey, day: day, giftState: giftState, giftPreview: giftPreview, GIFT: GIFT, SHOP_PRICE: SHOP_PRICE, SHOP_REROLLS: SHOP_REROLLS, shopRerollCost: shopRerollCost,
+    weekKey: weekKey, day: day, giftState: giftState, giftPreview: giftPreview, GIFT: GIFT, SHOP_PRICE: SHOP_PRICE, SHOP_REROLLS: SHOP_REROLLS, shopRerollCost: shopRerollCost, shopDust: shopDust, arenaLadder: arenaLadder, ladderRating: ladderRating,
     questState: questState, questReward: questReward, questLm: questLm, questText: questText, QUEST_TYPES: QUEST_TYPES, QUEST_SLOTS: QUEST_SLOTS,
     storyState: storyState, storyBoss: storyBoss, storyReward: storyReward, storyChapters: storyChapters, STORY_TRIES: STORY_TRIES,
     towerState: towerState, rushLimit: rushLimit, towerMonster: towerMonster, towerReward: towerReward, towerRegion: towerRegion, TOWER_TRIES: TOWER_TRIES,
@@ -4745,7 +4811,7 @@ async function admin(user, player, args) {
 }
 
 // ---------- belépési kör ----------
-const LOGGED = ['start', 'fight', 'choose', 'retreat', 'upgrade', 'reroll', 'patrolStart', 'patrolClaim', 'equip', 'equipIds', 'salvageWeak'];
+const LOGGED = ['start', 'fight', 'choose', 'retreat', 'upgrade', 'reroll', 'patrolStart', 'patrolClaim', 'equip', 'equipIds', 'salvageWeak', 'transfer', 'shopDust'];
 
 // ---------- Aréna, csapat, céh ----------
 const X = G.extra;
@@ -4757,11 +4823,11 @@ const weekNow = () => X.weekKey(Date.now());
 function heroSnap(save, uid) { return X.snap(save.hero, uid, save.arena ? save.arena.rating : 1000); }
 
 async function arenaPool(userId, save) {
-  // a hasonló pontszámú ellenfelek jönnek (a pontszám idővel a valódi erőt mutatja, a kasztok közti különbséggel együtt)
-  const p = G.summary(save).power, rt = (save.arena && save.arena.rating) || 1000;
+  // a hasonló erejű ellenfelek jönnek; a létrán elfoglalt helyüket és a tétet a játéklogika az erejükből számolja
+  const p = G.summary(save).power;
   const rows = await sql`select user_id, save from heroes where user_id <> ${userId} and active_at > now() - interval '30 days'
-                         and power between ${Math.floor(p * 0.6)} and ${Math.ceil(p * 1.6)}
-                         order by abs(coalesce((save->'arena'->>'rating')::int, 1000) - ${rt}) + random() * 60 limit 3`;
+                         and power between ${Math.floor(p * 0.8)} and ${Math.ceil(p * 1.25)}
+                         order by abs(power - ${p}) + random() * ${Math.max(20, Math.round(p * 0.08))} limit 3`;
   return rows.map(r => Object.assign(heroSnap(r.save, r.user_id), { hero: r.save.hero })); // a hős csak az esély kiszámításához kell
 }
 async function teamPool(userId, save) {

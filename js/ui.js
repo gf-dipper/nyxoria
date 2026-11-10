@@ -1021,7 +1021,9 @@
     return `<section class="panel"><div class="nx-ch-head"><div><h1>Vándorkereskedő</h1><p class="small muted">Naponta új áru, a szintedhez és a kasztodhoz igazítva. Mindegyikből egy darab van. Éjfélkor új árut hoz.</p></div>
       <div class="nx-ch-stats"><span><small>Holdezüstöd</small><b>${I.silver}${fmt(h.silver)}</b></span></div></div>
       ${(() => { const left = X.SHOP_REROLLS - (sh.rerolls || 0), cost = X.shopRerollCost(h); return `<div class="row wrap" style="gap:10px;margin-top:10px;align-items:center"><button class="btn ghost sm" data-act="shop-reroll" ${left > 0 && h.silver >= cost ? '' : 'disabled'}>Új árut kérek (${I.silver}${fmt(cost)})</button><span class="small muted">${left > 0 ? `Ma még ${left}× pakoltathatsz újra.` : 'Ma már nem pakol újra.'}</span></div>`; })()}</section>
-      <div class="nx-wares">${cards}</div>`;
+      <div class="nx-wares">${cards}${(() => { const p = X.shopDust(h), got = sh.dustDay === G.budapestDate(now()), room = E.dustRoom(S.save, now()), full = room != null && room <= 0;
+        return `<div class="panel nx-ware nx-ware-dust${got ? ' sold' : ''}"><div class="item"><span class="item-ic dust-ic">${I.dust}</span><div style="min-width:0"><div class="item-name">Csillagpor-csomag</div><div class="item-meta">Naponta egy · a heti keretbe beleszámít</div><div class="item-stats">+${fmt(p.dust)} Csillagpor a fejlesztésekhez</div></div></div>
+        <div class="row between" style="margin-top:10px"><b class="price">${I.silver}${fmt(p.price)}</b>${got ? '<span class="badge">Ma megvetted</span>' : full ? '<span class="badge">Betelt a heti keret</span>' : `<button class="btn primary sm" data-act="shop-dust" ${h.silver >= p.price ? '' : 'disabled'}>Megveszem</button>`}</div></div>`; })()}</div>`;
   }
   function renderAch() {
     tip('eredmenyek');
@@ -1911,8 +1913,12 @@
     // széttörés vagy eladás: amíg van hely a heti Csillagpor-keretben, a szétszedés éri meg, utána az eladás
     const items = list.map(it => {
       const sv = Math.min(room, E.salvageValue(it)), rf = E.refundValue(it), better = sv >= E.salvageValue(it) * 0.5 ? 'salvage' : 'sell';
-      return `<div class="inv-item">${itemHtml(it, { delta: true })}<div class="actions">
-      <button class="btn primary sm" data-act="equip" data-v="${it.id}">Felveszem</button>
+      // fejlesztés átvitele: a viselt tárgy +N-je átvihető erre a tárgyra; megmutatjuk, mennyit érne vele
+      const tr = E.transferInfo(h, it.id); let trHtml = '', trBtn = '';
+      if (tr) { const d = Math.round(E.powerDelta(h, Object.assign({}, it, { plus: tr.plus }))); trHtml = `<p class="small tr-hint">A viselt ${esc(D.SLOTS[it.slot].name.toLowerCase())} <b>+${tr.from.plus}</b> fejlesztése átvihető erre a tárgyra${tr.lost ? (tr.capped ? ` (ez a tárgy legfeljebb +${tr.plus} lehet` : ` (magasabb szintű tárgyon ugyanennyi Csillagpor +${tr.plus}-ig elég`) + '; a különbözet 70%-a szétszedéskor visszajár)' : ''}: úgy <b class="${d > 0 ? 'up' : 'down'}">${d > 0 ? '+' : ''}${d} harcerő</b>. A beletett Csillagpor nem vész el.</p>`;
+        trBtn = `<button class="btn sm" data-act="transfer" data-v="${it.id}" ${h.silver >= tr.silver ? '' : 'disabled'} title="A viselt tárgy fejlesztése erre a tárgyra kerül át">Fejlesztés átvitele (+${tr.plus}) · ${I.silver}${fmt(tr.silver)}</button>`; }
+      return `<div class="inv-item">${itemHtml(it, { delta: true })}${trHtml}<div class="actions">
+      <button class="btn primary sm" data-act="equip" data-v="${it.id}">Felveszem</button>${trBtn}
       <button class="btn ghost sm lockbtn${it.locked ? ' on' : ''}" data-act="lock-item" data-v="${it.id}" aria-pressed="${it.locked ? 'true' : 'false'}" title="${it.locked ? 'Zárolás feloldása' : 'Zárolás: nem lehet véletlenül szétszedni vagy eladni'}">${LOCK_SVG}${it.locked ? 'Feloldás' : 'Zárolás'}</button>
       <button class="btn ghost sm" data-act="try-on" data-v="${it.id}">${S.tryOn === it.id ? 'Bezárom' : 'Felpróbálom'}</button>
       <button class="btn ${better === 'salvage' ? '' : 'ghost '}sm" data-act="salvage" data-v="${it.id}" ${it.locked ? 'disabled title="Zárolva"' : ''}>${I.dust}Szétszedés (+${fmt(sv + rf)})</button>
@@ -2278,6 +2284,8 @@
     slot(v) { S.slot = v; render(); const d = document.querySelector('.eq-detail'); if (d) { const r = d.getBoundingClientRect(); if (r.top > innerHeight - 120) d.scrollIntoView({ behavior: 'smooth', block: 'start' }); } },
     upgrade(v) { act('upgrade', { id: v }, r => toast(`Fejlesztve: +${r.plus}`)); },
     reroll(v) { act('reroll', { id: v }, () => toast('Új tárgyjellemzők!')); },
+    transfer(v) { act('transfer', { id: v }, r => toast(`A fejlesztés átkerült: ${r.name} +${r.plus}`)); },
+    'shop-dust'() { act('shopDust', {}, r => toast(`+${r.dust} Csillagpor`)); },
     'skill-move'(v, x) { act('skillMove', { i: +v, dir: +x.dataset.dir }); },
     'order-calc'(v, x) { x.disabled = true; x.textContent = 'Számolok…'; setTimeout(() => { S.orderAdv = orderAdvice(); render(); }, 30); },
     'order-apply'() { const a = S.orderAdv; if (!a) return; const h = hero(); S.orderAdv = Object.assign({}, a, { applied: true, key: orderKey(h, a.best) }); act('skillOrder', { order: a.best }); },

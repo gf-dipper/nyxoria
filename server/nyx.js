@@ -639,7 +639,7 @@ async function admin(user, player, args) {
 }
 
 // ---------- belépési kör ----------
-const LOGGED = ['start', 'fight', 'choose', 'retreat', 'upgrade', 'reroll', 'patrolStart', 'patrolClaim', 'equip', 'equipIds', 'salvageWeak'];
+const LOGGED = ['start', 'fight', 'choose', 'retreat', 'upgrade', 'reroll', 'patrolStart', 'patrolClaim', 'equip', 'equipIds', 'salvageWeak', 'transfer', 'shopDust'];
 
 // ---------- Aréna, csapat, céh ----------
 const X = G.extra;
@@ -651,11 +651,11 @@ const weekNow = () => X.weekKey(Date.now());
 function heroSnap(save, uid) { return X.snap(save.hero, uid, save.arena ? save.arena.rating : 1000); }
 
 async function arenaPool(userId, save) {
-  // a hasonló pontszámú ellenfelek jönnek (a pontszám idővel a valódi erőt mutatja, a kasztok közti különbséggel együtt)
-  const p = G.summary(save).power, rt = (save.arena && save.arena.rating) || 1000;
+  // a hasonló erejű ellenfelek jönnek; a létrán elfoglalt helyüket és a tétet a játéklogika az erejükből számolja
+  const p = G.summary(save).power;
   const rows = await sql`select user_id, save from heroes where user_id <> ${userId} and active_at > now() - interval '30 days'
-                         and power between ${Math.floor(p * 0.6)} and ${Math.ceil(p * 1.6)}
-                         order by abs(coalesce((save->'arena'->>'rating')::int, 1000) - ${rt}) + random() * 60 limit 3`;
+                         and power between ${Math.floor(p * 0.8)} and ${Math.ceil(p * 1.25)}
+                         order by abs(power - ${p}) + random() * ${Math.max(20, Math.round(p * 0.08))} limit 3`;
   return rows.map(r => Object.assign(heroSnap(r.save, r.user_id), { hero: r.save.hero })); // a hős csak az esély kiszámításához kell
 }
 async function teamPool(userId, save) {

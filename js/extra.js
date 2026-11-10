@@ -59,17 +59,19 @@
 
   // ===================== Vándorkereskedő =====================
   // Naponta 4 új áru, a hős szintjéhez és kasztjához; mindegyikből egy darab.
-  const SHOP_PRICE = { zold: 6, kek: 14, lila: 34 }; // × a szinthez tartozó alap-Holdezüst (egy kalandnyi)
+  const SHOP_PRICE = { zold: 6, kek: 14, lila: 34, legendas: 90 }; // × a szinthez tartozó alap-Holdezüst (egy kalandnyi)
   function refreshShop(save, now) {
     const today = day(now);
     if (save.shop && save.shop.day === today) return;
     const h = save.hero, rng = E.mulberry32(E.newSeed()), slots = E.shuffle(rng, D.SLOT_ORDER.slice());
     const items = [0, 1, 2, 3].map(i => {
-      const x = rng(), rar = E.gateRarity(i === 3 && h.level >= E.RARITY_GATE.lila && x < 0.03 ? 'lila' : x < 0.55 ? 'zold' : 'kek', h.level);
+      // a kínálat a szinttel javul: a lila kaputól már nincs zöld, a negyedik helyen jó eséllyel lila (25-től néha legendás) áll
+      const x = rng(), top = i === 3 && h.level >= E.RARITY_GATE.lila;
+      const rar = E.gateRarity(top && h.level >= E.RARITY_GATE.legendas && x < 0.05 ? 'legendas' : top && x < 0.35 ? 'lila' : h.level >= E.RARITY_GATE.lila ? (x > 0.9 ? 'lila' : 'kek') : x < 0.55 ? 'zold' : 'kek', h.level);
       const it = E.makeItem(rng, { slot: slots[i], rarity: rar, level: h.level, classId: h.classId });
       return { item: it, price: Math.round(E.silverBase(h.level) * SHOP_PRICE[rar]), sold: false };
     });
-    save.shop = { day: today, items: items };
+    save.shop = { day: today, items: items, dustDay: save.shop ? save.shop.dustDay : null };
   }
   A.shopOpen = (save, a, ctx) => { refreshShop(save, ctx.now); };
   // újrapakolás Holdezüstért (naponta legfeljebb 3×): értelmes költési lehetőség a felgyűlt ezüstnek
@@ -81,6 +83,20 @@
     if (h.silver < cost) fail('state', 'Ehhez nincs elég Holdezüstöd.');
     h.silver -= cost;
     save.shop.day = null; refreshShop(save, ctx.now); save.shop.rerolls = n + 1;
+  };
+  // Csillagpor-csomag Holdezüstért: naponta egy, a heti keret huszadáért (a keretbe beleszámít) – a felgyűlt ezüst értelmes helye
+  const shopDust = h => ({ dust: Math.round(E.dustCap(h.level) * 0.05), price: Math.round(E.silverBase(h.level) * 8) });
+  A.shopDust = (save, a, ctx) => {
+    refreshShop(save, ctx.now);
+    const h = save.hero, p = shopDust(h);
+    if (save.shop.dustDay === day(ctx.now)) fail('state', 'Ma már megvetted a Csillagpor-csomagot.');
+    const room = E.dustRoom(save, ctx.now);
+    if (room != null && room <= 0) fail('state', 'Ezen a héten már elérted a Csillagpor-keretet.');
+    if (h.silver < Math.round(p.price * (room != null ? Math.min(room, p.dust) : p.dust) / p.dust)) fail('state', 'Ehhez nincs elég Holdezüstöd.');
+    // ha a heti keretbe már csak kevesebb fér, annyit adunk, arányos áron
+    const amount = room != null ? Math.min(room, p.dust) : p.dust, price = Math.max(1, Math.round(p.price * amount / p.dust));
+    h.silver -= price; save.shop.dustDay = day(ctx.now);
+    return { dust: E.addDust(save, h, amount, ctx.now), silver: price };
   };
   A.shopBuy = (save, a, ctx) => {
     refreshShop(save, ctx.now);
@@ -298,7 +314,7 @@
   }
   // valódi ellenfél: az erőalapú esély (a régi, kasztfüggetlen összevetés) a cél
   const fairTarget = (myF, tactic, opp) => Math.min(0.95, Math.max(0.05, E.winChance(myF, ghostFighter(opp), tactic, 200, 2024)));
-  const DUEL_V = 3;
+  const DUEL_V = 4;
   // gépi ellenfél hangolása: akkorára állítjuk, hogy ellened épp a kívánt esélyed legyen (a kasztok közti különbség így nem számít)
   function tuneFor(myF, tactic, g, target) {
     let lo = 0.3, hi = 3;
@@ -342,6 +358,16 @@
   // ===================== Aréna =====================
   // Naponta 5 párbaj. Három ellenfél közül választasz (hasonló erejűek). Pontszám: Élő-rendszer (K = 32), 1000-ről indul.
   const ARENA_FIGHTS = 5;
+  // Létra: minden pontszámhoz tartozik egy erőszint. A győzelmi esély a szörnyszint ARÁNYÁVAL változik (kb. 19%-kal erősebb
+  // ellenfél ellen tizedére esik az esélyhányados), ezért a létra is arányos: 790 pont = e-szeres erő, és 150 pont
+  // különbség jelent tízszeres esélyhányadost. A gépi ellenfél ellen akkora az esélyed, mint az ilyen szintű szörny ellen,
+  // a tét pedig ugyanebből a skálából jön – így a pontszámod a hősöd valódi erejéhez áll be, és nem éri meg a könnyebbet választani.
+  const LADDER = { perE: 790, odds: 150 };
+  const arenaLadder = r => Math.max(1, Math.exp((r - 1000) / LADDER.perE));
+  const ladderRating = lv => Math.round(1000 + LADDER.perE * Math.log(Math.max(1, lv)));
+  const ladderTarget = (myF, tactic, r) => Math.min(0.92, Math.max(0.08, E.winChance(myF, E.monsterFighter(arenaLadder(r), {}), tactic, 200, 2024)));
+  const stakeExp = (mine, opp, ladder) => 1 / (1 + Math.pow(10, (opp - mine) / (ladder ? LADDER.odds : 400)));
+  const BOT_STEP = [-60, 0, 60];
   function arenaState(save, now) {
     const today = day(now), wk = weekKey(now);
     let s = save.arena || { rating: 1000, wins: 0, losses: 0, day: today, fights: 0, cands: [], week: wk, weekWins: 0 };
@@ -357,12 +383,22 @@
     if (s.cands && s.cands.length) { if ((s.rerolls || 0) >= 1) fail('state', 'Ma már cseréltél ellenfeleket. Válassz a mostaniak közül.'); s.rerolls = (s.rerolls || 0) + 1; }
     let pool = (ctx.arenaPool || []).slice(0, 3);
     const rng = E.mulberry32(E.newSeed());
-    const used = pool.map(c => c.name), myF = E.fighterFromHero(h), TARGET = [0.65, 0.5, 0.35];
+    const used = pool.map(c => c.name), myF = E.fighterFromHero(h);
+    // besorolás: az első kereséskor a pontszámod a hősöd erejéhez közel kerül, hogy ne kelljen hetekig könnyű párbajokat vívnod
+    if (s.placedV !== DUEL_V) { s.placedV = DUEL_V; s.rating = Math.max(s.rating, ladderRating(E.findMonsterLevel(myF, h.tactic, 0.5, { seed: 1001, n: 240, power: 1 })) - 120); }
     while (pool.length < 3) { // gépi ellenfelek pótolják a hiányt: egy könnyebb, egy kiegyenlített, egy nehezebb
       const i = pool.length, gp = gearProfile(h), b = botHero(rng, h.level + [-1, 0, 1][i], gp.rarity, i, used, gp.level);
-      const sn = snap(b, null, 1000); sn.hero = b; sn.target = TARGET[i]; sn.tune = duelTune(myF, h.tactic, duelBase(b), TARGET[i]);
+      const br = Math.max(100, s.rating + BOT_STEP[i]), tg = ladderTarget(myF, h.tactic, br);
+      const sn = snap(b, null, br); sn.hero = b; sn.target = tg; sn.ladder = br; sn.tune = duelTune(myF, h.tactic, duelBase(b), tg);
       pool.push(sn);
     }
+    // valódi ellenfél: az ő helye a létrán a saját erejéből adódik (akkor is, ha még sosem járt az Arénában), a tét pedig
+    // ugyanabból a skálából jön, mint a gépi ellenfeleknél – így egy erős, de 1000 pontos hős legyőzése is ér pontot
+    pool.forEach(c => { if (c.hero && c.uid && c.ladder == null) {
+      const of = E.fighterFromHero(c.hero), ot = c.hero.tactic || (D.CLASSES[c.hero.classId] || {}).tactic || 'kiegy';
+      c.ladder = ladderRating(E.findMonsterLevel(of, ot, 0.5, { seed: 1001, n: 160, power: 1 }));
+      c.target = ladderTarget(myF, h.tactic, c.ladder); c.tune = duelTune(myF, h.tactic, duelBase(c.hero), c.target);
+    } });
     // minden jelöltnél kiszámoljuk a győzelmi esélyt és azt, hány pont jár a győzelemért / vész el vereségnél
     pool = pool.map(c => {
       const out = Object.assign({}, c);
@@ -373,9 +409,9 @@
       // a gépi ellenfél pontszáma az esélyből adódik (Élő-képlet visszafelé), így a nyerhető pont is igazságos
       // gépi ellenfél: a pontszáma a kitűzött esélyből adódik (Élő-képlet visszafelé), így a tét mindig ehhez az esélyhez illik
       // gépi ellenfél: a pontszáma a ténylegesen mért (és kiírt) esélyből adódik, így a tét pontosan ehhez illik
-      if (c.target) { const pc = Math.min(0.95, Math.max(0.05, out.chance != null ? out.chance : c.target)); out.rating = Math.round(s.rating + 400 * Math.log10((1 - pc) / pc)); out.power = Math.round(out.power * c.tune); }
+      if (c.target) { out.rating = c.ladder != null ? c.ladder : out.rating; if (!c.uid) out.power = Math.round(out.power * c.tune); }
       // a tét a két pontszámból jön (Élő-rendszer): idővel mindenki a valódi erejének megfelelő helyre kerül
-      const ex = 1 / (1 + Math.pow(10, (out.rating - s.rating) / 400));
+      const ex = stakeExp(s.rating, out.rating, c.ladder != null);
       out.gain = Math.round(32 * (1 - ex)); out.loss = Math.round(32 * ex);
       if (c.uid) delete out.hero; // a valódi hős adatait nem tároljuk el, a harc előtt frissen töltjük be
       return out;
@@ -391,11 +427,11 @@
     if (!opp) fail('state', 'Ez az ellenfél már nem elérhető. Keress újat.');
     const heroF = E.fighterFromHero(h), g0 = duelBase(opp);
     // a harc előtt a mostani felszerelésekhez hangolunk újra (keresés előtti átöltözéssel nem lehet csalni)
-    const tune = duelTune(heroF, h.tactic, g0, c.target || fairTarget(heroF, h.tactic, opp));
+    const tune = duelTune(heroF, h.tactic, g0, c.ladder != null ? ladderTarget(heroF, h.tactic, c.ladder) : c.target || fairTarget(heroF, h.tactic, opp));
     const mon = Object.assign(scaleGhost(g0, tune), { name: g0.name });
     const f = E.simulateDuel(heroF, mon, h.tactic, g0.tactic, E.newSeed(), true);
     const oppRating = c.rating;
-    const exp = 1 / (1 + Math.pow(10, (oppRating - s.rating) / 400)), delta = Math.round(32 * ((f.win ? 1 : 0) - exp));
+    const exp = stakeExp(s.rating, oppRating, c.ladder != null), delta = Math.round(32 * ((f.win ? 1 : 0) - exp));
     s.rating = Math.max(100, s.rating + delta); s.fights++;
     if (f.win) { s.wins++; s.weekWins++; } else s.losses++;
     const silver = Math.round(E.silverBase(h.level) * (f.win ? 1 : 0.3)), dust = f.win ? Math.round(6 + h.level / 2) : 0;
@@ -632,7 +668,7 @@
     const lm = E.findMonsterLevel(E.fighterFromHero(h), h.tactic, E.eliteTarget(exp.offer.diff, moon, exp.offer.elite), { seed: 1000 + E.DIFF_ORDER.indexOf(exp.offer.diff), n: 240, power: moon.power });
     if (lm > exp.offer.lm) { exp.offer.lm = lm; exp.offer.level = Math.max(1, Math.round(lm)); }
   }
-  ['equip', 'equipIds', 'tactic', 'skillMove', 'skillOrder', 'upgrade', 'reroll', 'pathPick'].forEach(n => wrap(n, save => recalibrate(save)));
+  ['equip', 'equipIds', 'tactic', 'skillMove', 'skillOrder', 'upgrade', 'reroll', 'pathPick', 'transfer'].forEach(n => wrap(n, save => recalibrate(save)));
   wrap('upgrade', save => bump(save.hero, 'upgrades'));
   // ===================== Holdkrónika (fő történet) =====================
   // 10 fejezet; a következő a fejezet szintjétől nyílik. Minden fejezet végén egyedi főellenfél, egyszeri jutalommal.
@@ -717,7 +753,7 @@
   };
 
   G.extra = {
-    weekKey: weekKey, day: day, giftState: giftState, giftPreview: giftPreview, GIFT: GIFT, SHOP_PRICE: SHOP_PRICE, SHOP_REROLLS: SHOP_REROLLS, shopRerollCost: shopRerollCost,
+    weekKey: weekKey, day: day, giftState: giftState, giftPreview: giftPreview, GIFT: GIFT, SHOP_PRICE: SHOP_PRICE, SHOP_REROLLS: SHOP_REROLLS, shopRerollCost: shopRerollCost, shopDust: shopDust, arenaLadder: arenaLadder, ladderRating: ladderRating,
     questState: questState, questReward: questReward, questLm: questLm, questText: questText, QUEST_TYPES: QUEST_TYPES, QUEST_SLOTS: QUEST_SLOTS,
     storyState: storyState, storyBoss: storyBoss, storyReward: storyReward, storyChapters: storyChapters, STORY_TRIES: STORY_TRIES,
     towerState: towerState, rushLimit: rushLimit, towerMonster: towerMonster, towerReward: towerReward, towerRegion: towerRegion, TOWER_TRIES: TOWER_TRIES,
