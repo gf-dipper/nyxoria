@@ -495,7 +495,7 @@ async function admin(user, player, args) {
   };
   const num = (v, lo, hi) => { const n = Math.round(Number(v) || 0); if (n < lo || n > hi) throw new GameError('arg', 'Túl nagy érték.'); return n; };
   if (args.op === 'heroData') { // egy hős teljes adatai (táska és felszerelés is) az admin felülethez
-    const r = await withHero((save, h, now) => { E.torchState(save, now); return { hero: { name: h.name, classId: h.classId, people: h.people, level: h.level, xp: h.xp, xpNeed: E.xpNeeded(h.level), silver: h.silver, dust: h.dust, rig: h.rig || null, look: h.look || null, path: h.path,
+    const r = await withHero((save, h, now) => { E.torchState(save, now); return { hero: { name: h.name, classId: h.classId, people: h.people, level: h.level, moonRank: E.moonRank(h), xp: h.xp, xpNeed: E.xpNeeded(h.level), silver: h.silver, dust: h.dust, rig: h.rig || null, look: h.look || null, path: h.path,
       torches: save.torches.count, rested: save.torches.rested, arena: save.arena ? save.arena.rating : 1000, towerBest: (save.tower && save.tower.best) || 0, equipped: h.equipped, inventory: h.inventory, stats: h.stats || {}, power: E.power(E.heroStats(h)) } }; });
     return r.out;
   }
@@ -510,7 +510,7 @@ async function admin(user, player, args) {
       const parts = [d.silver && `${d.silver > 0 ? '+' : ''}${d.silver} Holdezüst`, d.dust && `${d.dust > 0 ? '+' : ''}${d.dust} Csillagpor`, d.torches && `${d.torches > 0 ? '+' : ''}${d.torches} fáklya`, d.rested && `${d.rested > 0 ? '+' : ''}${d.rested} Frissesség`, d.xp && `${d.xp > 0 ? '+' : ''}${d.xp} TP`].filter(Boolean);
       if (parts.length) G.personal(save, now, `Az adminoktól: ${parts.join(', ')}${note ? ` – ${G.esc(note)}` : ''}.`, 'loot');
       save.offers = null; G.refreshOffers(save);
-      return { levelUps: ups.length };
+      return { levelUps: ups.filter(u => !u.rank).length };
     });
     await alog(r.uid, 'resources', Object.assign({ hero: r.hero, note: note }, d));
     return r.out;
@@ -552,7 +552,7 @@ async function admin(user, player, args) {
   if (args.op === 'heroSet') { // szint, ösvény, aréna-pontszám, torony-legjobb
     const r = await withHero((save, h, now) => {
       const ch = {};
-      if (args.level != null) { const L = num(args.level, 1, E.MAX_LEVEL || 99); h.level = L; h.xp = 0; const un = E.unlockedSkills(h).slice(1); h.loadout = h.loadout.filter(x => un.indexOf(x) >= 0).concat(un.filter(x => h.loadout.indexOf(x) < 0)); ch.level = L; }
+      if (args.level != null) { const L = num(args.level, 1, E.MAX_LEVEL || 99); h.level = L; h.xp = 0; if (L < E.MAX_LEVEL) delete h.moonRank; const un = E.unlockedSkills(h).slice(1); h.loadout = h.loadout.filter(x => un.indexOf(x) >= 0).concat(un.filter(x => h.loadout.indexOf(x) < 0)); ch.level = L; }
       if (args.path !== undefined) { const p = args.path === null || args.path === '' ? null : num(args.path, 0, 2); if (p != null && h.level < D.PATH_LEVEL) throw new GameError('arg', `Ösvény a ${D.PATH_LEVEL}. szinttől adható.`); h.path = p; ch.path = p; }
       if (args.arena != null) { const a = X.arenaState(save, now); a.rating = num(args.arena, 0, 5000); save.arena = a; ch.arena = a.rating; }
       if (args.towerBest != null) { const t = X.towerState(save, now); t.best = num(args.towerBest, 0, 500); save.tower = t; h.stats = h.stats || {}; h.stats.towerMax = Math.max(h.stats.towerMax || 0, t.best); ch.towerBest = t.best; }

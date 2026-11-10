@@ -1360,3 +1360,7 @@ html { scrollbar-width: thin; scrollbar-color: rgba(127, 140, 255, .35) transpar
 .nx-stage { height: clamp(330px, 42vh, 460px); }
 @media (max-width: 760px) { .nx-stage { height: clamp(270px, 42svh, 360px); } }
 @media (max-height: 620px) { .nx-intro li span { display: none; } .nx-intro h2 { font-size: 19px; margin: 6px 0 10px; } }
+
+/* Hold-rang (50. szint után) */
+.bar.xp.moon > i { background: linear-gradient(90deg, #8fa8ff, #e8ecff); }
+.moon-rank { color: #c9d4ff; font-weight: 600; white-space: nowrap; }

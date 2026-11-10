@@ -298,6 +298,7 @@
         fig: 'paths', figCaption: 'Három ösvény kasztonként', go: 'hos',
         blocks: [
           { p: 'Tapasztalatot szinte mindenért kapsz: kalandért, őrjáratért, küldetésekért, tekercsekért. Szintlépéskor nő minden jellemződ, és bizonyos szinteken új képességet tanulsz. A legmagasabb szint az 50.' },
+          { p: 'Az 50. szinten sem áll meg a fejlődés: a tapasztalat onnantól Hold-rangot ad. Egy ranghoz ugyanannyi tapasztalat kell, mint amennyi az 50. szinthez kellett. Az első 25 rang mindegyike +0,4% alapjellemzőt ad (összesen +10%), és minden rangért 5000 Holdezüst jár. A 25. rang fölött a rang már csak dicsőség: látszik a karakterlapodon és a profilodon.' },
           { h: 'Ösvények', list: [
             'A {PATH_LEVEL}. szinttől a Karakter képernyőn a kasztod három ösvénye közül választhatsz egyet.',
             'Mindegyik mást erősít: például több védelmet, több telitalálatot vagy erősebb gyógyítást.',

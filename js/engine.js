@@ -26,6 +26,10 @@
 
   // ---------- Alapértékek ----------
   var MAX_ROUNDS = 25, GEAR_AVG = 1.25, MAX_LEVEL = 50;
+  // Hold-rang: az 50. szint után a tapasztalat rangokat ad. Az első 25 rang jellemzőt is növel, utána már csak dísz.
+  var MOON_RANK = { max: 99, bonusRanks: 25, pct: 0.4, silver: 5000 };
+  function moonRank(hero) { return hero && hero.level >= MAX_LEVEL ? Math.max(0, Math.min(MOON_RANK.max, hero.moonRank | 0)) : 0; }
+  function moonBonus(hero) { return Math.min(MOON_RANK.bonusRanks, moonRank(hero)) * MOON_RANK.pct; }
   // a harc tempója: minden ütés ekkora részét viszi be (hosszabb harc → több képesség jut szóhoz);
   // a képességek a harc elején sorban készen állnak (1., 2., 3. … kör), utána a saját újratöltésük szerint jönnek
   // dmg: a hős (és társai) ütése; a szörny ütése ehhez képest képességenként perSkill-lel erősebb, hogy a
@@ -270,6 +274,8 @@
       ['elet', 'tam', 'ved', 'fur'].forEach(function (k) { if (b[k]) s[k] *= 1 + b[k] / 100; });
       ['dmg', 'crit', 'dodge', 'heal', 'first'].forEach(function (k) { if (b[k]) s[k] += b[k]; });
     }
+    var mb = moonBonus(hero);
+    if (mb) ['elet', 'tam', 'ved', 'fur'].forEach(function (k) { s[k] *= 1 + mb / 100; });
     s.elet *= 1 + s.hp / 100;
     s.level = L;
     return s;
@@ -924,11 +930,19 @@
     hero.xp += Math.round(amount);
     while (hero.level < MAX_LEVEL && hero.xp >= xpNeeded(hero.level)) {
       hero.xp -= xpNeeded(hero.level); hero.level++;
+      if (hero.level === MAX_LEVEL) hero.moonRank = 0; // a rangok mindig az 50. szint elérésétől számítanak
       var c = D.CLASSES[hero.classId], idx = D.SKILL_LEVELS.indexOf(hero.level), sk = idx >= 0 ? c.skills[idx] : null;
       if (sk && hero.loadout.indexOf(sk) < 0) hero.loadout.push(sk);
       ups.push({ level: hero.level, skill: sk });
     }
-    if (hero.level >= MAX_LEVEL) hero.xp = Math.min(hero.xp, xpNeeded(MAX_LEVEL));
+    if (hero.level >= MAX_LEVEL) {
+      var need = xpNeeded(MAX_LEVEL);
+      while (hero.xp >= need && moonRank(hero) < MOON_RANK.max) {
+        hero.xp -= need; hero.moonRank = moonRank(hero) + 1; hero.silver = (hero.silver || 0) + MOON_RANK.silver;
+        ups.push({ level: hero.level, rank: hero.moonRank, silver: MOON_RANK.silver });
+      }
+      hero.xp = Math.min(hero.xp, need);
+    }
     return ups;
   }
 
@@ -1165,7 +1179,7 @@
   root.NYX.engine = {
     bossFighter: bossFighter, bossHit: bossHit, averageBossHit: averageBossHit,
     mulberry32: mulberry32, newSeed: newSeed, setForLevel: setForLevel, pick: pick, shuffle: shuffle, clamp: clamp,
-    MAX_ROUNDS: MAX_ROUNDS, MAX_LEVEL: MAX_LEVEL, DIFF: DIFF, DIFF_ORDER: DIFF_ORDER, MOONS: MOONS, MOON_ORDER: MOON_ORDER,
+    MAX_ROUNDS: MAX_ROUNDS, MAX_LEVEL: MAX_LEVEL, MOON_RANK: MOON_RANK, moonRank: moonRank, moonBonus: moonBonus, DIFF: DIFF, DIFF_ORDER: DIFF_ORDER, MOONS: MOONS, MOON_ORDER: MOON_ORDER,
     TORCH: TORCH, DUST_WEEKLY: DUST_WEEKLY, PITY_PURPLE: PITY_PURPLE, PITY_LEGEND: PITY_LEGEND, MAX_PLUS: MAX_PLUS, REFUND: REFUND, maxPlus: maxPlus, refundValue: refundValue, upgradeSilver: upgradeSilver, legendChance: legendChance, RARITY_GATE: RARITY_GATE, gateRarity: gateRarity, rollLoot: rollLoot, lilaChance: lilaChance, INVENTORY_MAX: INVENTORY_MAX,
     refBase: refBase, xpNeeded: xpNeeded, xpBase: xpBase, silverBase: silverBase,
     itemStats: itemStats, makeItem: makeItem, affixText: affixText, salvageValue: salvageValue, sellValue: sellValue, upgradeCost: upgradeCost,

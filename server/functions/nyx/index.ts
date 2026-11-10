@@ -216,10 +216,7 @@ import postgres from 'npm:postgres@3.4.9';
       b: { label: '„A szellem türelme”', result: 'A szellem nevet egyet, és elenged. Ez is egyfajta győzelem.', effect: 'silver' } },
     { title: 'A kőbe szúrt kard', text: 'Egy kard áll a kőbe szúrva. Nem túl mélyen. Kifejezetten sekélyen.',
       a: { label: 'Kihúzom', result: 'Könnyen kijön. Nem legendás, de jól jön.', effect: 'item' },
-      b: { label: 'Otthagyom', result: 'Lehet, hogy csapda. Bölcs döntés, és közben találsz pár érmét.', effect: 'silver' } },
-    { title: 'Alvó óriás', text: 'Egy óriás alszik az út közepén. Hangosan horkol.',
-      a: { label: 'Óvatosan átlépek rajta', result: 'Sikerült! Az óriás zsebéből közben kiesett valami.', effect: 'dust' },
-      b: { label: 'Megvárom, amíg felébred', result: 'Az óriás felébred, és megköszöni, hogy nem keltetted fel. Kedves óriás.', effect: 'heal' } }
+      b: { label: 'Otthagyom', result: 'Lehet, hogy csapda. Bölcs döntés, és közben találsz pár érmét.', effect: 'silver' } }
   ];
 
   // Tárgyak
@@ -628,6 +625,140 @@ import postgres from 'npm:postgres@3.4.9';
           { label: 'Megkérem, játsszon valamit', result: 'Öt húron is meglepően jól játszik. Arra járó vándorok állnak meg, pénzt dobnak a kalapjába, és a lantos megfelezi veled.', effect: 'silver' },
           { label: 'Írok hozzá egy új versszakot', needs: { trait: 'almodozo' },
             result: 'Egy holdfényes versszak jut eszedbe, a lantos meghatottan jegyzi le. Cserébe megtanít neked pár régi legendát.', effect: 'xp', amount: 1.5 }
+        ] },
+
+      // ----- második adag: bárhol előforduló esetek -----
+      { id: 'any_alvo_orias', region: 'any', kind: 'csapda', title: 'Az alvó óriás',
+        text: 'Az ösvény egy dombon vezet át. A domb horkol. Közelebbről nézve nem is domb, hanem egy óriás, aki valamikor tavaly dőlt le egy kicsit pihenni.',
+        options: [
+          { label: 'Lábujjhegyen átosonok rajta', check: { stat: 'fur', base: 0.6 },
+            result: 'Egy fűszál sem rezzen. Az óriás mellényzsebéből menet közben kigurul egy ezüstgomb, akkora, mint egy tányér.', effect: 'silver',
+            fail: { result: 'Ráléptél a fülére. Az óriás álmában odacsap, mint aki szúnyogot hesseget. Te vagy a szúnyog.', effect: 'hurt' } },
+          { label: 'Megkerülöm az egészet', result: 'Hosszú kerülő, az óriás ugyanis elég nagy. Legalább kényelmesen végiggondolod közben, mit tanultál az úton.', effect: 'xp', amount: 0.5 },
+          { label: 'Betakarom, mert fázik', needs: { trait: 'joszivu' },
+            result: 'Ráhúzol egy lehullott ponyvát a vállára. Az óriás álmában elmosolyodik, és a markából a lábad elé pereg egy halom csillagpor.', effect: 'dust', amount: 1.5 }
+        ] },
+
+      { id: 'any_visszhang_szurdok', region: 'any', kind: 'esemeny', title: 'A visszhang',
+        text: 'A szurdokban minden szavadra felel valaki. Csakhogy nem azt mondja vissza, amit te mondtál. Hanem azt, amit gondoltál.',
+        options: [
+          { label: 'Kikérdezem magamat', result: 'Furcsa beszélgetés, de tanulságos. Kiderül, hogy a múltkori őrzőnél végig tudtad, mit rontasz el.', effect: 'xp' },
+          { label: 'Befogom a fülem, és átsietek', result: 'Vannak dolgok, amiket az ember nem akar hallani saját magától. A túloldalon legalább találsz pár elgurult érmét.', effect: 'silver', amount: 0.5 },
+          { label: 'Viccet mesélek neki', needs: { trait: 'trefas' },
+            result: 'A visszhang a csattanónál felnevet, pedig azt még ki sem mondtad. Hálából megsúgja, mit rejtettek el a sziklahasadékban.', effect: 'silver', amount: 1.5 }
+        ] },
+
+      { id: 'any_holdgyujto', region: 'any', kind: 'esemeny', title: 'A holdfénygyűjtő',
+        text: 'Egy asszony fordított esernyőt tart az ég felé, pedig hét ágra süt a hold. „Holdfényt gyűjtök – mondja. – Lassan megy, de megéri.”',
+        options: [
+          { label: 'Segítek tartani', result: 'Egy óra múlva már zsibbad a karod, de az esernyő alján tényleg összegyűlik valami fényes. Megfelezi veled.', effect: 'dust' },
+          { label: 'Megkóstolom, amit gyűjtött', result: 'Hűvös, és olyan íze van, mint a mentának meg a csendnek. A sebeid viszketni kezdenek, aztán összehúzódnak.', effect: 'heal' },
+          { label: 'Megmutatom, hogy kell ezt rendesen', needs: { origin: 'tanonc' },
+            result: 'A mestered ugyanezt csinálta, csak tölcsérrel. Átszabjátok az esernyőt, és negyedóra alatt megtelik. A fele a tiéd.', effect: 'dust', amount: 1.5 }
+        ] },
+
+      { id: 'any_elveszett_arnyek', region: 'any', kind: 'esemeny', title: 'A kóbor árnyék',
+        text: 'Egy árnyék bandukol az úton, gazda nélkül. Amikor meglát, reménykedve odaáll a lábadhoz, hátha nem veszed észre, hogy már van egy.',
+        options: [
+          { label: 'Hagyom, hadd jöjjön', result: 'Két árnyékkal jársz egy darabig. A szörnyek ettől láthatóan elbizonytalanodnak, te meg egyre magabiztosabb vagy.', effect: 'blessing' },
+          { label: 'Segítek megkeresni a gazdáját', result: 'Egy bokor alatt alszik egy vándor, árnyék nélkül. Mire felébred, már megvan az árnyéka. Az árnyék hálából a markodba nyom pár érmét. Hogy honnan van egy árnyéknak pénze, azt jobb nem firtatni.', effect: 'silver' },
+          { label: 'Megnézem, mi van a zsebében', needs: { trait: 'kivancsi' },
+            result: 'Az árnyékoknak is van zsebük, csak senki sem szokott belenézni. Ebben egy árnyék-érme lapul, ami a kezedben igazivá válik. Aztán még egy. Meg még egy.', effect: 'silver', amount: 1.5 }
+        ] },
+
+      { id: 'any_harom_ajto', region: 'any', kind: 'rejtveny', title: 'Három ajtó a réten',
+        text: 'A rét közepén három ajtó áll, fal nélkül. Az elsőn kilincs van, a másodikon kopogtató, a harmadik résnyire nyitva. Egy tábla szerint: „Csak az egyik udvarias.”',
+        options: [
+          { label: 'Kopogok a másodikon', result: 'Az ajtó kinyílik, mögötte ugyanaz a rét, csak egy kis asztalkával, rajta csillagporral teli tálka. „Végre valaki, aki tud viselkedni.”', effect: 'dust', amount: 1.5 },
+          { label: 'Benyitok az elsőn', result: 'Az ajtó sértődötten nyikorog. Mögötte ugyanaz a rét van, csak valahogy barátságtalanabb.', effect: 'none' },
+          { label: 'Belesek a harmadikon', result: 'Valaki belülről becsapja az orrod előtt. Jogos. Leskelődni tényleg nem szép dolog.', effect: 'hurt', amount: 0.5 }
+        ] },
+
+      { id: 'any_merleges_ember', region: 'any', kind: 'arus', title: 'A mérleges ember',
+        text: 'Egy sovány alak ül az útszélen egy rézmérleg mögött. „Bármit lemérek – mondja. – Bátorságot, szerencsét, lelkiismeretet. Darabja két ezüst, illetve nálad annál kicsit több.”',
+        options: [
+          { label: 'Mérje le a bátorságomat', cost: 1, result: 'A serpenyő nagyot koppan. „Ejha” – mondja az ember. Nem tudod, mennyi az annyi, de kihúzod magad, és a kardod is könnyebbnek tűnik.', effect: 'blessing' },
+          { label: 'Mérje le, mit tanultam eddig', cost: 0.5, result: 'Hosszan méricskél, közben sorolja, mit lát. A felére már nem is emlékeztél. Most megint igen.', effect: 'xp' },
+          { label: 'Nem kérek belőle', result: '„A takarékosságod viszont elég nehéz” – jegyzi meg, és ingyen megmutatja a mérleg nyelvét. Balra áll. Ez állítólag jó.', effect: 'none' },
+          { label: 'A mérlege hamis', needs: { origin: 'csempesz' },
+            result: 'Az ilyet egy csempész csukott szemmel kiszúrja: ólom van a bal serpenyő alatt. Az ember elsápad, és inkább fizet, csak ne mondd el senkinek.', effect: 'silver', amount: 1.5 }
+        ] },
+
+      { id: 'any_vamszedo_beka', region: 'any', kind: 'esemeny', title: 'A vámszedő béka',
+        text: 'A hídon egy béka ül, félrecsapott vámszedősapkában. „Hídvám! – brekegi. – Egy légy, vagy azzal egyenértékű szolgáltatás.”',
+        options: [
+          { label: 'Fogok neki egy legyet', check: { stat: 'fur', base: 0.65 },
+            result: 'Elsőre megvan. A béka elismerően bólint, és a sapkája alól előhúz neked egy fényes kis követ. Csillagporrá omlik a tenyeredben.', effect: 'dust',
+            fail: { result: 'Negyedóráig csapkodsz a levegőben, közben a korlátba is belevered a könyököd. A béka végül megszán, és átenged.', effect: 'hurt', amount: 0.5 } },
+          { label: 'Megvakarom a hátát', result: 'Ez pontosan egy léggyel egyenértékű. A béka elégedetten lehunyja a szemét, te pedig kipihenten sétálsz át a hídon.', effect: 'heal', amount: 0.5 },
+          { label: 'Felség, egy nemes nem fizet vámot', needs: { origin: 'nemes' },
+            result: 'A béka végigmér, aztán vigyázzba vágja magát. A szabályzat szerint az ilyen vendégnek még jár is valami a vámkasszából.', effect: 'silver', amount: 1.5 }
+        ] },
+
+      { id: 'any_kovacs_ullo', region: 'any', kind: 'esemeny', title: 'Az elhagyott üllő',
+        text: 'Az erdő közepén egy üllő áll, mellette kalapács, a parázs még meleg. A kovács sehol. Az üllőn félkész penge hűl.',
+        options: [
+          { label: 'Megélezem rajta a fegyverem', result: 'A kő is ott van mellette. Pár húzás, és a pengéd úgy vág, mint új korában.', effect: 'blessing' },
+          { label: 'Megvárom a kovácsot', result: 'Nem jön. Viszont a parázs mellett jólesik megmelegedni, és a tarisznyádból is előkerül egy elfelejtett pogácsa.', effect: 'heal' },
+          { label: 'Befejezem a pengét', needs: { origin: 'kovacs' },
+            result: 'A kezed emlékszik a mozdulatra. Mire kész, a fák közül előlép az öreg kovács, aki végig figyelt. „Ezt kerestem” – mondja, és megfizeti a vizsgamunkát.', effect: 'silver', amount: 2 }
+        ] },
+
+      { id: 'any_almatlan_bagoly', region: 'any', kind: 'esemeny', title: 'Az álmatlan bagoly',
+        text: 'Egy bagoly gubbaszt az ágon telihold idején, karikás szemmel. „Nem tudok aludni – panaszolja. – Számoltam már egeret, nem használ.”',
+        options: [
+          { label: 'Elmesélem neki a kalandjaimat', result: 'A harmadik szörnynél már horkol. Ettől függetlenül jó volt elmondani az egészet: közben rájössz egy-két dologra.', effect: 'xp' },
+          { label: 'Adok neki a teámból', result: 'A bagoly kortyol egyet, pislog kettőt, és elalszik. A fészkéből közben a fejedre potyog a gyűjteménye: csupa fényes holmi.', effect: 'silver' },
+          { label: 'Elmondom, miről szoktam álmodni', needs: { trait: 'almodozo' },
+            result: 'Olyan szépen meséled, hogy a bagoly csukott szemmel hallgatja, aztán már nem is hallgatja. Álmában egy csillagporos tollat ejt a kezedbe.', effect: 'dust', amount: 1.5 }
+        ] },
+
+      { id: 'any_mohos_oltarko', region: 'any', kind: 'szentely', title: 'A mohos oltárkő',
+        text: 'Az útelágazásnál lapos kő áll, rajta félig kiégett gyertyák és pár hervadt virág. Valaki nemrég még járt itt. A kő enyhén langyos.',
+        options: [
+          { label: 'Meggyújtok egy gyertyát', result: 'A láng ezüstösen ég, és nem lobog a szélben. Amíg nézed, a vállad elnehezül, aztán egyszerre nagyon könnyű lesz.', effect: 'blessing' },
+          { label: 'Leülök mellé pihenni', result: 'A kő melege átjárja a hátadat. Mire felállsz, a horzsolásaid fele eltűnt.', effect: 'heal' },
+          { label: 'Előbb háromszor körbejárom', needs: { trait: 'babonas' },
+            result: 'Balról jobbra, ahogy kell. A harmadik körnél az összes gyertya magától lángra kap. Ilyen áldást az kap, aki tudja a rendjét.', effect: 'blessing', amount: 1.5 }
+        ] },
+
+      { id: 'any_parbajozo_lovag', region: 'any', kind: 'esemeny', title: 'A rozsdás lovag',
+        text: 'Egy páncélos alak állja el az utat, tetőtől talpig rozsdásan. „Állj! Itt csak az megy át, aki legyőz!” A hangja kong. A sisakrostélya mögött nincs senki.',
+        options: [
+          { label: 'Kiállok ellene', check: { stat: 'tam', base: 0.6 },
+            result: 'Három csapás, és a páncél darabokra hullik. A mellvért alól kigurul minden, amit az elmúlt száz év vesztesei itt hagytak.', effect: 'silver', amount: 1.5,
+            fail: { result: 'A páncél üres, de az ökle nem az. Mire észbe kapsz, az árokban ülsz. „Jöhet a következő!” – kongja elégedetten.', effect: 'hurt' } },
+          { label: 'Megolajozom a térdét', result: 'A lovag meghatottan nyikorog egy utolsót, aztán hangtalanul félreáll. „Száz éve erre várok” – mondja. Megmutat pár fogást búcsúzóul.', effect: 'xp' },
+          { label: 'Kiröhögöm, és átsétálok mellette', needs: { trait: 'vakmero' },
+            result: 'A lovag annyira megdöbben, hogy elfelejt megütni. Ilyet még senki sem mert. Tisztelete jeléül utánad dobja a kesztyűjét, tele csillagporral.', effect: 'dust', amount: 1.5 }
+        ] },
+
+      { id: 'any_holdfeny_piac', region: 'any', kind: 'arany', title: 'Az éjféli vásár',
+        text: 'A tisztáson, ahol tegnap még semmi sem volt, most sátrak állnak, lampionok égnek, és valaki fuvolázik. Egy tábla hirdeti: „Éjféli vásár. Évente egyszer. Az első vendégnek minden ingyen.”',
+        options: [
+          { label: 'A csillagporos sátorhoz megyek', result: 'Az árus egy merőkanállal méri a port, és nem sajnálja. „Vidd csak, hajnalra úgyis elolvad, ami marad.”', effect: 'dust', amount: 2 },
+          { label: 'A pénzváltóhoz megyek', result: 'Becseréli a zsebedben lévő kavicsot ezüstre. Aztán a gombodat is. Aztán a tegnapi rossz kedvedet. Jól váltanak ma.', effect: 'silver', amount: 2 },
+          { label: 'Beülök a mesemondó sátrába', result: 'Az öreg mesemondó a te történetedet meséli, csak a végét is tudja. Nem mondja el, de eleget hallasz ahhoz, hogy okosabban menj tovább.', effect: 'xp', amount: 2 }
+        ] },
+
+      { id: 'any_kotelhid', region: 'any', kind: 'csapda', title: 'A kötélhíd',
+        text: 'A szakadék fölött kötélhíd leng. A deszkák fele megvan. A másik feléről egy tábla annyit mond: „Javítás alatt, türelmüket kérjük. Kelt: negyven éve.”',
+        options: [
+          { label: 'Nekifutok, és átugrálok', check: { stat: 'fur', base: 0.55 },
+            result: 'A hiányzó deszkáknál egyszerűen nem nézel le. Bevált. A túloldali oszlopra valaki egy erszényt akasztott az ügyeseknek.', effect: 'silver', amount: 1.5,
+            fail: { result: 'Az utolsó előtti deszka is javítás alatt volt. A kötélbe kapaszkodva húzod át magad, lehorzsolt tenyérrel.', effect: 'hurt' } },
+          { label: 'Lemászom, és odalent kelek át', result: 'Fél nap, de a szakadék alján meglepően sok leesett holmi hever. Az előtted járók nem voltak ilyen megfontoltak.', effect: 'silver', amount: 0.5 },
+          { label: 'Előbb minden csomót megnézek', needs: { trait: 'ovatos' },
+            result: 'A harmadik csomó kioldva, valaki így hagyta. Megkötöd, a többit is meghúzod, és úgy sétálsz át, mint a főutcán. A híd tövében ott a javítók elfelejtett bére.', effect: 'silver', amount: 1.5 }
+        ] },
+
+      { id: 'any_mogorva_remete', region: 'any', kind: 'esemeny', title: 'A remete kerítése',
+        text: 'Az ösvény egy kerítésnél véget ér. Mögötte kunyhó, előtte tábla: „Nem veszek semmit. Nem kérek tanácsot. A kutya harap. Nincs kutyám, de harap.”',
+        options: [
+          { label: 'Bekopogok, és útbaigazítást kérek', result: 'A remete morog, de elmagyarázza az utat, sőt azt is, melyik szörnyet honnan érdemes megközelíteni. Közben végig azt mondja, hogy siet.', effect: 'xp' },
+          { label: 'Csendben megkerülöm a kertet', result: 'A kerítés tövében gyógyfű nő. Abból, ami kilóg az ösvényre, szedsz egy csokorral. Az már közterület.', effect: 'heal' },
+          { label: 'Kiírom mellé, hogy „Helyes.”', needs: { trait: 'mogorva' },
+            result: 'Kinyílik az ajtó. A remete elolvassa, bólint, és szó nélkül a kezedbe nyom egy üveg házi gyógyfőzetet. Egyikőtök sem köszön el. Tökéletes találkozás volt.', effect: 'heal', amount: 2 }
         ] },
 
       // ===================== KÖDLÁP =====================
@@ -1635,6 +1766,10 @@ import postgres from 'npm:postgres@3.4.9';
 
   // ---------- Alapértékek ----------
   var MAX_ROUNDS = 25, GEAR_AVG = 1.25, MAX_LEVEL = 50;
+  // Hold-rang: az 50. szint után a tapasztalat rangokat ad. Az első 25 rang jellemzőt is növel, utána már csak dísz.
+  var MOON_RANK = { max: 99, bonusRanks: 25, pct: 0.4, silver: 5000 };
+  function moonRank(hero) { return hero && hero.level >= MAX_LEVEL ? Math.max(0, Math.min(MOON_RANK.max, hero.moonRank | 0)) : 0; }
+  function moonBonus(hero) { return Math.min(MOON_RANK.bonusRanks, moonRank(hero)) * MOON_RANK.pct; }
   // a harc tempója: minden ütés ekkora részét viszi be (hosszabb harc → több képesség jut szóhoz);
   // a képességek a harc elején sorban készen állnak (1., 2., 3. … kör), utána a saját újratöltésük szerint jönnek
   // dmg: a hős (és társai) ütése; a szörny ütése ehhez képest képességenként perSkill-lel erősebb, hogy a
@@ -1879,6 +2014,8 @@ import postgres from 'npm:postgres@3.4.9';
       ['elet', 'tam', 'ved', 'fur'].forEach(function (k) { if (b[k]) s[k] *= 1 + b[k] / 100; });
       ['dmg', 'crit', 'dodge', 'heal', 'first'].forEach(function (k) { if (b[k]) s[k] += b[k]; });
     }
+    var mb = moonBonus(hero);
+    if (mb) ['elet', 'tam', 'ved', 'fur'].forEach(function (k) { s[k] *= 1 + mb / 100; });
     s.elet *= 1 + s.hp / 100;
     s.level = L;
     return s;
@@ -2533,11 +2670,19 @@ import postgres from 'npm:postgres@3.4.9';
     hero.xp += Math.round(amount);
     while (hero.level < MAX_LEVEL && hero.xp >= xpNeeded(hero.level)) {
       hero.xp -= xpNeeded(hero.level); hero.level++;
+      if (hero.level === MAX_LEVEL) hero.moonRank = 0; // a rangok mindig az 50. szint elérésétől számítanak
       var c = D.CLASSES[hero.classId], idx = D.SKILL_LEVELS.indexOf(hero.level), sk = idx >= 0 ? c.skills[idx] : null;
       if (sk && hero.loadout.indexOf(sk) < 0) hero.loadout.push(sk);
       ups.push({ level: hero.level, skill: sk });
     }
-    if (hero.level >= MAX_LEVEL) hero.xp = Math.min(hero.xp, xpNeeded(MAX_LEVEL));
+    if (hero.level >= MAX_LEVEL) {
+      var need = xpNeeded(MAX_LEVEL);
+      while (hero.xp >= need && moonRank(hero) < MOON_RANK.max) {
+        hero.xp -= need; hero.moonRank = moonRank(hero) + 1; hero.silver = (hero.silver || 0) + MOON_RANK.silver;
+        ups.push({ level: hero.level, rank: hero.moonRank, silver: MOON_RANK.silver });
+      }
+      hero.xp = Math.min(hero.xp, need);
+    }
     return ups;
   }
 
@@ -2774,7 +2919,7 @@ import postgres from 'npm:postgres@3.4.9';
   root.NYX.engine = {
     bossFighter: bossFighter, bossHit: bossHit, averageBossHit: averageBossHit,
     mulberry32: mulberry32, newSeed: newSeed, setForLevel: setForLevel, pick: pick, shuffle: shuffle, clamp: clamp,
-    MAX_ROUNDS: MAX_ROUNDS, MAX_LEVEL: MAX_LEVEL, DIFF: DIFF, DIFF_ORDER: DIFF_ORDER, MOONS: MOONS, MOON_ORDER: MOON_ORDER,
+    MAX_ROUNDS: MAX_ROUNDS, MAX_LEVEL: MAX_LEVEL, MOON_RANK: MOON_RANK, moonRank: moonRank, moonBonus: moonBonus, DIFF: DIFF, DIFF_ORDER: DIFF_ORDER, MOONS: MOONS, MOON_ORDER: MOON_ORDER,
     TORCH: TORCH, DUST_WEEKLY: DUST_WEEKLY, PITY_PURPLE: PITY_PURPLE, PITY_LEGEND: PITY_LEGEND, MAX_PLUS: MAX_PLUS, REFUND: REFUND, maxPlus: maxPlus, refundValue: refundValue, upgradeSilver: upgradeSilver, legendChance: legendChance, RARITY_GATE: RARITY_GATE, gateRarity: gateRarity, rollLoot: rollLoot, lilaChance: lilaChance, INVENTORY_MAX: INVENTORY_MAX,
     refBase: refBase, xpNeeded: xpNeeded, xpBase: xpBase, silverBase: silverBase,
     itemStats: itemStats, makeItem: makeItem, affixText: affixText, salvageValue: salvageValue, sellValue: sellValue, upgradeCost: upgradeCost,
@@ -2804,6 +2949,7 @@ import postgres from 'npm:postgres@3.4.9';
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
   function fmt(n) { return Math.round(n).toLocaleString('hu-HU'); }
   function budapestDate(t) { return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Budapest' }).format(new Date(t)); }
+  function azN(n) { var s = String(n); return n === 1 || s.charAt(0) === '5' || (s.length === 4 && s.charAt(0) === '1') ? 'az' : 'a'; } // az 1., az 5., az 50., de a 10.
   function az(word) { return /^[aáeéiíoóöőuúüű]/i.test(String(word)) ? 'az' : 'a'; }
   function regionName(id) { const r = D.REGIONS.filter(x => x.id === id)[0]; return r ? r.name : ''; }
   function fail(code, msg) { const e = new Error(msg); e.code = code; throw e; }
@@ -3081,8 +3227,13 @@ import postgres from 'npm:postgres@3.4.9';
   function levelEvents(save, ups, ctx) {
     const h = save.hero;
     ups.forEach(u => {
-      personal(save, ctx.now, `<b>${esc(h.name)}</b> elérte a ${u.level}. szintet!${u.skill ? ' Új képesség: ' + esc(D.SKILLS[u.skill].name) + '.' : ''}`, 'level');
-      if (MILESTONES.indexOf(u.level) >= 0) ctx.events.push({ kind: 'level', level: u.level, html: `<b>${esc(h.name)}</b> elérte a ${u.level}. szintet!` });
+      if (u.rank) {
+        personal(save, ctx.now, `<b>${esc(h.name)}</b> elérte ${azN(u.rank)} ${u.rank}. Hold-rangot!`, 'level');
+        if (u.rank % 5 === 0) ctx.events.push({ kind: 'level', level: u.level, html: `☾ <b>${esc(h.name)}</b> elérte ${azN(u.rank)} ${u.rank}. Hold-rangot!` });
+        return;
+      }
+      personal(save, ctx.now, `<b>${esc(h.name)}</b> elérte ${azN(u.level)} ${u.level}. szintet!${u.skill ? ' Új képesség: ' + esc(D.SKILLS[u.skill].name) + '.' : ''}`, 'level');
+      if (MILESTONES.indexOf(u.level) >= 0) ctx.events.push({ kind: 'level', level: u.level, html: `<b>${esc(h.name)}</b> elérte ${azN(u.level)} ${u.level}. szintet!` });
     });
   }
   function itemEvent(save, it, ctx, how) {
@@ -3433,7 +3584,7 @@ import postgres from 'npm:postgres@3.4.9';
 
   function summary(save) {
     const h = save.hero, s = E.heroStats(h);
-    return { name: h.name, classId: h.classId, level: h.level, xp: h.xp, power: E.power(s), mythics: h.stats.mythics || 0, legendaries: h.stats.legendaries || 0, wins: h.stats.wins || 0 };
+    return { name: h.name, classId: h.classId, level: h.level, xp: h.xp + E.moonRank(h) * E.xpNeeded(E.MAX_LEVEL), power: E.power(s), mythics: h.stats.mythics || 0, legendaries: h.stats.legendaries || 0, wins: h.stats.wins || 0 };
   }
 
   root.NYX.game = {
@@ -3966,7 +4117,7 @@ import postgres from 'npm:postgres@3.4.9';
   function profileOf(save) {
     const h = save.hero, st = h.stats || {}, ach = achList(save);
     return {
-      name: h.name, classId: h.classId, people: h.people, level: h.level, rig: h.rig || null, look: h.look || null, worn: G.wornLook(h),
+      name: h.name, classId: h.classId, people: h.people, level: h.level, moonRank: E.moonRank(h), rig: h.rig || null, look: h.look || null, worn: G.wornLook(h),
       path: h.path != null && D.PATHS[h.classId] ? D.PATHS[h.classId][h.path].name : null, origin: h.origin, trait: h.trait, motto: h.motto || '',
       power: E.power(E.heroStats(h)), wins: st.wins || 0, expeditions: st.expeditions || 0, mythics: st.mythics || 0, legendaries: st.legendaries || 0, achTitles: (save.achTitles || []).slice(-3),
       towerMax: st.towerMax || 0, arena: save.arena ? save.arena.rating : 1000, arenaWins: save.arena ? save.arena.wins : 0,
@@ -4711,7 +4862,7 @@ async function admin(user, player, args) {
   };
   const num = (v, lo, hi) => { const n = Math.round(Number(v) || 0); if (n < lo || n > hi) throw new GameError('arg', 'Túl nagy érték.'); return n; };
   if (args.op === 'heroData') { // egy hős teljes adatai (táska és felszerelés is) az admin felülethez
-    const r = await withHero((save, h, now) => { E.torchState(save, now); return { hero: { name: h.name, classId: h.classId, people: h.people, level: h.level, xp: h.xp, xpNeed: E.xpNeeded(h.level), silver: h.silver, dust: h.dust, rig: h.rig || null, look: h.look || null, path: h.path,
+    const r = await withHero((save, h, now) => { E.torchState(save, now); return { hero: { name: h.name, classId: h.classId, people: h.people, level: h.level, moonRank: E.moonRank(h), xp: h.xp, xpNeed: E.xpNeeded(h.level), silver: h.silver, dust: h.dust, rig: h.rig || null, look: h.look || null, path: h.path,
       torches: save.torches.count, rested: save.torches.rested, arena: save.arena ? save.arena.rating : 1000, towerBest: (save.tower && save.tower.best) || 0, equipped: h.equipped, inventory: h.inventory, stats: h.stats || {}, power: E.power(E.heroStats(h)) } }; });
     return r.out;
   }
@@ -4726,7 +4877,7 @@ async function admin(user, player, args) {
       const parts = [d.silver && `${d.silver > 0 ? '+' : ''}${d.silver} Holdezüst`, d.dust && `${d.dust > 0 ? '+' : ''}${d.dust} Csillagpor`, d.torches && `${d.torches > 0 ? '+' : ''}${d.torches} fáklya`, d.rested && `${d.rested > 0 ? '+' : ''}${d.rested} Frissesség`, d.xp && `${d.xp > 0 ? '+' : ''}${d.xp} TP`].filter(Boolean);
       if (parts.length) G.personal(save, now, `Az adminoktól: ${parts.join(', ')}${note ? ` – ${G.esc(note)}` : ''}.`, 'loot');
       save.offers = null; G.refreshOffers(save);
-      return { levelUps: ups.length };
+      return { levelUps: ups.filter(u => !u.rank).length };
     });
     await alog(r.uid, 'resources', Object.assign({ hero: r.hero, note: note }, d));
     return r.out;
@@ -4768,7 +4919,7 @@ async function admin(user, player, args) {
   if (args.op === 'heroSet') { // szint, ösvény, aréna-pontszám, torony-legjobb
     const r = await withHero((save, h, now) => {
       const ch = {};
-      if (args.level != null) { const L = num(args.level, 1, E.MAX_LEVEL || 99); h.level = L; h.xp = 0; const un = E.unlockedSkills(h).slice(1); h.loadout = h.loadout.filter(x => un.indexOf(x) >= 0).concat(un.filter(x => h.loadout.indexOf(x) < 0)); ch.level = L; }
+      if (args.level != null) { const L = num(args.level, 1, E.MAX_LEVEL || 99); h.level = L; h.xp = 0; if (L < E.MAX_LEVEL) delete h.moonRank; const un = E.unlockedSkills(h).slice(1); h.loadout = h.loadout.filter(x => un.indexOf(x) >= 0).concat(un.filter(x => h.loadout.indexOf(x) < 0)); ch.level = L; }
       if (args.path !== undefined) { const p = args.path === null || args.path === '' ? null : num(args.path, 0, 2); if (p != null && h.level < D.PATH_LEVEL) throw new GameError('arg', `Ösvény a ${D.PATH_LEVEL}. szinttől adható.`); h.path = p; ch.path = p; }
       if (args.arena != null) { const a = X.arenaState(save, now); a.rating = num(args.arena, 0, 5000); save.arena = a; ch.arena = a.rating; }
       if (args.towerBest != null) { const t = X.towerState(save, now); t.best = num(args.towerBest, 0, 500); save.tower = t; h.stats = h.stats || {}; h.stats.towerMax = Math.max(h.stats.towerMax || 0, t.best); ch.towerBest = t.best; }

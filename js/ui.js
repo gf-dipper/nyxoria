@@ -242,9 +242,9 @@
     </div>${noLegend ? '' : '<p class="small muted stat-legend" style="font-size:12px;line-height:1.4">ÉLET: életerő · TÁM: támadás · VÉD: védekezés · FÜR: fürgeség (kitérés, telitalálat) · TP: tapasztalat</p>'}`;
   }
   function xpBar(h) {
-    const need = E.xpNeeded(h.level), max = h.level >= E.MAX_LEVEL;
-    return `<div class="bar xp" role="progressbar" aria-label="Tapasztalat" aria-valuemin="0" aria-valuemax="${need}" aria-valuenow="${h.xp}"><i style="width:${max ? 100 : Math.min(100, h.xp / need * 100)}%"></i></div>
-      <div class="bar-label"><span>${max ? 'Legmagasabb szint' : `${fmt(h.xp)} / ${fmt(need)} TP`}</span><span>${h.level}. szint</span></div>`;
+    const need = E.xpNeeded(h.level), max = h.level >= E.MAX_LEVEL, mr = E.moonRank(h), top = max && mr >= E.MOON_RANK.max;
+    return `<div class="bar xp${max ? ' moon' : ''}" role="progressbar" aria-label="${max ? `Tapasztalat a ${mr + 1}. Hold-rangig` : 'Tapasztalat'}" aria-valuemin="0" aria-valuemax="${need}" aria-valuenow="${Math.min(h.xp, need)}"><i style="width:${top ? 100 : Math.min(100, h.xp / need * 100)}%"></i></div>
+      <div class="bar-label"><span>${top ? 'Legmagasabb Hold-rang' : `${fmt(h.xp)} / ${fmt(need)} TP`}</span><span>${h.level}. szint${max ? ` · ☾ ${mr}` : ''}</span></div>`;
   }
   function xpMultNow() {
     if (!S.save) return 1;
@@ -615,7 +615,7 @@
     const ar = p.arenaLosses != null ? `${fmt(p.arenaWins || 0)} győzelem, ${fmt(p.arenaLosses)} vereség az arénában` : '';
     return `<div class="nx-pf">
       <div class="nx-pf-top"><div class="portrait">${A.heroSvg({ name: p.name, classId: p.classId, rig: p.rig, worn: p.worn, look: p.look, people: p.people }, { full: true })}</div>
-        <div class="nx-pf-id"><div class="pf-name"><h2>${esc(p.name)}</h2><p class="small muted">${p.level}. szintű ${esc(people)} ${esc(cls ? cls.name.toLowerCase() : '')}${p.path ? ' · ' + esc(p.path) : ''}</p>
+        <div class="nx-pf-id"><div class="pf-name"><h2>${esc(p.name)}</h2><p class="small muted">${p.level}. szintű ${esc(people)} ${esc(cls ? cls.name.toLowerCase() : '')}${p.moonRank ? ` · <span class="moon-rank">☾ ${p.moonRank}. Hold-rang</span>` : ''}${p.path ? ' · ' + esc(p.path) : ''}</p>
           ${p.guild ? `<p class="small">${esc(p.guild.name)} <span class="nx-tag">${esc(p.guild.tag)}</span>${p.guild.stars ? ` <span style="color:var(--fakla-300)">${'★'.repeat(Math.min(10, p.guild.stars))}</span>` : ''}</p>` : ''}
           ${seen ? `<p>${seen}</p>` : ''}</div>${p.motto ? `<p class="small muted">„${esc(p.motto)}”</p>` : ''}
           ${titles.length ? `<div class="pf-titles">${titles.map(t => `<span class="badge">${esc(t)}</span>`).join('')}</div>` : ''}
@@ -1428,7 +1428,7 @@
       return `<section class="panel"><div class="panel-title"><div><h1>Krónika</h1><p class="small muted">A hősöd története.</p></div><div class="seg" role="group" aria-label="Szűrés"><button data-act="chron-all" data-v="0" aria-pressed="${!all}">Fontosabbak</button><button data-act="chron-all" data-v="1" aria-pressed="${!!all}">Minden</button></div></div><div class="chron" style="max-height:none">${items}</div></section>`;
     }
     const rows = S.ranks[S.rankTab];
-    const rankHtml = rows ? (rows.length ? rows.map((r, i) => `<div class="rank-row${r.me ? ' me' : ''}"><span class="rank-n">${i + 1}.</span><span class="rank-name">${ONLINE && !r.guild ? `<button class="nx-lnk" data-act="profile-open" data-v="${esc(r.name)}">${esc(r.name)}</button>` : esc(r.name)}</span><span class="small muted rank-cls">${r.guild ? `${r.level} tag` : `${D.CLASSES[r.classId] ? D.CLASSES[r.classId].name : ''} · ${r.level}. szint`}</span><b>${S.rankTab === 'szint' || S.rankTab === 'ujonc' ? r.level + '.' : fmt(r.value)}</b><span class="small muted rank-unit">${S.rankTab === 'szint' || S.rankTab === 'ujonc' ? 'szint' : RANK_UNIT[S.rankTab]}</span></div>`).join('') : '<p class="small muted">Még üres ez a lista.</p>') : '<p class="small muted">Betöltés…</p>';
+    const rankHtml = rows ? (rows.length ? rows.map((r, i) => `<div class="rank-row${r.me ? ' me' : ''}"><span class="rank-n">${i + 1}.</span><span class="rank-name">${ONLINE && !r.guild ? `<button class="nx-lnk" data-act="profile-open" data-v="${esc(r.name)}">${esc(r.name)}</button>` : esc(r.name)}</span><span class="small muted rank-cls">${r.guild ? `${r.level} tag` : `${D.CLASSES[r.classId] ? D.CLASSES[r.classId].name : ''} · ${r.level}. szint`}</span><b>${S.rankTab === 'szint' || S.rankTab === 'ujonc' ? r.level + '.' : fmt(r.value)}</b><span class="small muted rank-unit">${S.rankTab === 'szint' || S.rankTab === 'ujonc' ? 'szint' + (r.level >= E.MAX_LEVEL && r.value > E.xpNeeded(E.MAX_LEVEL) ? ` · ☾ ${Math.min(E.MOON_RANK.max, Math.floor(r.value / E.xpNeeded(E.MAX_LEVEL)))}` : '') : RANK_UNIT[S.rankTab]}</span></div>`).join('') : '<p class="small muted">Még üres ez a lista.</p>') : '<p class="small muted">Betöltés…</p>';
     const chronList = S.chronTab === 'sajat' ? S.save.chronicle : S.chronicle;
     return `<div class="hero-grid">
       <section class="panel"><div class="panel-title"><h1>Ranglisták</h1>${(() => { const rr = S.ranks[S.rankTab] || [], k = rr.findIndex(x => x.me); return k >= 0 ? `<span class="badge">Te: ${k + 1}. hely</span>` : ''; })()}</div>
@@ -1872,7 +1872,7 @@
     const head = `<section class="panel nx-hhead">
         <div class="nx-hh-por hero-card"><div class="portrait">${A.heroSvg(h)}</div></div>
         <div class="nx-hh-main">
-          <div class="panel-title nx-hh-title"><div style="min-width:0"><h1>${esc(h.name)}</h1><p class="small muted">${h.level}. szintű ${esc(people)} ${esc(c.name.toLowerCase())} · ${esc(D.ORIGINS[h.origin].name)} · ${esc(D.TRAITS[h.trait].name)}</p>${h.motto ? `<p class="small muted">„${esc(h.motto)}”</p>` : ''}</div>${NEW_CREATOR ? '<button class="btn sm" data-act="screen" data-v="kinezet">Kinézet</button>' : ''}</div>
+          <div class="panel-title nx-hh-title"><div style="min-width:0"><h1>${esc(h.name)}</h1><p class="small muted">${h.level}. szintű ${esc(people)} ${esc(c.name.toLowerCase())}${E.moonRank(h) ? ` · <span class="moon-rank" title="Hold-rang: az 50. szint után szerzett rang. Minden rang +${String(E.MOON_RANK.pct).replace('.', ',')}% alapjellemzőt ad a ${E.MOON_RANK.bonusRanks}. rangig.">☾ ${E.moonRank(h)}. Hold-rang</span>` : ''} · ${esc(D.ORIGINS[h.origin].name)} · ${esc(D.TRAITS[h.trait].name)}</p>${h.motto ? `<p class="small muted">„${esc(h.motto)}”</p>` : ''}</div>${NEW_CREATOR ? '<button class="btn sm" data-act="screen" data-v="kinezet">Kinézet</button>' : ''}</div>
           ${(S.titles || []).length ? `<div class="row wrap" style="gap:6px;margin-bottom:8px">${S.titles.map(t => `<span class="badge" style="color:var(--fakla-300)">${esc(t)}</span>`).join('')}</div>` : ''}
           <div class="nx-hh-xp">${xpBar(h)}</div>
           ${statGrid(s, h.level >= 10)}
@@ -2006,13 +2006,23 @@
         <div class="row" style="gap:8px;justify-content:center;margin-top:14px">${better ? `<button class="btn primary" data-act="legend-equip" data-v="${it.id}">Felveszem</button>` : ''}<button class="btn ${better ? '' : 'primary'}" data-act="modal-close">Csodás!</button></div></div></div>`;
     }
     if (m.type === 'level') {
-      const h = hero(), last = m.ups[m.ups.length - 1], g = cls(h).base, n = m.ups.length;
+      const h = hero(), ranks = m.ups.filter(u => u.rank), pc = x => String(Math.round(x * 10) / 10).replace('.', ',');
+      if (ranks.length && ranks.length === m.ups.length) {
+        const lr = ranks[ranks.length - 1].rank, R = E.MOON_RANK, sil = ranks.reduce((t, u) => t + (u.silver || 0), 0), was = Math.min(R.bonusRanks, lr - ranks.length) * R.pct, nowB = Math.min(R.bonusRanks, lr) * R.pct;
+        return `<div class="modal-back${still}" role="dialog" aria-modal="true" aria-labelledby="lvl-t"><div class="modal">
+          <div class="portrait md" style="margin:0 auto 12px">${A.heroSvg(h)}</div>
+          <div class="tiny" style="color:var(--fakla-300)">Hold-rang</div><h2 id="lvl-t">☾ ${lr}. Hold-rang!</h2>
+          <p class="muted" style="margin-top:6px">${nowB > was ? `Minden alapjellemződ +${pc(nowB)}%${was ? ` (eddig +${pc(was)}%)` : ''}.` : `A jellemző-bónusz már a csúcson van (+${pc(nowB)}%), innen a rang a dicsőségért jár.`}</p>
+          <p class="small" style="margin-top:6px">Jutalom: <b>+${fmt(sil)} Holdezüst</b></p>
+          <button class="btn primary lg block" style="margin-top:16px" data-act="modal-close">Szuper!</button></div></div>`;
+      }
+      const last = m.ups.filter(u => !u.rank).pop(), g = cls(h).base, n = m.ups.length - ranks.length;
       const skills = m.ups.filter(u => u.skill).map(u => `<div class="skill" style="text-align:left;margin-top:8px">${skillIc(u.skill) || '<span class="num">★</span>'}<div><div class="sn">Új képesség: ${esc(D.SKILLS[u.skill].name)}</div><div class="sd">${esc(D.SKILLS[u.skill].desc)}</div></div></div>`).join('');
       return `<div class="modal-back${still}" role="dialog" aria-modal="true" aria-labelledby="lvl-t"><div class="modal">
         <div class="portrait md" style="margin:0 auto 12px">${A.heroSvg(h)}</div>
         <div class="tiny" style="color:var(--fakla-300)">Szintlépés</div><h2 id="lvl-t">${last.level}. szint!</h2>
         <p class="muted" style="margin-top:6px">+${fmt(g.elet[1] * n)} ÉLET · +${dec(g.tam[1] * n)} TÁM · +${dec(g.ved[1] * n)} VÉD · +${dec(g.fur[1] * n)} FÜR</p>
-        ${skills}${Object.keys(UNLOCK).filter(k => (ONLINE || (k !== 'boss' && k !== 'ceh')) && !usedBefore(k) && m.ups.some(u => u.level === UNLOCK[k])).map(k => `<div class="skill" style="text-align:left;margin-top:8px"><span class="num">★</span><div><div class="sn">Megnyílt: ${UNLOCK_NAME[k]}</div><div class="sd">Mostantól eléred a menüből.</div></div></div>`).join('')}${m.ups.some(u => u.level === D.PATH_LEVEL) ? `<div class="skill" style="text-align:left;margin-top:8px"><span class="num">★</span><div><div class="sn">Megnyíltak az ösvények</div><div class="sd">A Hős képernyőn választhatsz egyet a kasztod három útja közül. Az első választás ingyenes.</div></div></div>` : ''}<button class="btn primary lg block" style="margin-top:16px" data-act="modal-close">Szuper!</button></div></div>`;
+        ${skills}${ranks.length ? `<div class="skill" style="text-align:left;margin-top:8px"><span class="num">☾</span><div><div class="sn">${ranks[ranks.length - 1].rank}. Hold-rang</div><div class="sd">Az 50. szint után a tapasztalat Hold-rangot ad: rangonként +${pc(E.MOON_RANK.pct)}% alapjellemző és ${fmt(E.MOON_RANK.silver)} Holdezüst. Most kaptál: <b>+${fmt(ranks.reduce((t, u) => t + (u.silver || 0), 0))} Holdezüst</b>.</div></div></div>` : ''}${Object.keys(UNLOCK).filter(k => (ONLINE || (k !== 'boss' && k !== 'ceh')) && !usedBefore(k) && m.ups.some(u => u.level === UNLOCK[k])).map(k => `<div class="skill" style="text-align:left;margin-top:8px"><span class="num">★</span><div><div class="sn">Megnyílt: ${UNLOCK_NAME[k]}</div><div class="sd">Mostantól eléred a menüből.</div></div></div>`).join('')}${m.ups.some(u => u.level === D.PATH_LEVEL) ? `<div class="skill" style="text-align:left;margin-top:8px"><span class="num">★</span><div><div class="sn">Megnyíltak az ösvények</div><div class="sd">A Hős képernyőn választhatsz egyet a kasztod három útja közül. Az első választás ingyenes.</div></div></div>` : ''}<button class="btn primary lg block" style="margin-top:16px" data-act="modal-close">Szuper!</button></div></div>`;
     }
     if (m.type === 'chest' || m.type === 'patrol') {
       const r = m.res;

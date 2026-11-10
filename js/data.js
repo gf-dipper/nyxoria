@@ -211,10 +211,7 @@
       b: { label: '„A szellem türelme”', result: 'A szellem nevet egyet, és elenged. Ez is egyfajta győzelem.', effect: 'silver' } },
     { title: 'A kőbe szúrt kard', text: 'Egy kard áll a kőbe szúrva. Nem túl mélyen. Kifejezetten sekélyen.',
       a: { label: 'Kihúzom', result: 'Könnyen kijön. Nem legendás, de jól jön.', effect: 'item' },
-      b: { label: 'Otthagyom', result: 'Lehet, hogy csapda. Bölcs döntés, és közben találsz pár érmét.', effect: 'silver' } },
-    { title: 'Alvó óriás', text: 'Egy óriás alszik az út közepén. Hangosan horkol.',
-      a: { label: 'Óvatosan átlépek rajta', result: 'Sikerült! Az óriás zsebéből közben kiesett valami.', effect: 'dust' },
-      b: { label: 'Megvárom, amíg felébred', result: 'Az óriás felébred, és megköszöni, hogy nem keltetted fel. Kedves óriás.', effect: 'heal' } }
+      b: { label: 'Otthagyom', result: 'Lehet, hogy csapda. Bölcs döntés, és közben találsz pár érmét.', effect: 'silver' } }
   ];
 
   // Tárgyak

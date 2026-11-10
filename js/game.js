@@ -12,6 +12,7 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
   function fmt(n) { return Math.round(n).toLocaleString('hu-HU'); }
   function budapestDate(t) { return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Budapest' }).format(new Date(t)); }
+  function azN(n) { var s = String(n); return n === 1 || s.charAt(0) === '5' || (s.length === 4 && s.charAt(0) === '1') ? 'az' : 'a'; } // az 1., az 5., az 50., de a 10.
   function az(word) { return /^[aáeéiíoóöőuúüű]/i.test(String(word)) ? 'az' : 'a'; }
   function regionName(id) { const r = D.REGIONS.filter(x => x.id === id)[0]; return r ? r.name : ''; }
   function fail(code, msg) { const e = new Error(msg); e.code = code; throw e; }
@@ -289,8 +290,13 @@
   function levelEvents(save, ups, ctx) {
     const h = save.hero;
     ups.forEach(u => {
-      personal(save, ctx.now, `<b>${esc(h.name)}</b> elérte a ${u.level}. szintet!${u.skill ? ' Új képesség: ' + esc(D.SKILLS[u.skill].name) + '.' : ''}`, 'level');
-      if (MILESTONES.indexOf(u.level) >= 0) ctx.events.push({ kind: 'level', level: u.level, html: `<b>${esc(h.name)}</b> elérte a ${u.level}. szintet!` });
+      if (u.rank) {
+        personal(save, ctx.now, `<b>${esc(h.name)}</b> elérte ${azN(u.rank)} ${u.rank}. Hold-rangot!`, 'level');
+        if (u.rank % 5 === 0) ctx.events.push({ kind: 'level', level: u.level, html: `☾ <b>${esc(h.name)}</b> elérte ${azN(u.rank)} ${u.rank}. Hold-rangot!` });
+        return;
+      }
+      personal(save, ctx.now, `<b>${esc(h.name)}</b> elérte ${azN(u.level)} ${u.level}. szintet!${u.skill ? ' Új képesség: ' + esc(D.SKILLS[u.skill].name) + '.' : ''}`, 'level');
+      if (MILESTONES.indexOf(u.level) >= 0) ctx.events.push({ kind: 'level', level: u.level, html: `<b>${esc(h.name)}</b> elérte ${azN(u.level)} ${u.level}. szintet!` });
     });
   }
   function itemEvent(save, it, ctx, how) {
@@ -641,7 +647,7 @@
 
   function summary(save) {
     const h = save.hero, s = E.heroStats(h);
-    return { name: h.name, classId: h.classId, level: h.level, xp: h.xp, power: E.power(s), mythics: h.stats.mythics || 0, legendaries: h.stats.legendaries || 0, wins: h.stats.wins || 0 };
+    return { name: h.name, classId: h.classId, level: h.level, xp: h.xp + E.moonRank(h) * E.xpNeeded(E.MAX_LEVEL), power: E.power(s), mythics: h.stats.mythics || 0, legendaries: h.stats.legendaries || 0, wins: h.stats.wins || 0 };
   }
 
   root.NYX.game = {

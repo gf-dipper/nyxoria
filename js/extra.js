@@ -519,7 +519,7 @@
   function profileOf(save) {
     const h = save.hero, st = h.stats || {}, ach = achList(save);
     return {
-      name: h.name, classId: h.classId, people: h.people, level: h.level, rig: h.rig || null, look: h.look || null, worn: G.wornLook(h),
+      name: h.name, classId: h.classId, people: h.people, level: h.level, moonRank: E.moonRank(h), rig: h.rig || null, look: h.look || null, worn: G.wornLook(h),
       path: h.path != null && D.PATHS[h.classId] ? D.PATHS[h.classId][h.path].name : null, origin: h.origin, trait: h.trait, motto: h.motto || '',
       power: E.power(E.heroStats(h)), wins: st.wins || 0, expeditions: st.expeditions || 0, mythics: st.mythics || 0, legendaries: st.legendaries || 0, achTitles: (save.achTitles || []).slice(-3),
       towerMax: st.towerMax || 0, arena: save.arena ? save.arena.rating : 1000, arenaWins: save.arena ? save.arena.wins : 0,
