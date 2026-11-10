@@ -1163,3 +1163,28 @@ html { scrollbar-width: thin; scrollbar-color: rgba(127, 140, 255, .35) transpar
 .offer .o-threat.t-konnyu { right: 12%; height: 40%; opacity: .65; filter: brightness(0) drop-shadow(0 0 2px rgba(190, 210, 255, .55)); }
 .offer .o-threat.t-kozepes { right: 7%; height: 56%; opacity: .72; filter: brightness(0) drop-shadow(0 0 3px rgba(205, 175, 255, .65)); }
 .offer .o-threat.t-nehez { right: 0; height: 92%; opacity: .9; filter: brightness(0) drop-shadow(0 0 5px rgba(255, 80, 90, .8)); }
+/* ajánlott képességsorrend */
+.ord-box { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 10px 12px; margin-bottom: 10px; border: 1px solid var(--line, rgba(255,255,255,.12)); border-radius: 12px; background: rgba(255, 255, 255, .03); }
+.ord-box p { margin-top: 2px; }
+.ord-box.good { border-color: rgba(120, 220, 160, .45); background: rgba(60, 160, 100, .08); }
+.ord-box.ok { border-color: rgba(255, 255, 255, .1); }
+.ord-box .btn { flex: 0 0 auto; }
+@media (max-width: 760px) { .ord-box { flex-direction: column; align-items: stretch; } }
+/* görgetési jelzés: csak ha tényleg van még elem jobbra */
+.nx-chips.more { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent); }
+/* harci képességsáv: melyik kész, melyik jön, mennyi kör van hátra */
+.nx-skb { display: flex; gap: 6px; margin-top: 3px; }
+.nx-skb .sk { position: relative; width: 26px; height: 26px; border-radius: 7px; background: rgba(8, 11, 31, .7); border: 1px solid rgba(255, 255, 255, .14); display: grid; place-items: center; filter: grayscale(.85) brightness(.7); transition: filter .2s, border-color .2s, transform .2s; }
+.nx-skb .sk .sk-ic, .nx-skb .sk svg { width: 20px; height: 20px; }
+.nx-skb .sk b { position: absolute; right: -5px; bottom: -6px; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 8px; display: grid; place-items: center; font-size: 10px; font-weight: 900; color: #fff; background: rgba(8, 11, 31, .92); border: 1px solid rgba(255, 255, 255, .25); font-variant-numeric: tabular-nums; line-height: 1; }
+.nx-skb .sk b:empty { display: none; }
+.nx-skb .sk.rdy { filter: none; border-color: rgba(160, 200, 255, .5); }
+.nx-skb .sk.nx { border-color: var(--fakla-300); box-shadow: 0 0 0 1px rgba(242, 181, 68, .5), 0 0 8px rgba(242, 181, 68, .45); }
+.nx-skb .sk.cast { transform: scale(1.18); }
+@media (max-width: 760px) { .nx-skb { gap: 3px; } .nx-skb .sk { width: 21px; height: 21px; border-radius: 6px; } .nx-skb .sk .sk-ic, .nx-skb .sk svg { width: 16px; height: 16px; } .nx-skb .sk b { font-size: 9px; min-width: 13px; height: 13px; } }
+/* legnagyobb harcerő felvétele */
+.gear-box { display: flex; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.gear-box.good { border-color: rgba(120, 220, 160, .45); }
+.gear-ch { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 3px; font-size: 13px; }
+.gear-ch .tiny { display: inline-block; min-width: 64px; color: var(--muted, #9aa3c7); }
+@media (max-width: 760px) { .gear-box { flex-direction: column; align-items: stretch; } }

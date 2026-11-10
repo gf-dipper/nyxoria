@@ -151,6 +151,8 @@
             'Mindenkinek van egy alaptámadása, és a 3., 6., 10. és 13. szinten egy-egy új képességet tanul.',
             'A harc elején a képességeid sorban élesednek: az első az első körben, a második a másodikban, és így tovább. A hős mindig a lista első kész képességét használja, utána az újratöltődik. Ha semmi sincs kész, alaptámadással üt.',
             'A sorrendet a Karakter képernyőn, a Képességek résznél a nyilakkal állíthatod.',
+            'Az Ajánlott sorrend gomb kipróbálja az összes sorrendet a mostani kalandok ellenfelei ellen, és megmutatja, melyikkel nyersz a legtöbbször. Egy kattintással átveheted, és vissza is állíthatod.',
+            'Harc közben a hős neve alatt látod a képességeidet: a szám azt mutatja, hány kör múlva lesz kész, a kiemelt pedig azt, amelyiket legközelebb használja.',
             'Idéző: a szellem minden körben vele üt; a Falka két farkast hív, a Lélekcsere egy nagy robbanásért feláldozza a szellemet.',
             'Orgyilkos: a harc első találata másfélszeres. Dalnok és Alakváltó: gyengítés, gyorsítás és gyógyulás.'
           ] },
@@ -229,7 +231,7 @@
             'A legendásra ugyanígy: legkésőbb {PITY_LEG} sorsolásonként jár egy, a {GATE_LEG}. szinttől. A legendás oda kerül, ahol még nincs legendásod.'
           ] },
           { h: 'Mitikus tárgy', p: 'A legritkább fajta: legendás erejű, egyedi ragyogású tárgy. Csak Nehéz kaland győzelméért járhat, a {GATE_LEG}. szinttől. Az erősebb hold és az elit őrző növeli az esélyét, és minden sikertelen próbálkozás közelebb visz hozzá.' },
-          { tip: 'A Harcerő egyetlen szám, ami összefoglalja, mennyire erős a hősöd. A zöld nyíl a tárgyakon azt jelzi, hogy erősebb a mostaninál.' }
+          { tip: 'A Harcerő egyetlen szám, ami összefoglalja, mennyire erős a hősöd. A zöld nyíl a tárgyakon azt jelzi, hogy erősebb a mostaninál. Ha a táskádban erősebb összeállítás van, a Táska tetején egy gombbal egyszerre felveheted, és vissza is állíthatod.' }
         ] },
 
       { id: 'ruhatar', title: 'Ruhatár és kinézet', short: 'A hősöd úgy néz ki, ahogy a felszerelése: szettek, egyedi legendások, fény, szárnyak.',

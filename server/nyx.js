@@ -639,7 +639,7 @@ async function admin(user, player, args) {
 }
 
 // ---------- belépési kör ----------
-const LOGGED = ['start', 'fight', 'choose', 'retreat', 'upgrade', 'reroll', 'patrolStart', 'patrolClaim', 'equip', 'salvageWeak'];
+const LOGGED = ['start', 'fight', 'choose', 'retreat', 'upgrade', 'reroll', 'patrolStart', 'patrolClaim', 'equip', 'equipIds', 'salvageWeak'];
 
 // ---------- Aréna, csapat, céh ----------
 const X = G.extra;

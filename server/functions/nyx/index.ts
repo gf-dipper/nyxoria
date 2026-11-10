@@ -2047,7 +2047,7 @@ import postgres from 'npm:postgres@3.4.9';
       var mf = mon.fur * (rnd <= ms.slowUntil ? 1 - ms.slow : 1);
       // a fürgébb gyakrabban kezd, de nem mindig (súlyozott véletlen): így egy hajszálnyi különbség nem dönti el a harcot
       var heroFirst = rng() < clamp(0.5 + 1.5 * (hf - mf) / Math.max(1, hf + mf), 0.2, 0.8);
-      emit({ kind: 'round' });
+      emit({ kind: 'round', rd: log ? (hero.loadout || []).map(function (id) { return ready[id]; }) : null }); // a képességsáv ebből mutatja, mikor lesz kész
       var order = heroFirst ? ['h', 'm'] : ['m', 'h'];
       for (var o = 0; o < 2; o++) {
         if (hp <= 0 || mhp <= 0) break;
@@ -2174,7 +2174,7 @@ import postgres from 'npm:postgres@3.4.9';
     for (rnd = 1; rnd <= maxR; rnd++) {
       var af = fur(A), bf = fur(B);
       var aFirst = rng() < clamp(0.5 + 1.5 * (af - bf) / Math.max(1, af + bf), 0.2, 0.8);
-      emit({ kind: 'round' });
+      emit({ kind: 'round', rd: log ? (a.loadout || []).map(function (id) { return A.ready[id]; }) : null });
       var order = aFirst ? [A, B] : [B, A];
       for (var o = 0; o < 2; o++) {
         if (A.hp <= 0 || B.hp <= 0) break;
@@ -2577,6 +2577,22 @@ import postgres from 'npm:postgres@3.4.9';
     eq[item.slot] = item;
     return powerRaw(heroStats(hero, eq)) - before;
   }
+  // a legnagyobb harcerejű összeállítás a felvett és a táskában lévő tárgyakból: az egész összeállítást értékeli
+  // (helyenként próbál cserét, amíg javul), így a tárgyak közti kölcsönhatás is számít
+  function bestGear(hero) {
+    var eq = {}; D.SLOT_ORDER.forEach(function (s) { eq[s] = hero.equipped[s] || null; });
+    var score = function () { return powerRaw(heroStats(hero, eq)); }, cur = score(), start = cur;
+    for (var pass = 0; pass < 4; pass++) {
+      var improved = false;
+      D.SLOT_ORDER.forEach(function (s) {
+        var cands = hero.inventory.filter(function (i) { return i.slot === s; }).concat(hero.equipped[s] ? [hero.equipped[s]] : []);
+        cands.forEach(function (it) { var keep = eq[s]; eq[s] = it; var v = score(); if (v > cur + 0.05) { cur = v; improved = true; } else eq[s] = keep; });
+      });
+      if (!improved) break;
+    }
+    var changes = D.SLOT_ORDER.filter(function (s) { return eq[s] && eq[s] !== hero.equipped[s]; }).map(function (s) { return { slot: s, to: eq[s], from: hero.equipped[s] || null }; });
+    return { changes: changes, before: start, after: cur };
+  }
   function isUpgrade(hero, item) { return powerDelta(hero, item) > 0.05; }
 
   function equip(hero, itemId) {
@@ -2697,7 +2713,7 @@ import postgres from 'npm:postgres@3.4.9';
     startExpedition: startExpedition, resolveCard: resolveCard, guardPreview: guardPreview, fightGuard: fightGuard,
     finishExpedition: finishExpedition, applyChoice: applyChoice, lossAdvice: lossAdvice,
     torchState: torchState, spendTorch: spendTorch, dustRoom: dustRoom, dustCap: dustCap, weekOf: weekOf, addDust: addDust, addXp: addXp,
-    addItem: addItem, powerDelta: powerDelta, isUpgrade: isUpgrade, equip: equip, salvage: salvage, sell: sell, upgrade: upgrade,
+    addItem: addItem, powerDelta: powerDelta, bestGear: bestGear, isUpgrade: isUpgrade, equip: equip, salvage: salvage, sell: sell, upgrade: upgrade,
     findItem: findItem, rerollCost: rerollCost, reroll: reroll, searchChance: searchChance, mythicChance: mythicChance, newSave: newSave
   };
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -3172,6 +3188,22 @@ import postgres from 'npm:postgres@3.4.9';
 
   // felszerelés
   A.equip = (save, a) => { if (save.expedition && save.expedition.phase === 'guard') { /* az őrző előtt is szabad */ } if (!E.equip(save.hero, a.id)) fail('arg', 'Nincs ilyen tárgy a táskában.'); };
+  // több tárgy felvétele egyszerre (a „Legnagyobb harcerő felvétele” és a visszavonása): csak a táskában lévő,
+  // különböző helyre szóló tárgyak; a lecserélt darabok a táskába kerülnek, semmi nem vész el
+  A.equipIds = (save, a) => {
+    // unequip: visszavonáskor a korábban üres helyek újra üresek lesznek (a tárgy a táskába kerül)
+    const ids = Array.isArray(a.ids) ? a.ids.map(String) : [], h = save.hero;
+    const off = Array.isArray(a.unequip) ? a.unequip.map(String).filter(s => D.SLOT_ORDER.indexOf(s) >= 0) : [];
+    if ((!ids.length && !off.length) || ids.length > D.SLOT_ORDER.length || new Set(ids).size !== ids.length || new Set(off).size !== off.length) fail('arg', 'Érvénytelen tárgylista.');
+    const its = ids.map(id => h.inventory.find(i => i.id === id));
+    if (its.some(i => !i)) fail('arg', 'Nincs ilyen tárgy a táskában.');
+    if (new Set(its.map(i => i.slot)).size !== its.length || its.some(i => off.indexOf(i.slot) >= 0)) fail('arg', 'Egy helyre csak egy tárgy kerülhet.');
+    const freed = off.filter(s => h.equipped[s]).length;
+    if (h.inventory.length - its.length + its.length + freed > E.INVENTORY_MAX) fail('state', 'Nincs elég hely a táskában.');
+    its.forEach(i => E.equip(h, i.id));
+    off.forEach(s => { if (h.equipped[s]) { h.inventory.push(h.equipped[s]); delete h.equipped[s]; } });
+    return { ids: ids };
+  };
   A.salvage = (save, a, ctx) => ({ dust: E.salvage(save, save.hero, a.id, ctx.now) });
   A.sell = (save, a) => ({ silver: E.sell(save.hero, a.id) });
   A.salvageWeak = (save, a, ctx) => {
@@ -3190,6 +3222,12 @@ import postgres from 'npm:postgres@3.4.9';
     const r = E.reroll(save.hero, a.id);
     if (!r.ok) fail('cost', r.reason === 'nincs' ? 'Ennek a tárgynak nincs jellemzője.' : 'Nincs elég Holdezüst.');
     return r;
+  };
+  // a teljes sorrend egyszerre (pl. az „Ajánlott sorrend” átvétele): csak a meglévő képességek átrendezése lehet
+  A.skillOrder = (save, a) => {
+    const l = save.hero.loadout, o = Array.isArray(a.order) ? a.order.map(String) : null;
+    if (!o || o.length !== l.length || o.some(id => l.indexOf(id) < 0) || new Set(o).size !== o.length) fail('arg', 'Érvénytelen sorrend.');
+    save.hero.loadout = o;
   };
   A.skillMove = (save, a) => {
     const l = save.hero.loadout, i = a.i | 0, j = i + (a.dir < 0 ? -1 : 1);
@@ -3236,7 +3274,7 @@ import postgres from 'npm:postgres@3.4.9';
   };
 
   // ---------- futtatás ----------
-  const FREE_DURING_EXPEDITION = ['tactic', 'restyle', 'lookPick', 'dye', 'settings', 'tip', 'equip', 'salvage', 'sell', 'salvageWeak', 'upgrade', 'reroll', 'skillMove', 'patrolStart', 'patrolClaim'];
+  const FREE_DURING_EXPEDITION = ['tactic', 'restyle', 'lookPick', 'dye', 'settings', 'tip', 'equip', 'salvage', 'sell', 'salvageWeak', 'upgrade', 'reroll', 'skillMove', 'skillOrder', 'equipIds', 'patrolStart', 'patrolClaim'];
 
   // tárgyak átállítása az új rendszerre (legendás fokozat, fejlesztés-visszatérítés): egyszer, minden régi mentésen
   function migrateItems(save) {
@@ -3956,7 +3994,7 @@ import postgres from 'npm:postgres@3.4.9';
     const lm = E.findMonsterLevel(E.fighterFromHero(h), h.tactic, E.eliteTarget(exp.offer.diff, moon, exp.offer.elite), { seed: 1000 + E.DIFF_ORDER.indexOf(exp.offer.diff), n: 240, power: moon.power });
     if (lm > exp.offer.lm) { exp.offer.lm = lm; exp.offer.level = Math.max(1, Math.round(lm)); }
   }
-  ['equip', 'tactic', 'skillMove', 'upgrade', 'reroll', 'pathPick'].forEach(n => wrap(n, save => recalibrate(save)));
+  ['equip', 'equipIds', 'tactic', 'skillMove', 'skillOrder', 'upgrade', 'reroll', 'pathPick'].forEach(n => wrap(n, save => recalibrate(save)));
   wrap('upgrade', save => bump(save.hero, 'upgrades'));
   // ===================== Holdkrónika (fő történet) =====================
   // 10 fejezet; a következő a fejezet szintjétől nyílik. Minden fejezet végén egyedi főellenfél, egyszeri jutalommal.
@@ -4695,7 +4733,7 @@ async function admin(user, player, args) {
 }
 
 // ---------- belépési kör ----------
-const LOGGED = ['start', 'fight', 'choose', 'retreat', 'upgrade', 'reroll', 'patrolStart', 'patrolClaim', 'equip', 'salvageWeak'];
+const LOGGED = ['start', 'fight', 'choose', 'retreat', 'upgrade', 'reroll', 'patrolStart', 'patrolClaim', 'equip', 'equipIds', 'salvageWeak'];
 
 // ---------- Aréna, csapat, céh ----------
 const X = G.extra;

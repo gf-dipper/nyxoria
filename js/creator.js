@@ -21,14 +21,17 @@
   const C = {
     classId: O.classId || 'magus', people: O.people || null, scene: O.scene || 'holdfeny', name: O.name || '', step: 'alap', yaw: 0, zoom: 'full', preview: null, seen: new Set(['alap']),
     look: Object.assign(R.defaultLook(O.classId || 'magus'), O.look || {}),
-    origin: O.origin || 'arva', trait: O.trait || 'kivancsi', motto: O.motto || ''
+    origin: O.origin || 'arva', trait: O.trait || 'kivancsi', motto: O.motto || '', locks: new Set(), ideas: null
   };
   const RESTYLE = O.mode === 'restyle';
+  if (window.NYX) window.NYX.creatorDebug = () => JSON.parse(JSON.stringify({ look: C.look, people: C.people, name: C.name, classId: C.classId, locks: [...C.locks] }));
   const NAME_HINT = O.nameHint || 'Legfeljebb 16 karakter: betű, szám, szóköz vagy kötőjel.';
   const HIST = { undo: [], redo: [] };
 
   // ikonok (24×24, vonalas)
   const IC = {
+    lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+    unlock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/>',
     undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
     redo: '<path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>',
     dice: '<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><g fill="currentColor" stroke="none"><circle cx="8.3" cy="8.3" r="1.5"/><circle cx="15.7" cy="8.3" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="8.3" cy="15.7" r="1.5"/><circle cx="15.7" cy="15.7" r="1.5"/></g>',
@@ -56,7 +59,7 @@
 
   const STEPS = [
     { id: 'alap', name: 'Alap', desc: RESTYLE ? 'Nem, testalkat, bőrszín és farok. A kaszt és a faj nem változik.' : 'Nem, kaszt, faj, testalkat és farok. Ezzel kezdődik minden.', zoom: 'full', keys: ['sex', 'body', 'height', 'skin', 'tail'],
-      groups: RESTYLE ? [['sex'], ['opt', 'body'], ['opt', 'height'], ['color', 'skin'], ['opt', 'tail']] : [['sex'], ['class'], ['people'], ['opt', 'body'], ['opt', 'height'], ['color', 'skin'], ['opt', 'tail']] },
+      groups: RESTYLE ? [['ideas'], ['sex'], ['opt', 'body'], ['opt', 'height'], ['color', 'skin'], ['opt', 'tail']] : [['sex'], ['class'], ['ideas'], ['people'], ['opt', 'body'], ['opt', 'height'], ['color', 'skin'], ['opt', 'tail']] },
     { id: 'arc', name: 'Arc', desc: 'Arcforma, szemek és az, hogy milyen képet vág a hősöd.', zoom: 'face', keys: ['face', 'eyeShape', 'eye', 'eye2', 'eyeGlow', 'brows', 'nose', 'mouth', 'mark'],
       groups: [['opt', 'face'], ['opt', 'eyeShape'], ['color', 'eye'], ['color', 'eye2', true], ['toggle', 'eyeGlow'], ['opt', 'brows'], ['opt', 'nose'], ['opt', 'mouth'], ['opt', 'mark']] },
     { id: 'haj', name: 'Haj', desc: 'Válassz frizurát és hajszínt. A haj végét külön is átszínezheted.', zoom: 'upper', keys: ['hairFront', 'hairBack', 'hair', 'tip', 'beard'],
@@ -374,7 +377,7 @@
   function initPanel() {
     $('#cpanel').innerHTML =
       `<div class="nxc-steps" id="csteps" role="tablist" aria-label="A karakterkészítés lépései">${STEPS.map(s => `<button role="tab" id="ctab-${s.id}" data-step="${s.id}" aria-controls="cbody" aria-selected="false" tabindex="-1"><span class="n">${s.i + 1}</span><span class="seen" hidden></span>${icon(s.id)}<span>${s.name}</span></button>`).join('')}</div>
-      <div class="step-head"><div><div class="cnt" id="ccnt"></div><h3 id="ctitle"></h3><p id="cdesc"></p></div><button class="tbtn" id="crstep" data-act="randstep" title="Csak ennek a lépésnek a beállításait sorsolja újra">${icon('dice')}<span class="lbl">Sorsolás</span></button></div>
+      <div class="step-head"><div><div class="cnt" id="ccnt"></div><h3 id="ctitle"></h3><p id="cdesc"></p></div><div class="row" style="gap:6px"><button class="tbtn" id="clock" data-act="lockstep" aria-pressed="false">${icon('unlock')}<span class="lbl">Zárolás</span></button><button class="tbtn" id="crstep" data-act="randstep" title="Csak ennek a lépésnek a beállításait sorsolja újra">${icon('dice')}<span class="lbl">Sorsolás</span></button></div></div>
       <div class="c-body" id="cbody" role="tabpanel" tabindex="-1"></div>
       <div class="c-foot"><button class="btn" id="cprev" data-act="prev">${icon('left')}Előző</button><div class="prog"><span id="cprog"></span><div class="track"><i id="cbar"></i></div></div><button class="btn primary" id="cnext" data-act="next"></button></div>`;
   }
@@ -390,6 +393,11 @@
     $('#ctitle').textContent = s.name; $('#cdesc').textContent = s.desc;
     $('#crstep').title = s.id === 'nev' ? 'Új névötlet' : s.id === 'alap' ? 'Nem, faj, testalkat, bőrszín és farok újrasorsolása (a kaszt marad)' : 'Csak ennek a lépésnek a beállításait sorsolja újra';
     $('#crstep').setAttribute('aria-label', s.id === 'nev' ? 'Névötlet' : `Sorsolás ennél a lépésnél: ${s.name}`);
+    // zárolás: a Meglepetés gomb és az Ötletek a zárolt lépés beállításait nem változtatják
+    const lk = $('#clock'), on = C.locks.has(s.id), lockable = !(RESTYLE && s.id === 'nev');
+    lk.hidden = !lockable; lk.setAttribute('aria-pressed', String(on)); lk.innerHTML = `${icon(on ? 'lock' : 'unlock')}<span class="lbl">${on ? 'Zárolva' : 'Zárolás'}</span>`;
+    lk.title = on ? 'Zárolva: a Meglepetés gomb ezt a lépést nem változtatja. Kattints a feloldáshoz.' : 'Zárold, ha ez így tetszik: a Meglepetés gomb és az ötletek ezt a lépést nem változtatják.';
+    STEPS.forEach(x => $('#ctab-' + x.id).classList.toggle('locked', C.locks.has(x.id)));
     $('#cprev').disabled = s.i === 0;
     const nx = $('#cnext');
     if (last) { nx.className = 'btn fakla'; nx.dataset.act = 'done'; nx.innerHTML = `${icon('star')}${RESTYLE ? 'Mentés' : 'Kész'}`; }
@@ -427,6 +435,7 @@
     const t = g[0];
     if (t === 'opt') return optTiles(g[1]);
     if (t === 'color') return colorGroup(g[1], g[2]);
+    if (t === 'ideas') return `<div class="grp" data-g="ideas"><div class="grp-h"><h4 id="g-ideas">Ötletek</h4><button class="tbtn sm" data-act="ideas">${icon('dice')}<span class="lbl">Újak</span></button></div><p class="note" style="margin:0 0 8px">Kész hősök egy kattintásra; utána mindent átállíthatsz. A zárolt lépéseket megtartják.</p><div class="tiles ideas" id="cideas" role="group" aria-labelledby="g-ideas">${ideasHtml()}</div></div>`;
     if (t === 'sex') return `<div class="grp" data-g="sex">${grpHead('sex', 'Nem', 'sex')}<div class="sex" role="group" aria-labelledby="g-sex">${[['no', 'Nő', 'Karcsúbb váll, lágyabb vonások'], ['ferfi', 'Férfi', 'Szélesebb váll, markánsabb arc']].map(([v, n, d]) => `<button class="tile" data-set="sex" data-v="${v}" data-pv aria-pressed="false">${ck}${tileImg('sex', v)}<span><b>${n}</b><small>${d}</small></span></button>`).join('')}</div></div>`;
     if (t === 'class') return `<div class="grp" data-g="class">${grpHead('class', 'Kaszt', 'class')}<div class="tiles full cls" role="group" aria-labelledby="g-class">${CLS.map(c => `<button class="tile" data-class="${c}" data-pv aria-pressed="false">${ck}${tileImg('class', c)}<span class="nm">${D.CLASSES[c].name}</span><span class="sm">${D.CLASSES[c].role}</span></button>`).join('')}</div><div class="info" id="cclassinfo"></div></div>`;
     if (t === 'people') return `<div class="grp" data-g="people">${grpHead('people', 'Faj', 'people')}<div class="tiles" role="group" aria-labelledby="g-people">${D.PEOPLE_ORDER.map(p => `<button class="tile" data-people="${p}" data-pv aria-pressed="false">${ck}${tileImg('people', p)}<span class="nm">${D.PEOPLES[p].name}</span></button>`).join('')}</div><div class="info" id="cpeopleinfo"></div></div>`;
@@ -627,15 +636,29 @@
       }
     });
   }
+  // egy véletlen hős a zárolt lépések megtartásával (a Meglepetés gomb és az Ötletek is ezt használja)
+  function lockedRandom() {
+    const L = tidy(R.randomLook(C.classId, rnd));
+    if (C.classId === 'orgyilkos') L.outfit = 1; // az álarcos ruha eltakarná az arcot
+    const keepAlap = C.locks.has('alap');
+    // zárolt haj szakállal: a szakáll csak férfin marad meg, ezért ilyenkor a nem is marad
+    if (C.locks.has('haj') && C.look.beard && C.look.beard !== 'nincs') L.sex = C.look.sex;
+    const p = RESTYLE || keepAlap ? C.people : pick(D.PEOPLE_ORDER);
+    if (p && PEOPLE[p] && rnd() < 0.5) L.skin = PEOPLE[p].skin;
+    if (p && PEOPLE[p] && ['roka', 'macska'].indexOf(L.ears) < 0) L.ears = PEOPLE[p].ears;
+    STEPS.forEach(st => { if (C.locks.has(st.id)) st.keys.forEach(k => { L[k] = C.look[k]; }); });
+    if (keepAlap) L.ears = C.look.ears;
+    if (L.sex === 'no') L.beard = 'nincs';
+    return { look: tidy(L), people: p, name: RESTYLE || C.locks.has('nev') ? C.name : randomName(L.sex, C.name) };
+  }
   function randomizeAll() {
-    commit(() => {
-      const L = tidy(R.randomLook(C.classId, rnd));
-      if (C.classId === 'orgyilkos') L.outfit = 1; // az álarcos ruha eltakarná az arcot
-      const p = RESTYLE ? C.people : pick(D.PEOPLE_ORDER); if (!RESTYLE) C.people = p;
-      if (p && PEOPLE[p] && rnd() < 0.5) L.skin = PEOPLE[p].skin;
-      if (p && PEOPLE[p] && ['roka', 'macska'].indexOf(L.ears) < 0) L.ears = PEOPLE[p].ears;
-      C.look = L; if (!RESTYLE) C.name = randomName(L.sex, C.name);
-    });
+    commit(() => { const r = lockedRandom(); C.look = r.look; if (!RESTYLE) { C.people = r.people; C.name = r.name; } });
+  }
+  // Ötletek: négy kész, azonnal választható hős (csak kinézet: az erő minden ötletnél ugyanaz), utána szabadon szerkeszthető
+  function newIdeas() { C.ideas = [0, 1, 2, 3].map(() => lockedRandom()); }
+  function ideasHtml() {
+    if (!C.ideas) newIdeas();
+    return C.ideas.map((x, i) => `<button class="tile idea" data-idea="${i}" aria-label="${i + 1}. ötlet kiválasztása"><span class="idea-fig">${R.hero({ name: '', classId: C.classId, rig: x.look }, { yaw: 0 }).replace(/viewBox="[^"]*"/, `viewBox="${VB_FULL}"`)}</span></button>`).join('');
   }
   function resetLook() {
     const ok = commit(() => {
@@ -686,7 +709,14 @@
       if (d.col !== undefined) { commit(() => { C.look[d.col] = d.v || null; }); return; }
       if (d.metal) { commit(() => { C.look.metal = d.metal; }); return; }
       if (d.tog) { commit(() => { C.look[d.tog] = !C.look[d.tog]; }); return; }
-      if (d.class) { commit(() => { C.classId = d.class; C.look = classLook(C.look, d.class); }); return; }
+      if (d.class) {
+        // a ruha szabása és a fegyver kasztonként más: kasztváltáskor ezek zárolása feloldódik (szólunk is róla)
+        const had = ['ruha', 'fegyver'].filter(x => C.locks.has(x));
+        commit(() => { C.classId = d.class; C.look = classLook(C.look, d.class); had.forEach(x => C.locks.delete(x)); C.ideas = null; });
+        if (had.length && d.class) toast('Új kaszt, új szabás és fegyver: az öltözet és a fegyver zárolását feloldottam.');
+        return;
+      }
+      if (d.idea != null && C.ideas && C.ideas[+d.idea]) { const x = C.ideas[+d.idea]; commit(() => { C.look = Object.assign({}, x.look); if (!RESTYLE) { C.people = x.people; C.name = x.name; } }); return; }
       if (d.people) { commit(() => { C.people = d.people; Object.assign(C.look, PEOPLE[d.people]); }); return; }
       if (d.origin) { C.origin = d.origin; syncBody(); return; }
       if (d.trait) { C.trait = d.trait; syncBody(); return; }
@@ -698,6 +728,8 @@
         case 'undo': undo(); break;
         case 'redo': redo(); break;
         case 'random': randomizeAll(); break;
+        case 'lockstep': { const id = C.step; if (C.locks.has(id)) C.locks.delete(id); else C.locks.add(id); C.ideas = null; updateChrome(); if (id === 'alap') syncBody(); break; }
+        case 'ideas': newIdeas(); { const el = $('#cideas'); if (el) el.innerHTML = ideasHtml(); } break;
         case 'reset': resetLook(); break;
         case 'randstep': randomizeStep(); break;
         case 'namegen': commit(() => { C.name = randomName(C.look.sex, C.name); }, { noPop: true }); break;

@@ -149,6 +149,15 @@
       if (!e.dodge) { pose(monSvg(), 'act-hit'); V.number(stage, p.mon.x + 30, p.mon.y - 20, String(e.dmg), 'hit'); } else V.number(stage, p.mon.x + 30, p.mon.y - 20, 'mellé', 'miss');
       onHit && onHit(e);
     }
+    // az ellenfél (párbajban a másik hős) társa: szellemlövedék tőle a hős felé
+    async function petM(g, e, onHit) {
+      if (!alive(g)) return;
+      const p = points();
+      if (!quiet()) await V.projectile(stage, { from: { x: p.monHead.x - 30, y: p.monHead.y }, to: p.hero.center, kind: 'spirit', color: '#ffb3c8', arc: -50 });
+      if (!alive(g)) return;
+      if (!e.dodge) { pose(heroSvg(), 'act-hit'); V.number(stage, p.hero.head.x + 10, p.hero.head.y - 50, String(e.dmg), 'hit'); } else { pose(heroSvg(), 'dodge'); V.number(stage, p.hero.head.x + 10, p.hero.head.y - 50, 'kitért', 'miss'); }
+      onHit && onHit(e);
+    }
     // side: 'm' = a hatás az ellenfélen látszik (párbajban az ellenfél is gyógyul, pajzsot húz, kábít, mérgez)
     function heal(g, amount, side) { if (!alive(g)) return; const p = points(); if (amount > 0) { if (side === 'm') { if (!quiet()) V.heal(stage, { at: p.mon }); V.number(stage, p.mon.x + 10, p.monHead.y - 30, '+' + amount, 'heal'); return; } if (!quiet()) V.heal(stage, { at: p.hero.center }); V.number(stage, p.hero.head.x + 10, p.hero.head.y - 50, '+' + amount, 'heal'); } }
     function shield(g, side) { if (!alive(g)) return; const p = points(); if (side === 'm') { V.number(stage, p.mon.x + 10, p.monHead.y - 30, 'pajzs', 'heal'); return; } if (!quiet()) V.shield(stage, { at: p.hero.center, box: p.hero.box }); V.number(stage, p.hero.head.x + 10, p.hero.head.y - 50, 'pajzs', 'heal'); }
@@ -162,7 +171,7 @@
     }
     // végállapot (átugrás után, újrarajzoláskor): csak a pózok, effektek nélkül
     function setEnd(win) { const hs = heroSvg(), ms = monSvg(); if (win) { if (ms && !st.boss) ms.classList.add('act-ko'); } else if (hs) hs.classList.add('act-ko'); }
-    return Object.assign(st, { setRate, heroSkill, heroCast, monAttack, pet, heal, shield, stun, dot, finish, setEnd, wait: w, newGen: () => ++st.gen, alive });
+    return Object.assign(st, { setRate, heroSkill, heroCast, monAttack, pet, petM, heal, shield, stun, dot, finish, setEnd, wait: w, newGen: () => ++st.gen, alive });
   }
 
   root.NYX.stage = { html: html, create: create, esc: esc };

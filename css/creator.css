@@ -293,3 +293,11 @@
 .nxc .story-card[aria-pressed="true"] { border-color: var(--hold-300); background: rgba(207, 216, 255, .12); box-shadow: inset 0 0 0 1px var(--hold-300); }
 .nxc .story-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .nxc .story-chips .chip { min-height: 40px; }
+/* zárolt lépés jelzése a lépéssoron, ötletek */
+.cr [role="tab"].locked::after, [id^="ctab-"].locked::after { content: ''; display: inline-block; width: 9px; height: 9px; margin-left: 5px; border-radius: 2px; background: currentColor; opacity: .7; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 11V8a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1zm2 0h6V8a3 3 0 0 0-6 0z'/%3E%3C/svg%3E") center/contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 11V8a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1zm2 0h6V8a3 3 0 0 0-6 0z'/%3E%3C/svg%3E") center/contain no-repeat; }
+#clock[aria-pressed="true"] { color: var(--fakla-300, #f2c46b); border-color: rgba(242, 196, 107, .55); }
+.tiles.ideas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.tile.idea { padding: 4px; aspect-ratio: 3 / 4; overflow: hidden; }
+.tile.idea .idea-fig { display: block; width: 100%; height: 100%; }
+.tile.idea .idea-fig svg { width: 100%; height: 100%; display: block; }
+.nxc .tbtn.sm { height: 30px; padding: 0 9px; font-size: 12px; }
