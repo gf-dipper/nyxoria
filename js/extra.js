@@ -665,10 +665,11 @@
     const moon = E.MOONS[exp.offer.moon] || E.MOONS.ujhold;
     if (!E.DIFF[exp.offer.diff]) return;
     // ugyanazzal a céllal (a hold kockázatával együtt) és ugyanazokkal a próbaharcokkal, mint az ajánlat
-    const lm = E.findMonsterLevel(E.fighterFromHero(h), h.tactic, E.eliteTarget(exp.offer.diff, moon, exp.offer.elite), { seed: 1000 + E.DIFF_ORDER.indexOf(exp.offer.diff), n: 240, power: moon.power });
+    const ch = E.canonHero(h); // az alap felálláshoz mérünk: a sorrend és a taktika váltása nem tolja feljebb az őrzőt
+    const lm = E.findMonsterLevel(E.fighterFromHero(ch), ch.tactic, E.eliteTarget(exp.offer.diff, moon, exp.offer.elite), { seed: 1000 + E.DIFF_ORDER.indexOf(exp.offer.diff), n: 240, power: moon.power });
     if (lm > exp.offer.lm) { exp.offer.lm = lm; exp.offer.level = Math.max(1, Math.round(lm)); }
   }
-  ['equip', 'equipIds', 'tactic', 'skillMove', 'skillOrder', 'upgrade', 'reroll', 'pathPick', 'transfer'].forEach(n => wrap(n, save => recalibrate(save)));
+  ['equip', 'equipIds', 'upgrade', 'reroll', 'pathPick', 'transfer'].forEach(n => wrap(n, save => recalibrate(save)));
   wrap('upgrade', save => bump(save.hero, 'upgrades'));
   // ===================== Holdkrónika (fő történet) =====================
   // 10 fejezet; a következő a fejezet szintjétől nyílik. Minden fejezet végén egyedi főellenfél, egyszeri jutalommal.

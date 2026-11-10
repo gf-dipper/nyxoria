@@ -79,6 +79,14 @@
             'Közepes: a jó középút.',
             'Nehéz: kockázatos, de több tapasztalat, Holdezüst, Csillagpor és tárgy jár, és főleg innen jönnek a legendás tárgyak.'
           ] },
+          { h: 'Az őrzők természete', p: 'A {TRAIT_MIN}. szinttől a három ajánlat őrzője más-más természetű; ez a kaland kártyáján és az őrző előtt is látszik. Az őrző ereje a hősöd alap felállásához igazodik (a képességek a megszerzés sorrendjében, a kasztod ajánlott taktikájával), ezért aki a sorrenddel és a taktikával alkalmazkodik, annak tényleg jobb az esélye. A kártyán látott esély mindig a mostani felállásodra szól. A Karakter oldalon az „Ajánlott sorrend” kaland közben az éppen rád váró őrző ellen számol.', list: [
+            'Páncélos: az első 3 körben a sebzés közel harmadát felfogja. A páncéltörő képesség rögtön áttöri.',
+            'Fürge: nehezebb eltalálni, a nagy csapások elől különösen gyakran kitér. A méreg és a kísérő lény biztosabb.',
+            'Dühöngő: körről körre nagyobbat üt (egy határig). A rövid harc és a kábítás segít.',
+            'Szívós: az első 8 körben minden körben visszagyógyul. A sok sebzés egyszerre többet ér.',
+            'Lesből támad: az első csapása jóval nagyobb. Az elöl álló pajzs, kitérés vagy védekezés felfogja a javát.',
+            'Tüskés: a találataid egy részét visszakapod. A pajzs ezt is felfogja; a méreg és a kísérő lény után nem jár visszaszúrás.'
+          ] },
           { h: 'Győzelem és vereség', list: [
             'Győzelemnél tapasztalat, Holdezüst és Csillagpor jár, és a három felkínált jutalomból egyet választhatsz.',
             'A jutalom lehet tárgy, egy marék Holdezüst, Csillagpor vagy tapasztalat-tekercs. A jobb tárgyat a hősöd magától felveszi.',

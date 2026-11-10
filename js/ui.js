@@ -774,9 +774,11 @@
   function orderAdvice() {
     const h = hero(), lo = h.loadout || [];
     if (lo.length < 2) return null;
-    const offers = (S.save.offers || []).filter(o => o.diff === 'kozepes' || o.diff === 'nehez');
-    const mons = offers.length ? offers.map(o => E.monsterFighter(o.lm, { name: o.guard })) : [E.monsterFighter(E.findMonsterLevel(E.fighterFromHero(h), h.tactic, 0.6, { n: 80 }))];
-    const score = (order, seed, n) => { const hh = Object.assign({}, h, { loadout: order }), f = E.fighterFromHero(hh); return mons.reduce((t, m) => t + E.winChance(f, m, h.tactic, n, seed), 0) / mons.length; };
+    // kaland közben a mostani őrző ellen számolunk (az ő természetével és a hős mostani állapotával)
+    const exp = inExpedition() ? S.save.expedition : null;
+    const offers = exp ? [exp.offer] : (S.save.offers || []).filter(o => o.diff === 'kozepes' || o.diff === 'nehez');
+    const mons = offers.length ? offers.map(o => E.monsterFighter(o.lm, { name: o.guard, trait: o.trait, power: (E.MOONS[o.moon] || E.MOONS.ujhold).power })) : [E.monsterFighter(E.findMonsterLevel(E.fighterFromHero(h), h.tactic, 0.6, { n: 80 }))];
+    const score = (order, seed, n) => { const hh = Object.assign({}, h, { loadout: order }), f = E.fighterFromHero(hh, exp ? { hpFactor: exp.hpFactor, blessing: exp.blessing } : null); return mons.reduce((t, m) => t + E.winChance(f, m, h.tactic, n, seed), 0) / mons.length; };
     const cur = score(lo, 9191, 160); let best = lo, bs = cur;
     perms(lo).forEach(p => { if (p.join() === lo.join()) return; const sc = score(p, 9191, 160); if (sc > bs + 1e-9) { bs = sc; best = p; } });
     // ellenőrzés független véletlenszámokkal: csak akkor ajánlunk, ha ott is egyértelműen jobb
@@ -786,9 +788,9 @@
       const c1 = score(lo, 31337, 400), b1 = score(best, 31337, 400), c2 = score(lo, 70001, 400), b2 = score(best, 70001, 400);
       vc = (c1 + c2) / 2; vb = (b1 + b2) / 2; sure = b1 >= c1 + 0.03 && b2 >= c2 + 0.03 && bs >= cur + 0.03;
     }
-    return { cur: vc, best, bs: vb, sure, prev: lo.slice(), key: orderKey(h, lo) };
+    return { cur: vc, best, bs: vb, sure, prev: lo.slice(), key: orderKey(h, lo), guard: exp ? exp.offer.guard : null };
   }
-  function orderKey(h, lo) { return (lo || h.loadout).join() + '|' + h.level + '|' + h.tactic + '|' + (h.path == null ? '' : h.path) + '|' + D.SLOT_ORDER.map(sl => { const i = h.equipped[sl]; return i ? i.id + '+' + (i.plus || 0) + JSON.stringify(i.affixes || []) : '-'; }).join(','); }
+  function orderKey(h, lo) { return (S.save.expedition && S.save.expedition.phase !== 'result' ? S.save.expedition.id + '|' : '') + (lo || h.loadout).join() + '|' + h.level + '|' + h.tactic + '|' + (h.path == null ? '' : h.path) + '|' + D.SLOT_ORDER.map(sl => { const i = h.equipped[sl]; return i ? i.id + '+' + (i.plus || 0) + JSON.stringify(i.affixes || []) : '-'; }).join(','); }
   const inExpedition = () => !!(S.save.expedition && S.save.expedition.phase !== 'result');
   // rövid magyarázat: miért jobb, ha ez a képesség jön először (a játékos tanuljon belőle, ne csak átvegye)
   function orderWhy(best, prev) {
@@ -803,12 +805,11 @@
   function orderBox() {
     const h = hero(), a = S.orderAdv;
     if ((h.loadout || []).length < 2) return '';
-    // kaland közben az őrző a hős mostani erejéhez igazodik: itt nem ajánlunk (a nyereség nem érvényesülne, és nem lenne valódi visszavonás)
-    if (inExpedition()) return `<div class="ord-box ok"><div><b>Ajánlott sorrend</b><p class="small muted">Kaland közben nem számolok: az őrző a hősöd mostani erejéhez igazodik. A kaland után nézd meg újra.</p></div></div>`;
-    if (!a || a.key !== orderKey(h)) return `<div class="ord-box"><div><b>Ajánlott sorrend</b><p class="small muted">Kipróbálom az összes sorrendet a mostani kalandok ellenfelei ellen, és megmutatom, melyikkel nyersz a legtöbbször.</p></div><button class="btn sm" data-act="order-calc">Kiszámolom</button></div>`;
+    const onGuard = inExpedition() ? S.save.expedition.offer.guard : null, where = onGuard ? `${esc(onGuard)} ellen` : 'a mostani kalandok ellenfelei ellen';
+    if (!a || a.key !== orderKey(h)) return `<div class="ord-box"><div><b>Ajánlott sorrend</b><p class="small muted">Kipróbálom az összes sorrendet ${where}, és megmutatom, melyikkel nyersz a legtöbbször.</p></div><button class="btn sm" data-act="order-calc">Kiszámolom</button></div>`;
     if (a.applied) return `<div class="ord-box ok"><div><b>Átvetted az ajánlott sorrendet.</b><p class="small muted">${orderWhy(a.best, a.prev)}</p></div><button class="btn sm" data-act="order-undo">Visszaállítom</button></div>`;
-    if (!a.sure) return `<div class="ord-box ok"><div><b>Nincs egyértelműen jobb sorrend.</b><p class="small muted">A mostani sorrended jó: más sorrend nem ad érezhetően jobb esélyt (most kb. ${pct(a.cur)} a közepes és nehéz kalandokon átlagosan).</p></div></div>`;
-    return `<div class="ord-box good"><div><b>Jobb sorrendet találtam</b><p class="small">${a.best.map((id, i) => `${i + 1}. ${esc(D.SKILLS[id].name)}`).join(' → ')}</p><p class="small muted">${orderWhy(a.best, a.prev)} Győzelmi esély a mostani kalandokon átlagosan: ${pct(a.cur)} helyett <b style="color:var(--tunde-400)">${pct(a.bs)}</b>.</p></div><button class="btn fakla sm" data-act="order-apply">Átveszem</button></div>`;
+    if (!a.sure) return `<div class="ord-box ok"><div><b>Nincs egyértelműen jobb sorrend.</b><p class="small muted">A mostani sorrended jó: más sorrend nem ad érezhetően jobb esélyt (most kb. ${pct(a.cur)} ${onGuard ? 'ez ellen az őrző ellen' : 'a közepes és nehéz kalandokon átlagosan'}).</p></div></div>`;
+    return `<div class="ord-box good"><div><b>Jobb sorrendet találtam</b><p class="small">${a.best.map((id, i) => `${i + 1}. ${esc(D.SKILLS[id].name)}`).join(' → ')}</p><p class="small muted">${orderWhy(a.best, a.prev)} Győzelmi esély ${onGuard ? 'ez ellen az őrző ellen' : 'a mostani kalandokon átlagosan'}: ${pct(a.cur)} helyett <b style="color:var(--tunde-400)">${pct(a.bs)}</b>.</p></div><button class="btn fakla sm" data-act="order-apply">Átveszem</button></div>`;
   }
   function chanceOf(mon) { const h = hero(); return E.winChance(E.fighterFromHero(h), mon, h.tactic, 120, 4242); }
   function chanceWord(c) { return c >= 0.8 ? 'könnyű' : c >= 0.6 ? 'jó esélyed van' : c >= 0.4 ? 'kiegyenlített' : c >= 0.2 ? 'nehéz' : 'nagyon nehéz'; }
@@ -846,7 +847,7 @@
     const P = (X && X.QUEST_SLOTS) || 3, map = {
       TORCH_MAX: E.TORCH.max, TORCH_MIN: Math.round(E.TORCH.regenMs / 60000), RESTED_MAX: E.TORCH.restedMax, // a BOSS_HITS és a HERO_SLOTS a szerveren él (3–3); ha ott változik, itt is át kell írni
       GATE_KEK: E.RARITY_GATE.kek, GATE_LILA: E.RARITY_GATE.lila, GATE_LEG: E.RARITY_GATE.legendas,
-      PITY_LILA: E.PITY_PURPLE, PITY_LEG: E.PITY_LEGEND, INV_MAX: E.INVENTORY_MAX, REFUND: Math.round(E.REFUND * 100), PATH_LEVEL: D.PATH_LEVEL,
+      TRAIT_MIN: D.TRAIT_MIN_LEVEL, PITY_LILA: E.PITY_PURPLE, PITY_LEG: E.PITY_LEGEND, INV_MAX: E.INVENTORY_MAX, REFUND: Math.round(E.REFUND * 100), PATH_LEVEL: D.PATH_LEVEL,
       TOWER_TRIES: X ? X.TOWER_TRIES : 5, EVENT_TRIES: X ? X.EVENT_TRIES : 3, ARENA_FIGHTS: X ? X.ARENA_FIGHTS : 5, TEAM_RUNS: X ? X.TEAM_RUNS : 3, STORY_TRIES: X ? X.STORY_TRIES : 3, QUEST_SLOTS: P,
       ELITE_MIN: E.ELITE ? E.ELITE.minLevel : 5, ELITE_PCT: E.ELITE ? Math.round(E.ELITE.chance * 100) : 20, MOON_MIN: E.MOONS.felhold.minLevel, BOSS_HITS: 3, HERO_SLOTS: 3
     };
@@ -1300,14 +1301,14 @@
       return `<button class="offer${rec ? ' rec' : ''}${o.elite ? ' elite' : ''}" data-act="start" data-v="${o.diff}" aria-label="${E.DIFF[o.diff].name} kaland: ${esc(r.name)}, győzelmi esély ${pct(o.chance)}">
         <div class="scene">${A.sceneSvg(r.scene, A.hash(o.guard) % 997)}<i class="o-mood m-${o.diff}" aria-hidden="true"></i><div class="o-threat t-${o.diff}" aria-hidden="true">${A.monsterSvg(o.guard, o.region, { guard: true })}</div><span class="diff-pill d-${o.diff}">${E.DIFF[o.diff].name}</span>${rec ? '<span class="rec-pill">AJÁNLOTT</span>' : ''}</div>
         <div class="body">
-          <div><h3>${esc(r.name)}</h3><div class="small muted">Őrző: ${esc(o.guard)} · <span style="white-space:nowrap">${o.level}. szint</span></div>${o.elite ? '<div class="elite-line">Elit őrző: kisebb esély, több jutalom</div>' : ''}</div>
+          <div><h3>${esc(r.name)}</h3><div class="small muted">Őrző: ${esc(o.guard)} · <span style="white-space:nowrap">${o.level}. szint</span></div>${o.elite ? '<div class="elite-line">Elit őrző: kisebb esély, több jutalom</div>' : ''}${o.trait && D.GUARD_TRAITS[o.trait] ? `<div class="trait-line"><b>${D.GUARD_TRAITS[o.trait].name}</b> · ${esc(D.GUARD_TRAITS[o.trait].desc)}</div>` : ''}</div>
           <div class="chance"><b class="d-${o.diff}">${pct(o.chance)}</b><span class="small muted">győzelmi esély</span></div>
           <div class="reward-line"><span>${I.xp}${fmt(xp)} TP${t.rested && !tired ? ' (×2)' : tired ? ' (fáradtan)' : ''}</span><span>${I.silver}${fmt(Math.round(o.rewards.silver * tf))}</span>${tired ? '<span>tárgy nélkül</span>' : `<span>${pct(o.rewards.itemChance)} tárgy</span>`}</div>
         </div></button>`;
     }).join('');
     return (NEW_SHELL ? campStage() : mobileHeroStrip()) + (ONLINE ? bossStrip() : '') + `
       <section class="panel" aria-labelledby="exp-title" id="offers-anchor">
-        <div class="panel-title" style="align-items:flex-end"><div><h1 id="exp-title">Hová indulsz?</h1><p class="small muted">Egy kaland 1 fáklyába kerül, és nagyjából egy percig tart.</p></div></div>
+        <div class="panel-title" style="align-items:flex-end"><div><h1 id="exp-title">Hová indulsz?</h1><p class="small muted">Egy kaland 1 fáklyába kerül, és nagyjából egy percig tart.${offers.some(o => o.trait) ? ' Az őrzők természete a kártyán áll: a képességeid sorrendjével és a taktikával készülhetsz ellenük.' : ''}</p></div></div>
         ${bonusBadges()}
         ${tired ? `<div class="advice" style="margin-bottom:12px">${I.torch.replace('<svg', '<svg width="20" height="28"')}<div><b>Elfogytak a fáklyák.</b> Fáradtan is mehetsz, de kevesebb tapasztalatot és Holdezüstöt kapsz, tárgyat pedig nem (${(S.save.tiredRun || 0) < 8 ? '50%' : (S.save.tiredRun || 0) < 16 ? '25%' : '10%'}). ${torchText(t)}</div></div>` : ''}
         <div class="offers">${cards || '<p class="muted">Az ajánlatok töltődnek…</p>'}</div>
@@ -1504,8 +1505,8 @@
     const h = hero(), r = region(exp.offer.region), c = cls(h);
     // A győzelmi esélyt a böngésző számolja ki a látható adatokból (az eredményt a szerver dönti el)
     const heroF = E.fighterFromHero(h, { hpFactor: exp.hpFactor, blessing: exp.blessing });
-    const mon = E.monsterFighter(exp.offer.lm, { power: (E.MOONS[exp.offer.moon] || E.MOONS.ujhold).power, name: exp.offer.guard });
-    const chance = E.winChance(heroF, mon, h.tactic, 400, 777);
+    const mon = E.monsterFighter(exp.offer.lm, { power: (E.MOONS[exp.offer.moon] || E.MOONS.ujhold).power, name: exp.offer.guard, trait: exp.offer.trait });
+    const chance = E.winChance(heroF, mon, h.tactic, 400, 777), TRT = exp.offer.trait && D.GUARD_TRAITS[exp.offer.trait];
     const tacticSeg = ['roham', 'kiegy', 'kitartas'].map(id => `<button data-act="tactic" data-v="${id}" aria-pressed="${h.tactic === id}">${D.TACTICS[id].name}${c.tactic === id ? ' <span class="rec-tag">ajánlott</span>' : ''}</button>`).join('');
     const col = chance >= 0.65 ? 'var(--jo-400)' : chance >= 0.45 ? 'var(--kozepes-400)' : 'var(--veszely-400)';
     return `<div class="exp-scene">${A.sceneSvg(r.scene, 9)}<p class="intro">${guardText(exp.offer.guard, 'intro') ? esc(guardText(exp.offer.guard, 'intro')) : `A tisztás végén ott vár a terület őrzője: <b>${esc(exp.offer.guard)}</b>.`}</p></div>
@@ -1514,6 +1515,7 @@
         <div><div class="tiny">${exp.offer.elite ? '<span class="elite-tag">Elit</span> őrző' : 'Az őrző'}</div><h2>${esc(exp.offer.guard)}</h2><p class="small muted">${exp.offer.level}. szint · ${fmt(mon.maxHp)} ÉLET · ${fmt(mon.tam)} TÁM</p>
           <div class="chance" style="margin-top:8px"><b style="color:${col}">${pct(chance)}</b><span class="small muted">győzelmi esély (próbaharcok alapján)</span></div>
           ${exp.offer.elite ? `<p class="small elite-why">${esc(eliteText(exp.offer.guard))} Ha legyőzöd, több Holdezüst, Csillagpor és tapasztalat jár, és nagyobb eséllyel kapsz tárgyat.</p>` : ''}
+          ${TRT ? `<div class="trait-box"><b>${TRT.name}</b><span>${esc(TRT.desc)}</span><span class="tip">${esc(TRT.tip)}</span>${h.loadout.length > 1 ? '<button class="btn ghost sm" data-act="screen" data-v="hos">Sorrend ehhez az őrzőhöz</button>' : ''}</div>` : ''}
           ${modsHtml(exp)}</div>
         <div class="stack" style="min-width:220px"><div class="seg" role="group" aria-label="Taktika">${tacticSeg}</div><button class="btn fakla lg block" data-act="fight">Harcba!</button></div>
       </div></div>`;
@@ -1539,13 +1541,15 @@
         if (e.who === 'mpet') return e.dodge ? `<p class="heal">${M} társa mellécsap.</p>` : `<p class="mon">${M} társa odakap: ${fmt(e.dmg)}${e.crit ? ' (telitalálat!)' : ''}${e.absorbed ? ` (a pajzs ${fmt(e.absorbed)} pontot elnyelt)` : ''}.</p>`;
         if (e.who === 'pet') return e.dodge ? `<p class="muted">${c.pet} mellécsap.</p>` : `<p>${c.pet} odakap: ${fmt(e.dmg)}${e.crit ? ' (telitalálat!)' : ''}${e.absorbed ? ` (a pajzsa ${fmt(e.absorbed)} pontot elnyelt)` : ''}.</p>`;
         if (e.dodge) return `<p class="heal">${H} ügyesen kitér!</p>`;
+        if (e.ambush) return `<p class="mon">${M} lesből lecsap: ${fmt(e.dmg)} sebzés!${e.absorbed ? ` (a pajzs ${fmt(e.absorbed)} pontot elnyelt)` : ''}</p>`;
         return `<p class="mon">${M} ${e.special ? esc(c.special) : 'üt'}: ${fmt(e.dmg)} sebzés${e.special ? '!' : '.'}${e.crit ? ' Ez fájt!' : ''}${e.absorbed ? ` (a pajzs ${fmt(e.absorbed)} pontot elnyelt)` : ''}</p>`;
       case 'heal': if (e.who === 'ally') return e.amount > 0 ? `<p class="heal">${esc((c.allies || [])[e.ally] || 'A társad')} gyógyít: +${fmt(e.amount)} ÉLET.</p>` : '';
         return e.amount > 0 ? `<p class="${e.who === 'm' ? 'mon' : 'heal'}">${e.who === 'm' ? M : H} ${e.skill === 'regen' ? 'erőre kap a holdfénytől' : 'gyógyul'}: +${fmt(e.amount)} ÉLET.</p>` : '';
       case 'shield': if (e.who === 'ally') return `<p class="heal">${esc((c.allies || [])[e.ally] || 'A társad')} pajzsot emel ${H} elé: ${fmt(e.amount)} sebzést fog fel.</p>`;
         return e.who === 'm' ? `<p class="mon">${M} védőpajzsot von maga köré: ${fmt(e.amount)} sebzést fog fel.</p>` : `<p class="heal">Védőpajzs: ${fmt(e.amount)} sebzést fog fel.</p>`;
       case 'stun': return e.who === 'm' ? `<p class="mon">${H} megszédül, és kihagy egy kört.</p>` : `<p>${M} megszédül, és kihagy egy kört.</p>`;
-      case 'dot': return e.who === 'm' ? `<p class="mon">A méreg tovább mar: ${fmt(e.dmg)}.</p>` : `<p>A méreg tovább mar: ${fmt(e.dmg)}.</p>`;
+      case 'dot': if (e.thorn) return e.dmg > 0 || e.absorbed ? `<p class="mon">A tüskék visszaszúrnak: ${fmt(e.dmg)}${e.absorbed ? ` (a pajzs ${fmt(e.absorbed)} pontot elnyelt)` : ''}.</p>` : '';
+        return e.who === 'm' ? `<p class="mon">A méreg tovább mar: ${fmt(e.dmg)}.</p>` : `<p>A méreg tovább mar: ${fmt(e.dmg)}.</p>`;
       case 'skip': return e.who === 'h' ? `<p class="mon">${H} még kábult, nem tud támadni.</p>` : `<p class="muted">${M} még kábult, nem tud támadni.</p>`;
     }
     return '';
@@ -1857,12 +1861,13 @@
           <div class="nx-hh-sub"><span title="A FÜR növeli">Telitalálat <b>${dec(crit)}%</b></span><span title="A FÜR növeli">Kitérés <b>${dec(dodge)}%</b></span>${s.dmg ? `<span>Sebzés <b>+${s.dmg}%</b></span>` : ''}${s.heal ? `<span>Gyógyítás <b>+${s.heal}%</b></span>` : ''}<span>Győzelem <b>${fmt(h.stats.wins)}</b> / ${fmt(h.stats.expeditions)} kaland</span></div>
           <div class="power"><span class="tiny" style="color:var(--fakla-300)">${icx('misc', 'harcero-bare', '')}Harcerő</span><b>${fmt(E.power(s))}</b></div>
         </div></section>`;
+    const backExp = inExpedition() && S.save.expedition.phase === 'guard' ? '<div class="nx-backexp"><span class="small">Az őrző vár. A sorrendet és a taktikát itt is, ott is állíthatod.</span><button class="btn fakla sm" data-act="screen" data-v="kaland">Vissza az őrzőhöz</button></div>' : '';
     const eqP = `<section class="panel nx-eqp"><div class="panel-title"><h2>Felszerelés</h2><button class="btn ghost sm" data-act="screen" data-v="taska">Táska (${h.inventory.length})</button></div><div class="eq-grid">${tiles}</div><div class="eq-detail">${detail}</div></section>`;
     const skP = `<section class="panel nx-skp"><div class="panel-title"><h2>Képességek</h2></div>
           <p class="small muted" style="margin-bottom:10px">A hős mindig a lista első kész képességét használja. A sorrendet a nyilakkal állíthatod. Ha egyik sincs kész: <b>${esc(D.SKILLS[basic].name)}</b> (${esc(D.SKILLS[basic].desc.toLowerCase().replace(/\.\s*$/, ''))}).</p>
           ${orderBox()}${loadout || '<p class="small muted">A 3. szinten kapod az első képességet.</p>'}${locked}</section>`;
     const paP = `<section class="panel nx-pap">${pathsHtml(h)}</section>`;
-    return `<div class="nx-hwrap">${head}<div class="nx-hgrid"><div class="nx-hcol l">${eqP}</div><div class="nx-hcol r">${skP}${paP}</div></div></div>${NEW_CREATOR ? '' : lookPanel(h)}`;
+    return `<div class="nx-hwrap">${backExp}${head}<div class="nx-hgrid"><div class="nx-hcol l">${eqP}</div><div class="nx-hcol r">${skP}${paP}</div></div></div>${NEW_CREATOR ? '' : lookPanel(h)}`;
   }
   function renderWardrobe() {
     const h = hero();

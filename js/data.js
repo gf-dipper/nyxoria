@@ -243,6 +243,18 @@
     kozepes: { szurke: 0.45, zold: 0.35, kek: 0.16, lila: 0.04 },
     nehez:   { szurke: 0.30, zold: 0.35, kek: 0.25, lila: 0.10 }
   };
+  // Őrzők természete: minden őrzőnek van egy sajátossága, ami ellen más képességsorrend és taktika válik be.
+  // A motor (engine.js simulateFight) a mon.trait alapján alkalmazza. A számok úgy vannak hangolva, hogy átlagos
+  // felállás ellen az esély a kitűzött érték körül maradjon; aki alkalmazkodik, jobb esélyt kap.
+  var GUARD_TRAITS = {
+    pancelos: { name: 'Páncélos', armorRounds: 3, armor: 0.3, hp: 0.9, desc: 'Az első 3 körben a páncélja a sebzés közel harmadát felfogja, utána megreped.', tip: 'A legnagyobb ütéseid általában a 4. körtől érnek a legtöbbet; a páncéltörő képesség rögtön áttöri.' },
+    furge:    { name: 'Fürge', dodgeBig: 0.22, dodge: 0.02, big: 1.7, hp: 0.97, desc: 'Nehéz eltalálni: a nagy, lassú csapások elől különösen gyakran kitér.', tip: 'A sok kisebb ütés, a méreg és a kísérő lény biztosabban talál, mint egyetlen hatalmas csapás.' },
+    duhongo:  { name: 'Dühöngő', rage: 0.025, start: 0.92, cap: 1.12, desc: 'Körről körre egyre nagyobbat üt.', tip: 'Minél rövidebb a harc, annál jobb: a gyors sebzés és a kábítás segít.' },
+    szivos:   { name: 'Szívós', regen: 0.022, regenRounds: 8, hp: 0.9, desc: 'Az első 8 körben minden körben visszagyógyul valamennyit.', tip: 'A sok sebzés egyszerre többet ér ellene, mint a lassú őrlés.' },
+    lesbol:   { name: 'Lesből támad', ambush: 1.6, rest: 0.93, desc: 'Az első csapása jóval nagyobb a szokásosnál.', tip: 'Ha az első helyen pajzs, kitérés vagy védekezés áll, az felfogja a javát.' },
+    tuskes:   { name: 'Tüskés', thorns: 0.12, tam: 0.92, desc: 'Minden találatod egy részét visszakapod.', tip: 'A pajzs a tüskéket is felfogja, a gyógyítás pótolja; a méreg és a kísérő lény ütése után nem jár visszaszúrás.' }
+  };
+  var TRAIT_MIN_LEVEL = 6;
   var AFFIXES = [
     { id: 'dmg',   text: '+{v}% sebzés',            min: 4, max: 8 },
     { id: 'crit',  text: '+{v}% telitalálat-esély',    min: 2, max: 4 },
@@ -372,7 +384,7 @@
     PEOPLES: PEOPLES, PEOPLE_ORDER: PEOPLE_ORDER, HAIR_COLORS: HAIR_COLORS, ORIGINS: ORIGINS, ORIGIN_ORDER: ORIGIN_ORDER,
     TRAITS: TRAITS, TRAIT_ORDER: TRAIT_ORDER, REGIONS: REGIONS, MONSTER_SPECIALS: MONSTER_SPECIALS,
     CLEARING_INTROS: CLEARING_INTROS, SEARCHES: SEARCHES, EVENTS: EVENTS, SLOTS: SLOTS, SLOT_ORDER: SLOT_ORDER,
-    SLOT_BUDGET: SLOT_BUDGET, RARITIES: RARITIES, RARITY_ORDER: RARITY_ORDER, RARITY_TABLE: RARITY_TABLE, AFFIXES: AFFIXES,
+    SLOT_BUDGET: SLOT_BUDGET, RARITIES: RARITIES, RARITY_ORDER: RARITY_ORDER, RARITY_TABLE: RARITY_TABLE, AFFIXES: AFFIXES, GUARD_TRAITS: GUARD_TRAITS, TRAIT_MIN_LEVEL: TRAIT_MIN_LEVEL,
     ITEM_NAMES: ITEM_NAMES, ITEM_ADJ: ITEM_ADJ, LEGEND_NAMES: LEGEND_NAMES, LEGEND_LINES: LEGEND_LINES, MYTHIC_NAMES: MYTHIC_NAMES, MYTHIC_SLOTS: MYTHIC_SLOTS, PATHS: PATHS, PATH_LEVEL: PATH_LEVEL, OWL_TIPS: OWL_TIPS,
     LOOK_ENUMS: LOOK_ENUMS, LOOK_COLORS: LOOK_COLORS, LOOK_COLORS_OPT: LOOK_COLORS_OPT, LOOK_INTS: LOOK_INTS, LOOK_BASE: LOOK_BASE, CLASS_LOOK: CLASS_LOOK, PEOPLE_LOOK: PEOPLE_LOOK
   };

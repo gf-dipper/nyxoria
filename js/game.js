@@ -265,17 +265,17 @@
   function offersKey(save) {
     const h = save.hero;
     const eq = D.SLOT_ORDER.map(s => h.equipped[s] ? h.equipped[s].id + ':' + (h.equipped[s].plus || 0) + ':' + (h.equipped[s].rerolls || 0) : '').join(',');
-    return ['v2', h.level, h.loadout.join('.'), save.settings.moon, eq, h.path == null ? '' : h.path].join('|'); // a taktika nem hoz új kalandot, csak az esélyt számolja újra
+    return ['v4', h.level, h.loadout.slice().sort().join('.'), save.settings.moon, eq, h.path == null ? '' : h.path].join('|'); // a taktika nem hoz új kalandot, csak az esélyt számolja újra
   }
   function refreshOffers(save) {
     if (save.expedition) return;
     const key = offersKey(save);
     if (!save.offers || save.offersKey !== key) {
       save.offers = E.makeOffers(save.hero, save.settings.moon, E.newSeed());
-      save.offersKey = key; save.offersTactic = save.hero.tactic;
-    } else if (save.offersTactic !== save.hero.tactic) {
+      save.offersKey = key; save.offersTactic = save.hero.tactic + '|' + save.hero.loadout.join('.');
+    } else if (save.offersTactic !== save.hero.tactic + '|' + save.hero.loadout.join('.')) {
       save.offers.forEach(o => { o.chance = E.offerChance(save.hero, o); });
-      save.offersTactic = save.hero.tactic;
+      save.offersTactic = save.hero.tactic + '|' + save.hero.loadout.join('.');
     }
   }
 

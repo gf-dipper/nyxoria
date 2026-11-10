@@ -295,13 +295,16 @@
 
   function monsterFighter(Lm, opts) {
     opts = opts || {};
-    var r = refBase(Lm), pw = opts.power || 1;
-    return {
+    var r = refBase(Lm), pw = opts.power || 1, tr = opts.trait && D.GUARD_TRAITS[opts.trait] ? opts.trait : null, T = tr ? D.GUARD_TRAITS[tr] : {};
+    var hpM = pw * (T.hp || 1);
+    var m = {
       side: 'm', name: opts.name || 'Szörny', level: Math.max(1, Math.round(Lm)), lm: Lm,
-      maxHp: r.elet * GEAR_AVG * pw, hpStart: r.elet * GEAR_AVG * pw,
-      tam: r.tam * GEAR_AVG * pw, ved: r.ved * GEAR_AVG, fur: r.fur,
+      maxHp: r.elet * GEAR_AVG * hpM, hpStart: r.elet * GEAR_AVG * hpM,
+      tam: r.tam * GEAR_AVG * pw * (T.tam || 1), ved: r.ved * GEAR_AVG, fur: r.fur,
       dmgPct: 0, critPct: 0, dodgePct: 0, healPct: 0, firstPct: 0
     };
+    if (tr) m.trait = tr;
+    return m;
   }
 
   // ---------- Harc ----------
@@ -322,6 +325,7 @@
     var ready = {}, monMul = COMBAT.dmg + COMBAT.perSkill * ((mon.ghostOf && mon.loadout) || hero.loadout || []).length;
     (hero.loadout || []).forEach(function (id, i) { ready[id] = COMBAT.readyAtStart ? i + 1 : D.SKILLS[id].cd; });
     var firstHitDone = false, rnd, dmgDealt = 0, dmgTaken = 0, dodged = 0, crits = 0;
+    var TR = mon.trait ? D.GUARD_TRAITS[mon.trait] : null, monHitDone = false; // az őrző természete
 
     function emit(e) { if (log) { e.r = rnd; e.hp = Math.max(0, hp); e.mhp = Math.max(0, mhp); log.push(e); } }
 
@@ -331,9 +335,12 @@
       var attFur = att.side === 'm' ? att.fur * (rnd <= ms.slowUntil ? 1 - ms.slow : 1) : att.fur * (rnd <= st.hasteUntil ? 1 + st.haste : 1);
       var dodgeP = 0.03 + 0.12 * defFur / (defFur + sc) + def.dodgePct / 100;
       if (def.side === 'h' && rnd <= st.dodgeUntil) dodgeP += st.dodge;
+      if (TR && TR.dodgeBig && def.side === 'm') dodgeP += mult >= TR.big ? TR.dodgeBig : TR.dodge; // Fürge: a nagy csapások elől kitér
       if (rng() < dodgeP) return { dmg: 0, dodge: true };
       var ved = def.ved * (def.side === 'm' && rnd <= ms.armorUntil ? 1 - ms.armor : 1);
       var d = att.tam * 2 * mult * K / (K + ved) * (0.7 + rng() * 0.6);
+      if (TR && def.side === 'm' && TR.armor && rnd <= TR.armorRounds && !(rnd <= ms.armorUntil)) d *= 1 - TR.armor; // Páncélos: az első körökben (páncéltörés áttöri)
+      if (TR && att.side === 'm') { if (TR.rage) d *= Math.min(TR.cap, TR.start + TR.rage * (rnd - 1)); if (TR.ambush) d *= monHitDone ? TR.rest : TR.ambush; }
       d *= 1 + att.dmgPct / 100;
       if (att.side === 'h') {
         d *= T.out;
@@ -357,6 +364,11 @@
       mhp -= res.dmg; dmgDealt += res.dmg;
       if (res.dodge) dodged++; if (res.crit) crits++;
       emit({ who: 'h', kind: 'hit', skill: skillId, dmg: Math.round(res.dmg), crit: !!res.crit, dodge: !!res.dodge, first: !!res.first });
+      if (TR && TR.thorns && !res.dodge && res.dmg > 0 && mhp > 0 && hp > 1) { // Tüskés: a közvetlen találat egy része visszaüt (a pajzs felfogja)
+        var th = res.dmg * TR.thorns * hero.maxHp / mon.maxHp, tab = Math.min(st.shield, th); st.shield -= tab; th -= tab;
+        th = Math.min(th, hp - 1); hp -= th; dmgTaken += th;
+        if (th >= 0.5 || tab >= 0.5) emit({ who: 'm', kind: 'dot', thorn: true, dmg: Math.round(th), absorbed: Math.round(tab) });
+      }
       return res;
     }
 
@@ -438,13 +450,16 @@
     }
 
     function monTurn() {
+      if (TR && TR.regen && rnd <= TR.regenRounds && mhp < mon.maxHp) { var mb = mhp; mhp = Math.min(mon.maxHp, mhp + mon.maxHp * TR.regen); emit({ who: 'm', kind: 'heal', amount: Math.round(mhp - mb) }); } // Szívós
       if (ms.stunned) { ms.stunned = false; emit({ who: 'm', kind: 'skip' }); return; }
       var special = rnd % 4 === 0;
       var res = attackRoll(mon, hero, special ? 1.6 : 1.0);
+      if (TR && TR.ambush && !monHitDone) res.ambush = true;
+      monHitDone = true;
       var d = res.dmg;
       if (st.shield > 0 && d > 0) { var ab = Math.min(st.shield, d); st.shield -= ab; d -= ab; res.absorbed = Math.round(ab); }
       hp -= d; dmgTaken += d;
-      emit({ who: 'm', kind: 'hit', special: special, dmg: Math.round(d), crit: !!res.crit, dodge: !!res.dodge, absorbed: res.absorbed || 0 });
+      emit({ who: 'm', kind: 'hit', special: special, dmg: Math.round(d), crit: !!res.crit, dodge: !!res.dodge, absorbed: res.absorbed || 0, ambush: !!res.ambush });
     }
 
     for (rnd = 1; rnd <= maxR; rnd++) {
@@ -638,23 +653,39 @@
   // ---------- Expedíció-ajánlatok ----------
   // a hold kockázata a célesélyhez arányos: a Közepesnél teljes, a Nehéznél kisebb (különben a Nehéz Vérhold csapda lenne)
   function offerTarget(d, moon) { return DIFF[d].target - (moon.risk || 0) * DIFF[d].target / DIFF.kozepes.target; }
+  // A szörny szintjét a hős ALAP felállásához mérjük (a képességek a megszerzés sorrendjében, a kaszt alap taktikájával),
+  // nem a mostanihoz: így a jobb sorrend és a jól megválasztott taktika tényleg jobb esélyt ad, és nem tolja feljebb az ellenfelet.
+  function canonHero(hero) {
+    var c = D.CLASSES[hero.classId], lo = (hero.loadout || []).slice().sort(function (a, b) { return c.skills.indexOf(a) - c.skills.indexOf(b); });
+    return Object.assign({}, hero, { loadout: lo, tactic: c.tactic });
+  }
+  // a három ajánlat természete: a szintből és a megtett kalandok számából adódik (se felszereléssel, se sorrenddel, se holddal nem változik)
+  function offerTraits(hero) {
+    if (hero.level < D.TRAIT_MIN_LEVEL) return [null, null, null];
+    var r = mulberry32(((hero.level * 7919) ^ ((hero.stats && hero.stats.expeditions || 0) * 104729) ^ 0x7a17) >>> 0);
+    return shuffle(r, Object.keys(D.GUARD_TRAITS)).slice(0, 3);
+  }
   function makeOffers(hero, moonId, seed) {
     var rng = mulberry32(seed || newSeed());
-    var heroF = fighterFromHero(hero);
+    var heroF = fighterFromHero(hero), ch = canonHero(hero), canonF = fighterFromHero(ch), traits = offerTraits(hero);
     var moon = MOONS[moonId] || MOONS.ujhold;
     var used = {};
     return DIFF_ORDER.map(function (d, idx) {
       // az elit sorsolás független a felszereléstől: a szint és a megtett kalandok száma dönti el (felszerelés-cserével nem lehet „horgászni”)
       var elite = d !== 'konnyu' && hero.level >= ELITE.minLevel && mulberry32(((hero.level * 7919) ^ ((hero.stats && hero.stats.expeditions || 0) * 104729) ^ (idx * 31 + 0x51ed)) >>> 0)() < ELITE.chance;
-      var Lm = findMonsterLevel(heroF, hero.tactic, eliteTarget(d, moon, elite), { seed: 1000 + idx, n: 240, power: moon.power });
+      var Lm = findMonsterLevel(canonF, ch.tactic, eliteTarget(d, moon, elite), { seed: 1000 + idx, n: 240, power: moon.power });
       var region = regionFor(Lm, d);
       var guards = region.guards.filter(function (g) { return !used[g]; });
-      var guard = pick(rng, guards.length ? guards : region.guards); used[guard] = 1;
-      var mon = monsterFighter(Lm, { power: moon.power, name: guard });
+      // az őrző a szintből és a megtett kalandok számából adódik (képességsorrend-cserével nem lehet könnyebb őrzőt „horgászni”)
+      var grng = mulberry32(((hero.level * 7919) ^ ((hero.stats && hero.stats.expeditions || 0) * 104729) ^ (idx * 131 + 0x77aa)) >>> 0);
+      var guard = pick(grng, guards.length ? guards : region.guards); used[guard] = 1;
+      var trait = traits[idx] || null;
+      var mon = monsterFighter(Lm, { power: moon.power, name: guard, trait: trait });
       var chance = winChance(heroF, mon, hero.tactic, 500, 4242); // rögzített próbaharcok: ugyanarra a helyzetre mindig ugyanazt az esélyt mutatja
       var o = { diff: d, lm: Lm, level: mon.level, region: region.id, guard: guard, moon: moonId || 'ujhold',
                chance: chance, seed: newSeed(rng) };
       if (elite) o.elite = true;
+      if (trait) o.trait = trait;
       o.rewards = expeditionRewardsPreview(hero, d, Lm, moonId, elite);
       return o;
     });
@@ -663,7 +694,7 @@
   // taktikaváltáskor nem jön új kaland, csak az esélyek számolódnak újra ugyanazokra az őrzőkre
   function offerChance(hero, o) {
     var moon = MOONS[o.moon] || MOONS.ujhold;
-    return winChance(fighterFromHero(hero), monsterFighter(o.lm, { power: moon.power, name: o.guard }), hero.tactic, 500, 4242);
+    return winChance(fighterFromHero(hero), monsterFighter(o.lm, { power: moon.power, name: o.guard, trait: o.trait }), hero.tactic, 500, 4242);
   }
   function expeditionRewardsPreview(hero, d, Lm, moonId, elite) {
     var D2 = DIFF[d];
@@ -769,7 +800,7 @@
 
   function expeditionMonster(exp, power) {
     var moon = MOONS[exp.offer.moon] || MOONS.ujhold;
-    return monsterFighter(exp.offer.lm, { power: (power || 1) * moon.power, name: exp.offer.guard });
+    return monsterFighter(exp.offer.lm, { power: (power || 1) * moon.power, name: exp.offer.guard, trait: exp.offer.trait });
   }
 
   // Egy tisztás-kártya feloldása. Visszaadja az eredményt; az exp állapotát módosítja.
@@ -1140,7 +1171,7 @@
     itemStats: itemStats, makeItem: makeItem, affixText: affixText, salvageValue: salvageValue, sellValue: sellValue, upgradeCost: upgradeCost,
     newHero: newHero, unlockedSkills: unlockedSkills, nextSkillUnlock: nextSkillUnlock, heroStats: heroStats, power: power, powerRaw: powerRaw, lootLevel: lootLevel,
     fighterFromHero: fighterFromHero, monsterFighter: monsterFighter, simulateFight: simulateFight, simulateDuel: simulateDuel, duelChance: duelChance, PVP: PVP, winChance: winChance,
-    findMonsterLevel: findMonsterLevel, COMBAT: COMBAT, regionFor: regionFor, makeOffers: makeOffers, offerTarget: offerTarget, ELITE: ELITE, offerMoon: offerMoon, eliteTarget: eliteTarget, normEvent: normEvent, eventOptions: eventOptions, eventCost: eventCost, eventCheckChance: eventCheckChance, applyFollow: applyFollow, offerChance: offerChance,
+    findMonsterLevel: findMonsterLevel, canonHero: canonHero, offerTraits: offerTraits, COMBAT: COMBAT, regionFor: regionFor, makeOffers: makeOffers, offerTarget: offerTarget, ELITE: ELITE, offerMoon: offerMoon, eliteTarget: eliteTarget, normEvent: normEvent, eventOptions: eventOptions, eventCost: eventCost, eventCheckChance: eventCheckChance, applyFollow: applyFollow, offerChance: offerChance,
     startExpedition: startExpedition, resolveCard: resolveCard, guardPreview: guardPreview, fightGuard: fightGuard,
     finishExpedition: finishExpedition, applyChoice: applyChoice, lossAdvice: lossAdvice,
     torchState: torchState, spendTorch: spendTorch, dustRoom: dustRoom, dustCap: dustCap, weekOf: weekOf, addDust: addDust, addXp: addXp,

@@ -180,11 +180,13 @@
         tufts += `M${f(bx - 8)} ${f(by - 2)} L${f(bx - 4)} ${f(by + l)} L${f(bx)} ${f(by + l * 0.6)} L${f(bx + 4)} ${f(by + l * 0.95)} L${f(bx + 9)} ${f(by)} Z `;
       }
     });
-    out += `<g class="sc-sway" style="transform-origin:0px 100px"><path d="${br}" stroke="${c}" stroke-width="6" stroke-linecap="round" fill="none"/><path d="${tufts}" fill="${c}"/><path d="${br}" stroke="${rim}" stroke-width="1.2" fill="none" opacity="0.25" transform="translate(2 -3)"/></g>`;
+    // a táborban nincs közeli fatörzs és lelógó ág: a széles, alacsony képkivágásban csak egy értelmetlen fekete csík látszana belőle
+    const noTrunk = s.kind === 'camp';
+    if (!noTrunk) out += `<g class="sc-sway" style="transform-origin:0px 100px"><path d="${br}" stroke="${c}" stroke-width="6" stroke-linecap="round" fill="none"/><path d="${tufts}" fill="${c}"/><path d="${br}" stroke="${rim}" stroke-width="1.2" fill="none" opacity="0.25" transform="translate(2 -3)"/></g>`;
     // közeli fatörzs kéreggel, gyökérrel és holdfényes peremmel
     let bark = '';
     for (let i = 0; i < 14; i++) { const y = r() * 600, x = 4 + r() * 26; bark += `M${f(x)} ${f(y)} q${f((r() - 0.5) * 6)} ${f(20 + r() * 20)} ${f((r() - 0.5) * 4)} ${f(40 + r() * 40)} `; }
-    out += `<path d="M-40 -10 L34 -10 C36 200 40 420 46 560 L58 606 L-40 606 Z" fill="${c}"/><path d="${bark}" stroke="${mix(c, '#000000', 0.5)}" stroke-width="2.4" fill="none" stroke-linecap="round"/>` +
+    if (!noTrunk) out += `<path d="M-40 -10 L34 -10 C36 200 40 420 46 560 L58 606 L-40 606 Z" fill="${c}"/><path d="${bark}" stroke="${mix(c, '#000000', 0.5)}" stroke-width="2.4" fill="none" stroke-linecap="round"/>` +
       `<path d="M34 -10 C36 200 40 420 46 560 L58 606" stroke="${rim}" stroke-width="2.2" fill="none" opacity="0.4"/>`;
     // jobb alsó páfrány
     let fern = '';
