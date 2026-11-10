@@ -241,7 +241,7 @@
           { h: 'Tájegység-szettek', list: ['Minden tárgy arról a tájegységről kapja a stílusát, ahonnan származik: Ködláp, Holdfény-erdő, Árnyromok, Csillaghullás-szirtek, Éjkatlan.', 'Minél ritkább, annál gazdagabb: a kéken szegélyek és embléma, a lilán nagyobb vállvért és rúnák jelennek meg.', 'A szürke kezdő holmi még a hőskészítőben választott ruhádat mutatja.', 'A névvel ellátott legendás és a mitikus tárgyak egyedi kinézetűek.'] },
           { h: 'A fegyver fénye', p: 'A fegyvered a fejlesztéstől kezd fényleni: +4-től halványan, +8-tól erősebben, +10-től a ritkaság színében, +12-nél szikrázik is.' },
           { h: 'Szárnyak és aurák', p: 'Ezek csak díszek, eredményekért járnak (például 100 győzelem, a Holdtorony 30. emelete, a Holdkrónika vége). A Ruhatárban látod, melyikhez mennyi hiányzik.' },
-          { h: 'Ruhatár és festés', list: ['A Hős fülön, a Karakter oldal Ruhatár részében bármelyik korábban viselt kinézetet magadra öltheted.', 'A páncél színét Csillagporért átfestheted, az eredeti színek visszaállítása ingyenes.', 'A Táskában a Felpróbálom gombbal előre megnézheted, hogy néznél ki egy tárgyban.'] },
+          { h: 'Ruhatár és festés', list: ['A Kinézet oldalon (a Hős menüben) bármelyik korábban viselt kinézetet magadra öltheted.', 'A páncél színét Csillagporért átfestheted, az eredeti színek visszaállítása ingyenes.', 'A Táskában a Felpróbálom gombbal előre megnézheted, hogy néznél ki egy tárgyban.'] },
           { tip: 'Huhu! A fény a fegyver fejlesztéséből jön, nem a ritkaságból: egy jól kifejlesztett kék kard is szépen ragyog.' }
         ] },
       { id: 'fejlesztes', title: 'Fejlesztés és a táska', short: 'Fejlesztés, újrasorsolás, szétszedés, eladás, tele táska.',

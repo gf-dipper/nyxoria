@@ -1215,3 +1215,54 @@ html { scrollbar-width: thin; scrollbar-color: rgba(127, 140, 255, .35) transpar
   .nx-gm-tools .seg { display: flex; flex-wrap: nowrap; width: 100%; }
   .nx-gm-tools .seg button { flex: 1 1 auto; padding: 0 5px; font-size: 12px; min-width: 0; }
 }
+/* karakterlap: fejléc (kép + név + tulajdonságok), alatta felszerelés | képességek */
+.nx-hhead { display: grid; grid-template-columns: 216px minmax(0, 1fr); gap: 20px; align-items: start; }
+.nx-hhead .nx-hh-por { padding: 0; background: none; border: 0; box-shadow: none; }
+.nx-hhead .nx-hh-por .portrait { margin: 0; }
+.nx-hh-title { margin-bottom: 8px; align-items: flex-start; }
+.nx-hh-title h1 { margin: 0; }
+.nx-hh-xp { margin-bottom: 10px; }
+.nx-hh-sub { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 10px; font-size: 13px; color: var(--hold-500); }
+.nx-hh-sub b { color: var(--hold-100); }
+.nx-hhead .power { margin-top: 10px; }
+.nx-hhead .stats { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 0; }
+@media (max-width: 1200px) and (min-width: 621px) { .nx-hhead .stats { grid-template-columns: 1fr 1fr; } }
+.nx-hgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-top: 12px; align-items: start; }
+.nx-hcol { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.nx-hcol > .panel { margin: 0; }
+.eq-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 8px; }
+.eq-tile { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--ej-600); border-radius: 12px; background: var(--ej-900); color: inherit; font: inherit; text-align: left; cursor: pointer; min-height: 62px; }
+.eq-tile:hover { border-color: var(--hold-500); }
+.eq-tile[aria-pressed="true"] { border-color: var(--hold-300); box-shadow: 0 0 0 1px var(--hold-300) inset; background: var(--ej-800); }
+.eq-tile .item-ic, .eq-tile .eq-ic { width: 44px; height: 44px; }
+.eq-tile .eq-ic { display: grid; place-items: center; border: 1px dashed var(--ej-600); border-radius: 10px; color: var(--hold-500); font-size: 20px; }
+.eq-txt { display: flex; flex-direction: column; min-width: 0; }
+.eq-txt > b, .eq-txt > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.eq-txt > b { font-size: 14px; }
+.eq-detail { margin-top: 10px; scroll-margin-top: 70px; }
+.eq-detail .btn { white-space: nowrap; flex-shrink: 0; }
+.nx-pap .nx-paths-h { margin-top: 0; }
+.sk-cd { white-space: nowrap; }
+.nx-hwrap { container-type: inline-size; }
+@container (max-width: 760px) { .nx-hgrid { grid-template-columns: minmax(0, 1fr); } .nx-hcol { display: contents; } .nx-hgrid .nx-eqp { order: 1; } .nx-hgrid .nx-skp { order: 2; } .nx-hgrid .nx-pap { order: 3; } }
+@supports not (container-type: inline-size) { @media (max-width: 1400px) { .nx-hgrid { grid-template-columns: minmax(0, 1fr); } .nx-hcol { display: contents; } .nx-hgrid .nx-eqp { order: 1; } .nx-hgrid .nx-skp { order: 2; } .nx-hgrid .nx-pap { order: 3; } } }
+.eq-tile { position: relative; }
+.eq-tile > .eq-lock { position: absolute; left: 4px; top: 4px; width: 18px; height: 18px; border-radius: 6px; background: var(--ej-950); border: 1px solid var(--ej-600); display: grid; place-items: center; color: var(--fakla-300); }
+.eq-tile > .eq-lock svg { width: 11px; height: 11px; }
+@media (max-width: 480px) { .nx-kin-title { flex-direction: column; align-items: stretch; gap: 10px; } .nx-kin-title .btn { align-self: flex-start; } }
+@media (max-width: 620px) {
+  .nx-hhead { grid-template-columns: 112px minmax(0, 1fr); gap: 12px; }
+  .nx-hhead .nx-hh-por .portrait { width: 112px; height: 132px; }
+  .nx-hh-main > * { grid-column: 1 / -1; }
+  .nx-hhead .stats { grid-template-columns: 1fr 1fr; }
+  .nx-hh-main { display: contents; }
+  .nx-hh-title { grid-column: 2; grid-row: 1; flex-direction: column; gap: 8px; }
+  .nx-hh-title h1 { font-size: 24px; }
+}
+@media (max-width: 480px) {
+  .nx-skp .skill { position: relative; gap: 8px; padding-left: 10px; }
+  .nx-skp .skill .num { position: absolute; left: 4px; top: 4px; width: 20px; height: 20px; font-size: 11px; border-radius: 6px; z-index: 1; box-shadow: 0 0 0 2px var(--ej-900); }
+  .nx-skp .skill.locked .num { width: auto; padding: 0 4px; }
+  .eq-detail .row.between { flex-wrap: wrap; gap: 8px; }
+  .eq-detail .row.between > .btn, .eq-detail .row.between > .badge { margin-left: auto; }
+}

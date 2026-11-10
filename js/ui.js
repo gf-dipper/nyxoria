@@ -233,13 +233,13 @@
     if (t.count >= E.TORCH.max) return t.rested >= E.TORCH.restedMax ? 'Minden fáklyád ég, és a Frissességed is tele van.' : `Minden fáklyád ég. ${timeLeft(t.nextIn)} múlva Frissességet kezdesz gyűjteni.`;
     return `Következő fáklya: <b data-torch-timer>${timeLeft(t.nextIn)}</b>`;
   }
-  function statGrid(s) {
+  function statGrid(s, noLegend) {
     return `<div class="stats">
       <div class="stat">${icx('misc', 'elet-bare', I.heart)}<div><span>ÉLET</span><b>${fmt(s.elet)}</b></div></div>
       <div class="stat">${icx('misc', 'tam-bare', I.sword)}<div><span>TÁM</span><b>${fmt(s.tam)}</b></div></div>
       <div class="stat">${icx('misc', 'ved-bare', I.shield)}<div><span>VÉD</span><b>${fmt(s.ved)}</b></div></div>
       <div class="stat">${icx('misc', 'fur-bare', I.wing)}<div><span>FÜR</span><b>${fmt(s.fur)}</b></div></div>
-    </div><p class="small muted stat-legend" style="font-size:12px;line-height:1.4">ÉLET: életerő · TÁM: támadás · VÉD: védekezés · FÜR: fürgeség (kitérés, telitalálat) · TP: tapasztalat</p>`;
+    </div>${noLegend ? '' : '<p class="small muted stat-legend" style="font-size:12px;line-height:1.4">ÉLET: életerő · TÁM: támadás · VÉD: védekezés · FÜR: fürgeség (kitérés, telitalálat) · TP: tapasztalat</p>'}`;
   }
   function xpBar(h) {
     const need = E.xpNeeded(h.level), max = h.level >= E.MAX_LEVEL;
@@ -378,7 +378,7 @@
       { name: 'Hős', items: [
         { id: 'hos', name: 'Karakter', ic: 'karakter', sub: 'Tulajdonságok, felszerelés, képességek', go: ['screen', 'hos'] },
         { id: 'taska', name: 'Táska', ic: 'taska', sub: 'Tárgyak, szétszedés, eladás', go: ['screen', 'taska'] },
-        NEW_CREATOR ? { id: 'kinezet', name: 'Kinézet', ic: 'kinezet', sub: 'Bármikor átszabhatod', go: ['screen', 'kinezet'] } : null,
+        NEW_CREATOR ? { id: 'kinezet', name: 'Kinézet', ic: 'kinezet', sub: 'Ruhatár, festés, átszabás', go: ['screen', 'kinezet'] } : null,
         { id: 'eredmenyek', name: 'Eredmények', ic: 'eredmeny', sub: 'Trófeák és gyűjtőalbum', go: ['screen', 'eredmenyek'], badge: achBadge() },
         { id: 'profil', name: 'Profil', ic: 'karakter', sub: 'Ezt látják rólad a többiek', go: ['screen', 'profil'] },
         { id: 'hosok', name: 'Hőseim', ic: 'karakter', sub: 'Legfeljebb 3 hős, bármikor válthatsz', go: ['screen', 'hosok'] }
@@ -1180,12 +1180,12 @@
       if (NEW_CREATOR) { renderNewCreator(); return; }
       app.innerHTML = renderCreator(); return;
     }
-    if (S.cr && ((S.cr.mode === 'restyle' && S.screen !== 'kinezet') || (S.cr.mode === 'new' && S.screen !== 'ujhos') || S.combat)) dropCreator();
+    if (S.cr && ((S.cr.mode === 'restyle' && S.screen !== 'atszabas') || (S.cr.mode === 'new' && S.screen !== 'ujhos') || S.combat)) dropCreator();
     if (S.screen === 'ujhos' && NEW_CREATOR && !S.combat) {
       app.innerHTML = (NEW_SHELL ? newTopbar() : topbar()) + `<div class="layout wide"><main class="main" id="main"><div class="exp-head"><div><div class="tiny">Új hős</div><h1>Új hős készítése</h1></div><button class="btn ghost sm" data-act="screen" data-v="hosok">Mégse</button></div><div id="cr-ph"></div></main></div>` + modalHtml();
       keepCreator('new'); return;
     }
-    if (S.screen === 'kinezet' && NEW_CREATOR && !S.combat) {
+    if (S.screen === 'atszabas' && NEW_CREATOR && !S.combat) {
       // itt nincs alsó menü (a készítőnek kell a hely); a Vissza gomb a fejlécben van
       app.innerHTML = (NEW_SHELL ? newTopbar() : topbar()) + `<div class="layout wide"><main class="main" id="main"><div class="exp-head"><div><div class="tiny">${esc(hero().name)}</div><h1>Kinézet átszabása</h1></div><button class="btn ghost sm" data-act="restyle-back">Vissza, mentés nélkül</button></div><div id="cr-ph"></div></main></div>` + modalHtml() + devbar();
       keepCreator('restyle'); return;
@@ -1209,6 +1209,7 @@
     else if (S.screen === 'ceh') main = renderGuild();
     else if (S.screen === 'profil' && X) main = renderProfile();
     else if (S.screen === 'hosok') main = renderHeroes();
+    else if (S.screen === 'kinezet' && NEW_CREATOR) main = renderWardrobe();
     else if (S.screen === 'admin' && ONLINE && S.me && S.me.admin) main = renderAdmin();
     else main = renderSettings();
     if (S.notice && !S.combat && S.screen !== 'admin' && (() => { try { return localStorage.getItem('nyx-notice') !== String(S.notice.at); } catch (e) { return true; } })())
@@ -1217,14 +1218,6 @@
     if (NEW_SHELL) {
       // Hős: balra a hőskártya, mellette a név, a jellemzők és a fáklyák (így nincs üres folt és a név sem kétszer szerepel)
       // a két oszlop egymástól függetlenül folyik (bal: kártya, fáklyák, felszerelés; jobb: név, tulajdonságok, képességek)
-      if (showLeft) {
-        const k = main.indexOf('<!--nx-split-->'), rest = main.slice(k + 15), m = rest.indexOf('<!--nx-eq-->');
-        const gs = rest.indexOf('>') + 1, ge = rest.lastIndexOf('</div>');
-        const eq = m > 0 ? rest.slice(gs, m) : '', sk = m > 0 ? rest.slice(m + 12, ge) : '';
-        main = m > 0
-          ? `<div class="nx-herotop"><div class="nx-herostack l">${heroCard(true)}${torchPanel()}${eq.replace('<section class="panel"', '<section class="panel nx-eqp"')}</div><div class="nx-herostack r">${main.slice(0, k)}${statsPanel()}${sk.replace('<section class="panel"', '<section class="panel nx-skp"')}</div></div>`
-          : `<div class="nx-herotop"><div class="nx-herostack l">${heroCard(true)}${torchPanel()}</div><div class="nx-herostack r">${main.slice(0, k)}${statsPanel()}</div></div>` + rest;
-      }
       const wide = S.screen === 'admin' || S.screen === 'sugo'; // az admin felületnek kell a hely: ott nincs jobb oldali sáv
       app.innerHTML = newTopbar() + `<div class="layout nx-layout${wide ? ' nx-wide' : ''}">${railHtml()}<main class="main" id="main">${main}</main>${wide ? '' : rightPanel()}</div>` +
         newBottomnav() + modalHtml() + owlHtml() + devbar();
@@ -1811,36 +1804,51 @@
     const h = hero(), c = cls(h), s = E.heroStats(h), sc = 40 + 8 * h.level;
     tip('hos');
     const crit = 5 + 25 * s.fur / (s.fur + sc) + s.crit, dodge = 3 + 12 * s.fur / (s.fur + sc) + s.dodge;
-    const slots = D.SLOT_ORDER.map(slot => {
-      const it = h.equipped[slot];
-      return `<button class="slot" data-act="slot" data-v="${slot}" aria-pressed="${S.slot === slot}">${it ? itemHtml(it) : `<span class="muted">${D.SLOTS[slot].name}: üres</span>`}</button>`;
+    // felszerelés: kompakt rács; a kiválasztott tárgy részletei közvetlenül alatta nyílnak
+    const cur = S.slot && D.SLOT_ORDER.indexOf(S.slot) >= 0 ? S.slot : 'fegyver';
+    const tiles = D.SLOT_ORDER.map(slot => {
+      const it = h.equipped[slot], on = cur === slot;
+      if (!it) return `<button class="eq-tile empty" data-act="slot" data-v="${slot}" aria-pressed="${on}"><span class="eq-ic">+</span><span class="eq-txt"><b>${D.SLOTS[slot].name}</b><span class="small muted">üres hely</span></span></button>`;
+      return `<button class="eq-tile" data-act="slot" data-v="${slot}" aria-pressed="${on}" aria-label="${esc(D.SLOTS[slot].name)}: ${esc(it.name)}">${itemIcon(it)}<span class="eq-txt"><b class="item-name r-${it.rarity}">${it.mythic ? '✦ ' : ''}${esc(it.name)}${it.plus ? ` +${it.plus}` : ''}</b><span class="small muted">${D.SLOTS[slot].name} · ${it.level}. szint</span></span>${it.locked ? `<span class="eq-lock" title="Zárolva">${LOCK_SVG}</span>` : ''}</button>`;
     }).join('');
-    const sel = h.equipped[S.slot];
+    const sel = h.equipped[cur];
     let detail = '';
     if (sel) {
       const cost = E.upgradeCost(sel), rc = sel.affixes.length ? E.rerollCost(sel) : null;
-      const room = E.dustRoom(S.save, now()), mx = E.maxPlus(sel), sc = E.upgradeSilver(sel);
+      const room = E.dustRoom(S.save, now()), mx = E.maxPlus(sel), usc = E.upgradeSilver(sel);
       detail = `<div class="detail">${itemHtml(sel)}<div class="row" style="justify-content:flex-end;margin-top:6px"><button class="btn ghost sm lockbtn${sel.locked ? ' on' : ''}" data-act="lock-item" data-v="${sel.id}" aria-pressed="${sel.locked ? 'true' : 'false'}" title="${sel.locked ? 'Zárolás feloldása' : 'Zárolás: ha leveszed, akkor sem lehet véletlenül szétszedni vagy eladni'}">${LOCK_SVG}${sel.locked ? 'Feloldás' : 'Zárolás'}</button></div><hr class="divider">
         <div class="row between"><div><b>Fejlesztés</b><p class="small muted">Lépcsőnként +3% az alapértékekre. Most: +${sel.plus || 0} / +${mx} (${D.RARITIES[sel.rarity].name} tárgynál ennyi a határ). Ha később szétszeded vagy eladod, a beletett Csillagpor 70%-a visszajár.</p></div>
-        ${cost == null ? `<span class="badge">KÉSZ +${Math.max(mx, sel.plus || 0)}</span>` : `<button class="btn fakla sm" data-act="upgrade" data-v="${sel.id}" ${h.dust < cost || h.silver < sc ? 'disabled' : ''}>${I.dust}${fmt(cost)} · ${I.silver}${fmt(sc)}</button>`}</div>
+        ${cost == null ? `<span class="badge">KÉSZ +${Math.max(mx, sel.plus || 0)}</span>` : `<button class="btn fakla sm" data-act="upgrade" data-v="${sel.id}" ${h.dust < cost || h.silver < usc ? 'disabled' : ''}>${I.dust}${fmt(cost)} · ${I.silver}${fmt(usc)}</button>`}</div>
         ${rc != null ? `<div class="row between" style="margin-top:10px"><div><b>Tárgyjellemző újrasorsolása</b><p class="small muted">Új véletlen jellemzők. Minden újabb próba drágább.</p></div><button class="btn sm" data-act="reroll" data-v="${sel.id}" ${h.silver < rc ? 'disabled' : ''}>${I.silver}${fmt(rc)}</button></div>` : ''}
         ${h.dust < (cost || 0) ? `<p class="small muted" style="margin-top:8px">Csillagpor a győzelmekből, az őrjáratból, a heti szörny ládáiból és a tárgyak szétszedéséből jön. Hetente legfeljebb ${fmt(E.dustCap(h.level))} szerezhető${room != null ? `, ezen a héten még ${fmt(room)}` : ''}.</p>` : ''}
       </div>`;
-    }
+    } else detail = `<div class="detail"><p class="small muted">${D.SLOTS[cur].name}: ebben a helyben most nincs tárgy. A táskádból vehetsz fel egyet.</p><button class="btn sm" data-act="screen" data-v="taska" style="margin-top:8px">Táska megnyitása</button></div>`;
     const unlocked = E.unlockedSkills(h), basic = c.basic;
-    const loadout = h.loadout.map((id, i) => `<div class="skill"><span class="num">${i + 1}</span>${skillIc(id)}<div style="min-width:0"><div class="sn">${esc(D.SKILLS[id].name)} <span class="small muted">· ${D.SKILLS[id].cd} körönként</span></div><div class="sd">${esc(D.SKILLS[id].desc)}</div></div>
+    const cdTxt = id => D.SKILLS[id].cd ? `${D.SKILLS[id].cd} körönként` : 'mindig bevethető';
+    const loadout = h.loadout.map((id, i) => `<div class="skill"><span class="num">${i + 1}</span>${skillIc(id)}<div style="min-width:0"><div class="sn">${esc(D.SKILLS[id].name)} <span class="small muted sk-cd">· ${cdTxt(id)}</span></div><div class="sd">${esc(D.SKILLS[id].desc)}</div></div>
       <div class="move"><button data-act="skill-move" data-v="${i}" data-dir="-1" aria-label="Előrébb" ${i === 0 ? 'disabled' : ''}>${I.up}</button><button data-act="skill-move" data-v="${i}" data-dir="1" aria-label="Hátrébb" ${i === h.loadout.length - 1 ? 'disabled' : ''}>${I.down}</button></div></div>`).join('');
     const locked = c.skills.map((id, i) => unlocked.indexOf(id) < 0 ? `<div class="skill locked"><span class="num">${D.SKILL_LEVELS[i]}.</span>${skillIc(id, true)}<div><div class="sn">${esc(D.SKILLS[id].name)}</div><div class="sd">${esc(D.SKILLS[id].desc)} <b>A ${D.SKILL_LEVELS[i]}. szinten nyílik.</b></div></div></div>` : '').join('');
-    return `<section class="panel"><div class="panel-title"><div><h1>${esc(h.name)}</h1><p class="small muted">${esc(D.ORIGINS[h.origin].name)} · ${esc(D.TRAITS[h.trait].name)}${h.motto ? ` · „${esc(h.motto)}”` : ''}</p></div>${NEW_CREATOR ? '<button class="btn sm" data-act="restyle">Kinézet átszabása</button>' : ''}</div>
-        <div class="row wrap" style="gap:8px"><span class="badge">Telitalálat esélye ${dec(crit)}%</span><span class="badge">Kitérés ${dec(dodge)}%</span>${s.dmg ? `<span class="badge">+${s.dmg}% sebzés</span>` : ''}${s.heal ? `<span class="badge">+${s.heal}% gyógyítás</span>` : ''}<span class="badge">Győzelmek: ${h.stats.wins} / ${h.stats.expeditions}</span>${(S.titles || []).map(t => `<span class="badge" style="color:var(--fakla-300)">${esc(t)}</span>`).join('')}</div></section><!--nx-split-->
-      <div class="hero-grid" style="margin-top:12px">
-        <section class="panel"><div class="panel-title"><h2>Felszerelés</h2><button class="btn ghost sm" data-act="screen" data-v="taska">Táska (${h.inventory.length})</button></div><div class="slots">${slots}</div><div style="margin-top:12px">${detail}</div></section>
-<!--nx-eq-->        <section class="panel"><div class="panel-title"><h2>Képességek</h2></div>
+    const people = D.PEOPLES[h.people] ? D.PEOPLES[h.people].name.toLowerCase() : '';
+    const head = `<section class="panel nx-hhead">
+        <div class="nx-hh-por hero-card"><div class="portrait">${A.heroSvg(h)}</div></div>
+        <div class="nx-hh-main">
+          <div class="panel-title nx-hh-title"><div style="min-width:0"><h1>${esc(h.name)}</h1><p class="small muted">${h.level}. szintű ${esc(people)} ${esc(c.name.toLowerCase())} · ${esc(D.ORIGINS[h.origin].name)} · ${esc(D.TRAITS[h.trait].name)}</p>${h.motto ? `<p class="small muted">„${esc(h.motto)}”</p>` : ''}</div>${NEW_CREATOR ? '<button class="btn sm" data-act="screen" data-v="kinezet">Kinézet</button>' : ''}</div>
+          ${(S.titles || []).length ? `<div class="row wrap" style="gap:6px;margin-bottom:8px">${S.titles.map(t => `<span class="badge" style="color:var(--fakla-300)">${esc(t)}</span>`).join('')}</div>` : ''}
+          <div class="nx-hh-xp">${xpBar(h)}</div>
+          ${statGrid(s, h.level >= 10)}
+          <div class="nx-hh-sub"><span title="A FÜR növeli">Telitalálat <b>${dec(crit)}%</b></span><span title="A FÜR növeli">Kitérés <b>${dec(dodge)}%</b></span>${s.dmg ? `<span>Sebzés <b>+${s.dmg}%</b></span>` : ''}${s.heal ? `<span>Gyógyítás <b>+${s.heal}%</b></span>` : ''}<span>Győzelem <b>${fmt(h.stats.wins)}</b> / ${fmt(h.stats.expeditions)} kaland</span></div>
+          <div class="power"><span class="tiny" style="color:var(--fakla-300)">${icx('misc', 'harcero-bare', '')}Harcerő</span><b>${fmt(E.power(s))}</b></div>
+        </div></section>`;
+    const eqP = `<section class="panel nx-eqp"><div class="panel-title"><h2>Felszerelés</h2><button class="btn ghost sm" data-act="screen" data-v="taska">Táska (${h.inventory.length})</button></div><div class="eq-grid">${tiles}</div><div class="eq-detail">${detail}</div></section>`;
+    const skP = `<section class="panel nx-skp"><div class="panel-title"><h2>Képességek</h2></div>
           <p class="small muted" style="margin-bottom:10px">A hős mindig a lista első kész képességét használja. A sorrendet a nyilakkal állíthatod. Ha egyik sincs kész: <b>${esc(D.SKILLS[basic].name)}</b> (${esc(D.SKILLS[basic].desc.toLowerCase().replace(/\.\s*$/, ''))}).</p>
-          ${orderBox()}${loadout || '<p class="small muted">A 3. szinten kapod az első képességet.</p>'}${locked}
-          <hr class="divider">${pathsHtml(h)}
-        </section>
-      </div>${lookPanel(h)}`;
+          ${orderBox()}${loadout || '<p class="small muted">A 3. szinten kapod az első képességet.</p>'}${locked}</section>`;
+    const paP = `<section class="panel nx-pap">${pathsHtml(h)}</section>`;
+    return `<div class="nx-hwrap">${head}<div class="nx-hgrid"><div class="nx-hcol l">${eqP}</div><div class="nx-hcol r">${skP}${paP}</div></div></div>${NEW_CREATOR ? '' : lookPanel(h)}`;
+  }
+  function renderWardrobe() {
+    const h = hero();
+    return `<section class="panel"><div class="panel-title nx-kin-title"><div><h1>Kinézet</h1><p class="small muted">Itt választod ki, mit mutasson a hősöd a viselt és a korábbi tárgyaiból, itt festheted át a páncélt, és itt veheted fel a szárnyakat meg az aurákat. Az arcot, a hajat és az alkatot az átszabással módosíthatod.</p></div><button class="btn sm" data-act="restyle" style="white-space:nowrap;flex-shrink:0">Arc és alkat átszabása</button></div></section>${lookPanel(h)}`;
   }
   // ---------- kinézet a felszerelésből (gyűjtemény) ----------
   const SLOT_NAME = { fegyver: 'Fegyver', pancel: 'Páncél', sisak: 'Fejfedő', gyuru: 'Gyűrű', amulett: 'Amulett' };
@@ -1971,7 +1979,7 @@
     return '';
   }
   function owlHtml() {
-    if (S.screen === 'kinezet') return ''; // a készítőben Bubó nem takarja ki a választást
+    if (S.screen === 'atszabas') return ''; // a készítőben Bubó nem takarja ki a választást
     if (!S.owl || S.modal || (S.owlScreen && S.owlScreen !== S.screen)) return '';
     const text = D.OWL_TIPS[S.owl];
     if (!text) return '';
@@ -2088,11 +2096,11 @@
     const h = hero();
     return {
       mode: 'restyle', classId: h.classId, people: h.people, look: G.migrateLook(h), name: h.name,
-      onCancel: () => { if (!leaveOk()) return; S.screen = 'hos'; render(); scrollTop(); },
+      onCancel: () => { if (!leaveOk()) return; S.screen = S.restyleFrom || 'kinezet'; render(); scrollTop(); },
       onDone: async r => {
         if (S.busy) return;
         S.busy = true;
-        try { await api('restyle', { rig: r.look }); S.screen = 'hos'; toast('Elmentve: új kinézet.'); }
+        try { await api('restyle', { rig: r.look }); S.screen = S.restyleFrom || 'kinezet'; toast('Elmentve: új kinézet.'); }
         catch (e) { handleError(e); }
         finally { S.busy = false; }
         render(); scrollTop();
@@ -2101,7 +2109,7 @@
   }
   // átszabás közben a menüre kattintva nem vész el szó nélkül a munka: az első kattintás figyelmeztet, a második (5 mp-en belül) kilép
   function restyleDirty() {
-    if (S.screen !== 'kinezet' || !S.cr || S.cr.mode !== 'restyle') return false;
+    if (S.screen !== 'atszabas' || !S.cr || S.cr.mode !== 'restyle') return false;
     let a, b;
     try { a = G.cleanRig(S.cr.inst.state().look, hero().classId); b = G.migrateLook(hero()); } catch (e) { return false; }
     const keys = new Set(Object.keys(a).concat(Object.keys(b)));
@@ -2251,7 +2259,7 @@
     },
     camp() { act('camp', {}, () => { scrollTop(); if (ONLINE) refreshState().catch(() => {}); }); },
     retreat() { act('retreat', {}, res => { toast('Visszafordultál. Amit gyűjtöttél, megmaradt.'); if (res.levelUps && res.levelUps.length) S.modal = { type: 'level', ups: res.levelUps }; }); },
-    slot(v) { S.slot = v; render(); },
+    slot(v) { S.slot = v; render(); const d = document.querySelector('.eq-detail'); if (d) { const r = d.getBoundingClientRect(); if (r.top > innerHeight - 120) d.scrollIntoView({ behavior: 'smooth', block: 'start' }); } },
     upgrade(v) { act('upgrade', { id: v }, r => toast(`Fejlesztve: +${r.plus}`)); },
     reroll(v) { act('reroll', { id: v }, () => toast('Új tárgyjellemzők!')); },
     'skill-move'(v, x) { act('skillMove', { i: +v, dir: +x.dataset.dir }); },
@@ -2314,12 +2322,12 @@
       G.refreshOffers(S.save); persist(); render();
     },
     // karakterkészítő
-    restyle() { S.screen = 'kinezet'; render(); scrollTop(); },
+    restyle() { S.restyleFrom = S.screen === 'atszabas' ? S.restyleFrom : S.screen; S.screen = 'atszabas'; render(); scrollTop(); },
     info(v) { S.modal = { type: 'info', kind: v }; render(); },
     goto(v) { if (!leaveOk()) return; S.modal = null; gotoTarget(v); },
     'title-go'() { markTitle(); S.phase = 'game'; S.screen = 'kaland'; render(); scrollTop(); const g = el('nx-greet'); if (g) g.focus({ preventScroll: true }); },
     copy(v) { try { navigator.clipboard.writeText(v).then(() => toast('Kimásoltam: ' + v), () => toast('Jelöld ki és másold: ' + v)); } catch (e) { toast('Jelöld ki és másold: ' + v); } },
-    'restyle-back'() { if (!leaveOk()) return; S.screen = 'hos'; render(); scrollTop(); },
+    'restyle-back'() { if (!leaveOk()) return; S.screen = S.restyleFrom || 'kinezet'; render(); scrollTop(); },
     'c-set'(v, x) { // választáskor ne ugorjon az oldal a tetejére
       const y = window.scrollY; syncCreatorInputs(); S.creator[x.dataset.k] = v; render();
       window.scrollTo(0, y);
