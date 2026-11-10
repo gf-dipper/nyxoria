@@ -3864,7 +3864,8 @@ import postgres from 'npm:postgres@3.4.9';
       album: albumCount(save), trophies: ach.reduce((t, x) => t + x.claimed, 0), trophyMax: ach.reduce((t, x) => t + x.tiers.length, 0),
       topAch: ach.filter(x => x.claimed > 0).sort((x, y) => y.claimed / y.tiers.length - x.claimed / x.tiers.length).slice(0, 4).map(x => ({ name: x.name, tier: x.claimed, of: x.tiers.length })),
       mythicItems: Object.keys((save.album || {}).items || {}).filter(n => save.album.items[n].r === 'mitikus'),
-      equipped: D.SLOT_ORDER.map(k => h.equipped[k]).filter(Boolean).map(it => ({ name: it.name, slot: it.slot, rarity: it.rarity, mythic: !!it.mythic, plus: it.plus || 0 }))
+      equipped: D.SLOT_ORDER.map(k => h.equipped[k]).filter(Boolean).map(it => { const c = JSON.parse(JSON.stringify(it)); delete c.id; delete c.locked; c.mythic = !!it.mythic; c.plus = it.plus || 0; return c; }),
+      stats: (s => ({ elet: s.elet, tam: s.tam, ved: s.ved, fur: s.fur, dmg: s.dmg || 0, heal: s.heal || 0 }))(E.heroStats(h)), loadout: (h.loadout || []).slice(0, 4), arenaLosses: save.arena ? save.arena.losses || 0 : 0
     };
   }
 
@@ -4985,7 +4986,8 @@ async function profile(user, args) {
                         left join guild_members m on m.user_id = h.user_id left join guilds g on g.id = m.guild_id where lower(h.name) = lower(${name})`;
   if (!r) throw new GameError('arg', 'Nincs ilyen hős.');
   const titles = await sql`select title from boss_participants where user_id = ${r.user_id} and title is not null order by boss_id desc limit 5`;
-  return Object.assign(X.profileOf(r.save), { guild: r.gid ? { id: Number(r.gid), name: r.gname, tag: r.tag, color: r.color, emblem: r.emblem, stars: r.stars || 0 } : null, titles: titles.map(t => t.title), me: r.user_id === user.id });
+  const [act] = await sql`select active_at from heroes where lower(name) = lower(${name})`;
+  return Object.assign(X.profileOf(r.save), { active: act && act.active_at ? new Date(act.active_at).getTime() : null, alt: !act, guild: r.gid ? { id: Number(r.gid), name: r.gname, tag: r.tag, color: r.color, emblem: r.emblem, stars: r.stars || 0 } : null, titles: titles.map(t => t.title), me: r.user_id === user.id });
 }
 
 async function handle(req) {

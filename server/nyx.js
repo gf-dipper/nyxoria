@@ -880,7 +880,8 @@ async function profile(user, args) {
                         left join guild_members m on m.user_id = h.user_id left join guilds g on g.id = m.guild_id where lower(h.name) = lower(${name})`;
   if (!r) throw new GameError('arg', 'Nincs ilyen hős.');
   const titles = await sql`select title from boss_participants where user_id = ${r.user_id} and title is not null order by boss_id desc limit 5`;
-  return Object.assign(X.profileOf(r.save), { guild: r.gid ? { id: Number(r.gid), name: r.gname, tag: r.tag, color: r.color, emblem: r.emblem, stars: r.stars || 0 } : null, titles: titles.map(t => t.title), me: r.user_id === user.id });
+  const [act] = await sql`select active_at from heroes where lower(name) = lower(${name})`;
+  return Object.assign(X.profileOf(r.save), { active: act && act.active_at ? new Date(act.active_at).getTime() : null, alt: !act, guild: r.gid ? { id: Number(r.gid), name: r.gname, tag: r.tag, color: r.color, emblem: r.emblem, stars: r.stars || 0 } : null, titles: titles.map(t => t.title), me: r.user_id === user.id });
 }
 
 async function handle(req) {

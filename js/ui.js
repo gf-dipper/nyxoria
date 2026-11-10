@@ -482,14 +482,14 @@
   // tájékoztató ablakok (súgó, készletek, készülő funkciók, Discord, hiba bejelentése, menü telefonon)
   function infoModal(kind) {
     const h = hero(), t = S.save ? E.torchState(S.save, now()) : null, close = '<button class="btn primary block" data-act="modal-close">Rendben</button>';
-    const wrap = (title, sub, body, foot) => `<div class="modal-back" role="dialog" aria-modal="true" aria-labelledby="nx-mt"><div class="modal nx-modal"><div class="nx-mh"><div><h2 id="nx-mt">${title}</h2>${sub ? `<p class="small muted">${sub}</p>` : ''}</div><button class="icon-btn" data-act="modal-close" aria-label="Bezárás"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div><div class="nx-mb">${body}</div><div class="nx-mf">${foot || close}</div></div></div>`;
+    const wrap = (title, sub, body, foot, mc) => `<div class="modal-back" role="dialog" aria-modal="true" aria-labelledby="nx-mt"><div class="modal nx-modal${mc ? ' ' + mc : ''}"><div class="nx-mh"><div><h2 id="nx-mt">${title}</h2>${sub ? `<p class="small muted">${sub}</p>` : ''}</div><button class="icon-btn" data-act="modal-close" aria-label="Bezárás"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div><div class="nx-mb">${body}</div>${foot === false ? '' : `<div class="nx-mf">${foot || close}</div>`}</div></div>`;
     const li = (a, b, c) => `<li><span>${a}<small>${b}</small></span>${c != null ? `<b>${c}</b>` : ''}</li>`;
     if (kind === 'keszletek' && h) return wrap('Készletek', 'Mire jók a fáklyák és a pénzek', `<ul class="nx-list">
         ${li(icx('misc', 'fakla', '') + 'Fáklya', `Egy kaland egy fáklyába kerül. ${Math.round(E.TORCH.regenMs / 60000)} percenként gyullad egy, legfeljebb ${E.TORCH.max}.${t.count < E.TORCH.max ? ` A következő ${timeLeft(t.nextIn)} múlva.` : ''}`, `${t.count} / ${E.TORCH.max}`)}
         ${li(icx('misc', 'frissesseg', '') + 'Frissesség', 'Ha minden fáklyád ég, Frissességet gyűjtesz: ennyi kalandért dupla tapasztalat jár.', fmt(t.rested))}
         ${li(icx('misc', 'holdezust', '') + 'Holdezüst', 'Ezzel vásárolsz a Vándorkereskedőnél, ebből alapítasz céhet, és ezzel sorsolod újra a tárgyak tulajdonságait.', fmt(h.silver))}
         ${li(icx('misc', 'csillagpor', '') + 'Csillagpor', 'Ezzel erősíted a tárgyaidat. Győzelmekből, őrjáratból és a tárgyak szétszedéséből kapod.', fmt(h.dust))}</ul>`);
-    if (kind === 'profile') { const p = S.profileView; return wrap('Profil', '', p ? profileHtml(p) : '<p class="muted">Betöltés…</p>'); }
+    if (kind === 'profile') { const p = S.profileView; return wrap('Profil', '', p ? profileHtml(p) : '<p class="muted">Betöltés…</p>', false, 'nx-modal-prof'); }
     if (kind === 'gift' && h && X) {
       const st = X.giftState(S.save, now()), cur = st.can ? st.next : st.streak;
       const cells = [1, 2, 3, 4, 5, 6, 7].map(n => {
@@ -592,16 +592,31 @@
   // ---------- profil ----------
   function profileHtml(p) {
     const cls = D.CLASSES[p.classId];
-    const stat = (l, v) => `<span><small>${l}</small><b>${v}</b></span>`;
+    const fact = (l, v, t) => `<span${t ? ` title="${esc(t)}"` : ''}><small>${l}</small><b>${v}</b></span>`;
     const ach = (p.topAch || []).map(a => `<li><span>${esc(a.name)}</span><span class="small muted">${a.of}-ből ${a.tier} fokozat</span></li>`).join('');
-    const eq = (p.equipped || []).map(it => `<span class="item-ic painted r-${it.rarity}${it.mythic ? ' mythic' : ''}" title="${esc(it.name)}">${NXI ? NXI.item(it) : ''}${it.plus ? `<span class="plus">+${it.plus}</span>` : ''}</span>`).join('');
-    return `<div class="nx-prof"><div class="portrait">${A.heroSvg({ name: p.name, classId: p.classId, rig: p.rig, worn: p.worn, look: p.look, people: p.people }, { full: true })}</div>
-      <div class="nx-prof-main"><h2>${esc(p.name)}</h2><p class="small muted">${p.level}. szintű ${esc(D.PEOPLES[p.people] ? D.PEOPLES[p.people].name.toLowerCase() : '')} ${esc(cls ? cls.name.toLowerCase() : '')}${p.path ? ' · ' + esc(p.path) : ''}</p>
-        ${p.guild ? `<p class="small" style="margin-top:4px">${esc(p.guild.name)} <span class="nx-tag">${esc(p.guild.tag)}</span>${p.guild.stars ? ` <span style="color:var(--fakla-300)">${'★'.repeat(Math.min(10, p.guild.stars))}</span>` : ''}</p>` : ''}
-        ${p.motto ? `<p class="small muted">„${esc(p.motto)}”</p>` : ''}${(p.achTitles || []).concat(p.titles || []).length ? `<p class="small" style="color:var(--fakla-300)">${(p.achTitles || []).concat(p.titles || []).map(esc).join(' · ')}</p>` : ''}
-        <div class="nx-ch-stats" style="margin-top:10px">${stat('Harcerő', fmt(p.power))}${stat('Győzelem', fmt(p.wins))}${stat('Aréna', fmt(p.arena))}${stat('Holdtorony', p.towerMax ? p.towerMax + '. emelet' : '–')}${stat('Legendás tárgy', p.legendaries || 0)}${stat('Mitikus tárgy', p.mythics)}${stat('Trófea', p.trophies + ' / ' + p.trophyMax)}${stat('Album', p.album + ' lap')}</div>
-        ${eq ? `<div class="nx-prof-eq">${eq}</div>` : ''}${ach ? `<ul class="nx-pach">${ach}</ul>` : ''}</div></div>`;
+    const titles = (p.achTitles || []).concat(p.titles || []);
+    const people = D.PEOPLES[p.people] ? D.PEOPLES[p.people].name.toLowerCase() : '';
+    const seen = ONLINE && (p.active || (p.me && !p.alt)) ? gmSeen({ me: p.me && !p.alt, active: p.active }) : '';
+    const eq = (p.equipped || []).map(it => {
+      const head = `<span class="item-ic painted r-${it.rarity}${it.mythic ? ' mythic' : ''}">${NXI ? NXI.item(it) : ''}${it.plus ? `<span class="plus">+${it.plus}</span>` : ''}</span><span class="pf-it-t" title="${esc(it.name)}"><b class="item-name r-${it.rarity}">${it.mythic ? '✦ ' : ''}${esc(it.name)}${it.plus ? ` +${it.plus}` : ''}</b><span class="small muted">${[D.SLOTS[it.slot] ? D.SLOTS[it.slot].name : '', it.level ? `${it.level}. szint` : '', it.mythic ? 'mitikus' : D.RARITIES[it.rarity] ? D.RARITIES[it.rarity].name : ''].filter(Boolean).map(esc).join(' · ')}</span></span>`;
+      return it.level != null && it.affixes ? `<details class="pf-it"><summary>${head}<span class="pf-chev" aria-hidden="true">${I.down}</span></summary><div class="pf-it-d">${itemHtml(it)}</div></details>` : `<div class="pf-it"><div class="pf-sum">${head}</div></div>`;
+    }).join('');
+    const sk = (p.loadout || []).filter(id => D.SKILLS[id]).map((id, i) => `<div class="pf-sk">${skillIc(id)}<span class="num">${i + 1}</span><div style="min-width:0"><div class="sn">${esc(D.SKILLS[id].name)}</div><div class="small muted pf-cd">${D.SKILLS[id].cd ? D.SKILLS[id].cd + ' körönként' : 'mindig bevethető'}</div><div class="sd">${esc(D.SKILLS[id].desc)}</div></div></div>`).join('');
+    const ar = p.arenaLosses != null ? `${fmt(p.arenaWins || 0)} győzelem, ${fmt(p.arenaLosses)} vereség az arénában` : '';
+    return `<div class="nx-pf">
+      <div class="nx-pf-top"><div class="portrait">${A.heroSvg({ name: p.name, classId: p.classId, rig: p.rig, worn: p.worn, look: p.look, people: p.people }, { full: true })}</div>
+        <div class="nx-pf-id"><div class="pf-name"><h2>${esc(p.name)}</h2><p class="small muted">${p.level}. szintű ${esc(people)} ${esc(cls ? cls.name.toLowerCase() : '')}${p.path ? ' · ' + esc(p.path) : ''}</p>
+          ${p.guild ? `<p class="small">${esc(p.guild.name)} <span class="nx-tag">${esc(p.guild.tag)}</span>${p.guild.stars ? ` <span style="color:var(--fakla-300)">${'★'.repeat(Math.min(10, p.guild.stars))}</span>` : ''}</p>` : ''}
+          ${seen ? `<p>${seen}</p>` : ''}</div>${p.motto ? `<p class="small muted">„${esc(p.motto)}”</p>` : ''}
+          ${titles.length ? `<div class="pf-titles">${titles.map(t => `<span class="badge">${esc(t)}</span>`).join('')}</div>` : ''}
+          <div class="power"><span class="tiny" style="color:var(--fakla-300)">${icx('misc', 'harcero-bare', '')}Harcerő</span><b>${fmt(p.power)}</b></div>
+          ${p.stats ? statGrid(p.stats, true) : ''}</div></div>
+      <div class="nx-ch-stats pf-facts">${fact('Győzelem', fmt(p.wins) + (p.expeditions ? ` <i>/ ${fmt(p.expeditions)}</i>` : ''), p.expeditions ? `${fmt(p.wins)} győzelem ${fmt(p.expeditions)} kalandból` : '')}${fact('Arénapont', fmt(p.arena) + (p.arenaLosses != null && (p.arenaWins || p.arenaLosses) ? ` <i>${fmt(p.arenaWins || 0)}–${fmt(p.arenaLosses)}</i>` : ''), ar)}${fact('Holdtorony', p.towerMax ? p.towerMax + '. <i>emelet</i>' : '–', 'A legjobb elért emelet')}${fact('Legendás', (p.legendaries || 0) + ' tárgy', 'Ennyi legendás tárgyat szerzett eddig')}${fact('Mitikus', (p.mythics || 0) + ' tárgy', 'Ennyi mitikus tárgyat szerzett eddig')}${fact('Trófea', p.trophies + ' / ' + p.trophyMax)}${fact('Album', p.album + ' lap')}</div>
+      <div class="pf-cols${sk || ach ? '' : ' one'}"><div>${eq ? `<h3 class="pf-h">Felszerelés</h3><div class="pf-eq">${eq}</div>` : ''}</div>
+        ${sk || ach ? `<div>${sk ? `<h3 class="pf-h">Képességek</h3><div class="pf-sks">${sk}</div>` : ''}${ach ? `<h3 class="pf-h">Eredmények</h3><ul class="nx-pach">${ach}</ul>` : ''}</div>` : ''}</div>
+    </div>`;
   }
+
   // ---------- admin ----------
   function adminCall(op, args, done) {
     remote('admin', Object.assign({ op: op }, args || {})).then(r => { if (done) done(r); render(); }).catch(e => { toast(e.message || 'Hiba történt.'); render(); });
@@ -741,7 +756,8 @@
     const p = X.profileOf(S.save);
     if (ONLINE && S.guild) p.guild = S.guild;
     if (S.titles) p.titles = S.titles;
-    return `<section class="panel"><div class="nx-ch-head"><div><h1>Profil</h1><p class="small muted">Ezt látják rólad a többiek${ONLINE ? ', ha a ranglistán rád kattintanak' : ''}. A mitikus tárgyak, a trófeák és a toronyban elért legjobb emelet mutatja meg igazán, mennyit tettél bele.</p></div></div>${profileHtml(p)}</section>`;
+    p.me = true;
+    return `<section class="panel"><div class="nx-ch-head"><div><h1>Profil</h1><p class="small muted">Ezt látják rólad a többiek${ONLINE ? ', ha a ranglistán vagy a céhben rád kattintanak' : ''}. A mitikus tárgyak, a trófeák és a toronyban elért legjobb emelet mutatja meg igazán, mennyit tettél bele.</p></div></div>${profileHtml(p)}</section>`;
   }
 
   // ---------- kihívások: Holdtorony, esemény, vándorkereskedő, eredmények (logika: js/extra.js) ----------

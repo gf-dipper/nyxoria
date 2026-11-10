@@ -490,7 +490,8 @@
       album: albumCount(save), trophies: ach.reduce((t, x) => t + x.claimed, 0), trophyMax: ach.reduce((t, x) => t + x.tiers.length, 0),
       topAch: ach.filter(x => x.claimed > 0).sort((x, y) => y.claimed / y.tiers.length - x.claimed / x.tiers.length).slice(0, 4).map(x => ({ name: x.name, tier: x.claimed, of: x.tiers.length })),
       mythicItems: Object.keys((save.album || {}).items || {}).filter(n => save.album.items[n].r === 'mitikus'),
-      equipped: D.SLOT_ORDER.map(k => h.equipped[k]).filter(Boolean).map(it => ({ name: it.name, slot: it.slot, rarity: it.rarity, mythic: !!it.mythic, plus: it.plus || 0 }))
+      equipped: D.SLOT_ORDER.map(k => h.equipped[k]).filter(Boolean).map(it => { const c = JSON.parse(JSON.stringify(it)); delete c.id; delete c.locked; c.mythic = !!it.mythic; c.plus = it.plus || 0; return c; }),
+      stats: (s => ({ elet: s.elet, tam: s.tam, ved: s.ved, fur: s.fur, dmg: s.dmg || 0, heal: s.heal || 0 }))(E.heroStats(h)), loadout: (h.loadout || []).slice(0, 4), arenaLosses: save.arena ? save.arena.losses || 0 : 0
     };
   }
 

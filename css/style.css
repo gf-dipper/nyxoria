@@ -1266,3 +1266,56 @@ html { scrollbar-width: thin; scrollbar-color: rgba(127, 140, 255, .35) transpar
   .eq-detail .row.between { flex-wrap: wrap; gap: 8px; }
   .eq-detail .row.between > .btn, .eq-detail .row.between > .badge { margin-left: auto; }
 }
+/* profil (saját oldal és felugró ablak) */
+.nx-modal.nx-modal-prof { max-width: 820px; }
+.nx-pf-top { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 18px; align-items: start; }
+.nx-pf-top .portrait { width: 200px; height: 250px; margin: 0; }
+.nx-pf-id { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.nx-pf-id h2 { font-size: 26px; line-height: 1.15; margin: 0; }
+.nx-pf-id p { margin: 0; }
+.pf-name { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.pf-titles { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.pf-titles .badge { color: var(--fakla-300); }
+.nx-pf-id .power { margin-top: 8px; }
+.nx-pf-id .stats { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 8px; }
+.nx-ch-stats.pf-facts { margin-top: 14px; display: grid; grid-template-columns: repeat(auto-fit, minmax(98px, 1fr)); }
+.pf-facts span { min-width: 0; }
+.pf-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; margin-top: 8px; align-items: start; }
+.pf-h { font-size: 15px; margin: 12px 0 8px; color: var(--hold-300); }
+.pf-eq, .pf-sks { display: grid; gap: 6px; }
+.pf-it { border: 1px solid var(--ej-600); border-radius: 12px; background: var(--ej-900); }
+.pf-it summary, .pf-it .pf-sum { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; cursor: pointer; list-style: none; min-height: 56px; }
+.pf-it .pf-sum { grid-template-columns: 44px minmax(0, 1fr); cursor: default; }
+.pf-it summary::-webkit-details-marker { display: none; }
+.pf-it summary:focus-visible { outline: 2px solid var(--fakla-300); outline-offset: 2px; border-radius: 12px; }
+.pf-it .item-ic { width: 44px; height: 44px; }
+.pf-it-t { display: flex; flex-direction: column; min-width: 0; }
+.pf-it-t > * { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-chev { color: var(--hold-500); display: inline-flex; transition: transform .15s; }
+.pf-it[open] .pf-chev { transform: rotate(180deg); }
+.pf-it-d { padding: 0 10px 10px; }
+.pf-it-d .item { background: none; border: 0; padding: 0; display: block; }
+.pf-it-d .item > .item-ic, .pf-it-d .item .item-name, .pf-it-d .item .item-meta { display: none; }
+.pf-facts small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-sk { position: relative; display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 10px; align-items: start; padding: 8px 10px; border-radius: 12px; background: var(--ej-900); border: 1px solid var(--ej-600); }
+.pf-sk .num { position: absolute; left: 4px; top: 4px; width: 18px; height: 18px; border-radius: 6px; background: var(--ej-700); font-size: 11px; font-weight: 800; display: grid; place-items: center; box-shadow: 0 0 0 2px var(--ej-900); }
+.pf-sk .sn { font-weight: 800; }
+.pf-sk .sd { font-size: 13px; color: var(--hold-500); line-height: 18px; }
+.pf-cols.one { grid-template-columns: minmax(0, 1fr); }
+.pf-it[open] .pf-it-t > * { white-space: normal; overflow: visible; }
+.pf-facts b { flex-wrap: wrap; }
+.pf-facts b i { display: block; width: 100%; font-style: normal; font-size: 12px; font-weight: 600; color: var(--hold-500); white-space: nowrap; line-height: 1.2; }
+.nx-modal.nx-modal-prof { padding-top: 0; }
+.nx-modal-prof .nx-mh { position: sticky; top: 0; z-index: 3; background: var(--ej-800); margin: 0 -18px; padding: 18px 18px 10px; }
+@media (max-width: 720px) { .pf-cols { grid-template-columns: minmax(0, 1fr); gap: 0; } }
+@media (max-width: 560px) {
+  .nx-pf-top { grid-template-columns: 112px minmax(0, 1fr); gap: 12px; }
+  .nx-pf-top .portrait { width: 112px; height: 140px; }
+  .nx-pf-id { display: contents; }
+  .nx-pf-id > * { grid-column: 1 / -1; }
+  .nx-pf-id > .pf-name { grid-column: 2; grid-row: 1; align-self: center; }
+  .nx-pf-id h2 { font-size: 22px; }
+  .nx-pf-id .stats { grid-template-columns: 1fr 1fr; }
+  .nx-ch-stats.pf-facts { grid-template-columns: 1fr 1fr; }
+  .pf-facts > span:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
