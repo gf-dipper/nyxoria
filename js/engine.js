@@ -1012,6 +1012,7 @@
 
   function salvage(save, hero, itemId, now) {
     for (var i = 0; i < hero.inventory.length; i++) if (hero.inventory[i].id === itemId) {
+      if (hero.inventory[i].locked) return 0; // zárolt tárgyat nem lehet szétszedni
       var it = hero.inventory.splice(i, 1)[0], rf = refundValue(it);
       hero.dust += rf; // a fejlesztés visszatérítése nem számít bele a heti keretbe
       return addDust(save, hero, salvageValue(it), now) + rf;
@@ -1020,6 +1021,7 @@
   }
   function sell(hero, itemId) {
     for (var i = 0; i < hero.inventory.length; i++) if (hero.inventory[i].id === itemId) {
+      if (hero.inventory[i].locked) return 0; // zárolt tárgyat nem lehet eladni
       var it = hero.inventory.splice(i, 1)[0], v = sellValue(it);
       hero.silver += v; hero.dust += refundValue(it); return v;
     }

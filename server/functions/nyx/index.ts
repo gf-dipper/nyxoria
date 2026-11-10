@@ -2608,6 +2608,7 @@ import postgres from 'npm:postgres@3.4.9';
 
   function salvage(save, hero, itemId, now) {
     for (var i = 0; i < hero.inventory.length; i++) if (hero.inventory[i].id === itemId) {
+      if (hero.inventory[i].locked) return 0; // zárolt tárgyat nem lehet szétszedni
       var it = hero.inventory.splice(i, 1)[0], rf = refundValue(it);
       hero.dust += rf; // a fejlesztés visszatérítése nem számít bele a heti keretbe
       return addDust(save, hero, salvageValue(it), now) + rf;
@@ -2616,6 +2617,7 @@ import postgres from 'npm:postgres@3.4.9';
   }
   function sell(hero, itemId) {
     for (var i = 0; i < hero.inventory.length; i++) if (hero.inventory[i].id === itemId) {
+      if (hero.inventory[i].locked) return 0; // zárolt tárgyat nem lehet eladni
       var it = hero.inventory.splice(i, 1)[0], v = sellValue(it);
       hero.silver += v; hero.dust += refundValue(it); return v;
     }
@@ -3204,11 +3206,19 @@ import postgres from 'npm:postgres@3.4.9';
     off.forEach(s => { if (h.equipped[s]) { h.inventory.push(h.equipped[s]); delete h.equipped[s]; } });
     return { ids: ids };
   };
-  A.salvage = (save, a, ctx) => ({ dust: E.salvage(save, save.hero, a.id, ctx.now) });
-  A.sell = (save, a) => ({ silver: E.sell(save.hero, a.id) });
+  // tárgy zárolása: a zárolt tárgyat sem egyenként, sem tömegesen nem lehet szétszedni vagy eladni (felvenni lehet)
+  const lockedItem = (h, id) => h.inventory.find(i => i.id === id && i.locked);
+  A.lockItem = (save, a) => {
+    const h = save.hero, it = h.inventory.find(i => i.id === a.id) || D.SLOT_ORDER.map(s => h.equipped[s]).find(i => i && i.id === a.id);
+    if (!it) fail('arg', 'Nincs ilyen tárgy.');
+    if (it.locked) delete it.locked; else it.locked = true;
+    return { locked: !!it.locked };
+  };
+  A.salvage = (save, a, ctx) => { if (lockedItem(save.hero, a.id)) fail('state', 'Ez a tárgy zárolva van: előbb oldd fel a zárolást.'); return { dust: E.salvage(save, save.hero, a.id, ctx.now) }; };
+  A.sell = (save, a) => { if (lockedItem(save.hero, a.id)) fail('state', 'Ez a tárgy zárolva van: előbb oldd fel a zárolást.'); return { silver: E.sell(save.hero, a.id) }; };
   A.salvageWeak = (save, a, ctx) => {
     const h = save.hero; let sum = 0;
-    h.inventory.filter(it => !it.mythic && (it.rarity === 'szurke' || it.rarity === 'zold') && !E.isUpgrade(h, it)).forEach(it => { sum += E.salvage(save, h, it.id, ctx.now); });
+    h.inventory.filter(it => !it.mythic && !it.locked && (it.rarity === 'szurke' || it.rarity === 'zold') && !E.isUpgrade(h, it)).forEach(it => { sum += E.salvage(save, h, it.id, ctx.now); });
     return { dust: sum };
   };
   A.upgrade = (save, a, ctx) => {
@@ -3274,7 +3284,7 @@ import postgres from 'npm:postgres@3.4.9';
   };
 
   // ---------- futtatás ----------
-  const FREE_DURING_EXPEDITION = ['tactic', 'restyle', 'lookPick', 'dye', 'settings', 'tip', 'equip', 'salvage', 'sell', 'salvageWeak', 'upgrade', 'reroll', 'skillMove', 'skillOrder', 'equipIds', 'patrolStart', 'patrolClaim'];
+  const FREE_DURING_EXPEDITION = ['tactic', 'restyle', 'lookPick', 'dye', 'settings', 'tip', 'equip', 'salvage', 'sell', 'salvageWeak', 'upgrade', 'reroll', 'skillMove', 'skillOrder', 'equipIds', 'lockItem', 'patrolStart', 'patrolClaim'];
 
   // tárgyak átállítása az új rendszerre (legendás fokozat, fejlesztés-visszatérítés): egyszer, minden régi mentésen
   function migrateItems(save) {

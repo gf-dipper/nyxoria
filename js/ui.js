@@ -131,7 +131,7 @@
   function legendIds() { const h = S.save && S.save.hero; if (!h) return {}; const o = {}; D.SLOT_ORDER.map(k => h.equipped[k]).filter(Boolean).concat(h.inventory || []).forEach(it => { if (it.rarity === 'legendas') o[it.id] = it; }); return o; }
   // könnyű műveletek (taktika, képességsorrend, beállítások): azonnal itt hajtjuk végre, a szerver a háttérben követi
   // (nem kell megvárni a hálózatot, így nem „akad” a kattintás; ha a szerver mást mond, az ő mentése az érvényes)
-  const OPTIMISTIC = { tactic: 1, skillMove: 1, skillOrder: 1, settings: 1, tip: 1, lookPick: 1 };
+  const OPTIMISTIC = { tactic: 1, skillMove: 1, skillOrder: 1, settings: 1, tip: 1, lookPick: 1 }; // a zárolás megvárja a szervert (ne előzhesse meg egy tömeges szétszedés)
   let optSeq = 0;
   async function act(action, args, after) {
     if (ONLINE && OPTIMISTIC[action] && !S.busy && S.save) {
@@ -190,6 +190,19 @@
     (item.affixes || []).forEach(a => { html += `<br><span class="aff">${esc(E.affixText(a))}</span>`; });
     return html;
   }
+  const LOCK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true" width="11" height="11" fill="currentColor"><path d="M7 11V8a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1zm2 0h6V8a3 3 0 0 0-6 0z"/></svg>';
+  // tulajdonságonkénti összevetés a mostani teljes felszereléshez képest: mit nyersz és mit veszítesz
+  const STAT_LBL = [['elet', 'életerő', 0], ['tam', 'támadás', 0], ['ved', 'védekezés', 0], ['fur', 'fürgeség', 0], ['dmg', 'sebzés', 1], ['crit', 'telitalálat-esély', 1], ['dodge', 'kitérés', 1], ['heal', 'gyógyítás', 1], ['first', 'sebzés az első körben', 1]];
+  function statDiffHtml(item) {
+    const h = hero(), a = E.heroStats(h), eq = {}; D.SLOT_ORDER.forEach(s => { eq[s] = h.equipped[s]; }); eq[item.slot] = item;
+    const b = E.heroStats(h, eq), parts = [];
+    STAT_LBL.forEach(([k, n, pctUnit]) => {
+      // ugyanúgy kerekítünk, mint a Tulajdonságok panel (külön a két értéket), hogy a különbség pontosan egyezzen
+      const d = pctUnit ? Math.round(b[k] - a[k]) : Math.round(b[k]) - Math.round(a[k]); if (!d) return;
+      parts.push(`<span class="sd ${d > 0 ? 'up' : 'down'}">${n} ${d > 0 ? '+' : '−'}${fmt(Math.abs(d))}${pctUnit ? '%' : ''}</span>`);
+    });
+    return parts.length ? `<div class="stat-diff" aria-label="Változás felvétel után">${parts.join('')}</div>` : '';
+  }
   function deltaHtml(item) {
     const d = E.powerDelta(hero(), item);
     if (d > 0.05) return `<span class="delta up">${I.up}+${fmt(Math.max(1, d))} harcerő</span>`;
@@ -200,10 +213,10 @@
     opts = opts || {};
     const rar = D.RARITIES[item.rarity];
     return `<div class="item">${itemIcon(item)}<div style="min-width:0">
-      <div class="item-name r-${item.rarity}">${item.mythic ? '✦ ' : ''}${esc(item.name)}${item.plus ? ` +${item.plus}` : ''}</div>
+      <div class="item-name r-${item.rarity}">${item.mythic ? '✦ ' : ''}${esc(item.name)}${item.plus ? ` +${item.plus}` : ''}${item.locked ? ` <span class="lock-tag" title="Zárolva: nem szedhető szét és nem adható el">${LOCK_SVG}zárolva</span>` : ''}</div>
       <div class="item-meta">${D.SLOTS[item.slot].name} · ${item.level}. szint · ${item.mythic ? 'mitikus' : rar.name}${item.plus ? (item.plus > E.maxPlus(item) ? ` · +${item.plus} (tovább nem fejleszthető)` : ` · +${item.plus} / +${E.maxPlus(item)}`) : ''}</div>
       <div class="item-stats">${itemStatLines(item)}</div>${item.line ? `<div class="item-line">„${esc(item.line)}”</div>` : ''}
-      ${opts.delta ? `<div style="margin-top:4px">${deltaHtml(item)}</div>` : ''}
+      ${opts.delta ? `<div style="margin-top:4px">${deltaHtml(item)}${statDiffHtml(item)}</div>` : ''}
     </div></div>`;
   }
   function torchesHtml(t) {
@@ -1794,7 +1807,7 @@
     if (sel) {
       const cost = E.upgradeCost(sel), rc = sel.affixes.length ? E.rerollCost(sel) : null;
       const room = E.dustRoom(S.save, now()), mx = E.maxPlus(sel), sc = E.upgradeSilver(sel);
-      detail = `<div class="detail">${itemHtml(sel)}<hr class="divider">
+      detail = `<div class="detail">${itemHtml(sel)}<div class="row" style="justify-content:flex-end;margin-top:6px"><button class="btn ghost sm lockbtn${sel.locked ? ' on' : ''}" data-act="lock-item" data-v="${sel.id}" aria-pressed="${sel.locked ? 'true' : 'false'}" title="${sel.locked ? 'Zárolás feloldása' : 'Zárolás: ha leveszed, akkor sem lehet véletlenül szétszedni vagy eladni'}">${LOCK_SVG}${sel.locked ? 'Feloldás' : 'Zárolás'}</button></div><hr class="divider">
         <div class="row between"><div><b>Fejlesztés</b><p class="small muted">Lépcsőnként +3% az alapértékekre. Most: +${sel.plus || 0} / +${mx} (${D.RARITIES[sel.rarity].name} tárgynál ennyi a határ). Ha később szétszeded vagy eladod, a beletett Csillagpor 70%-a visszajár.</p></div>
         ${cost == null ? `<span class="badge">KÉSZ +${Math.max(mx, sel.plus || 0)}</span>` : `<button class="btn fakla sm" data-act="upgrade" data-v="${sel.id}" ${h.dust < cost || h.silver < sc ? 'disabled' : ''}>${I.dust}${fmt(cost)} · ${I.silver}${fmt(sc)}</button>`}</div>
         ${rc != null ? `<div class="row between" style="margin-top:10px"><div><b>Tárgyjellemző újrasorsolása</b><p class="small muted">Új véletlen jellemzők. Minden újabb próba drágább.</p></div><button class="btn sm" data-act="reroll" data-v="${sel.id}" ${h.silver < rc ? 'disabled' : ''}>${I.silver}${fmt(rc)}</button></div>` : ''}
@@ -1863,11 +1876,12 @@
       const sv = Math.min(room, E.salvageValue(it)), rf = E.refundValue(it), better = sv >= E.salvageValue(it) * 0.5 ? 'salvage' : 'sell';
       return `<div class="inv-item">${itemHtml(it, { delta: true })}<div class="actions">
       <button class="btn primary sm" data-act="equip" data-v="${it.id}">Felveszem</button>
+      <button class="btn ghost sm lockbtn${it.locked ? ' on' : ''}" data-act="lock-item" data-v="${it.id}" aria-pressed="${it.locked ? 'true' : 'false'}" title="${it.locked ? 'Zárolás feloldása' : 'Zárolás: nem lehet véletlenül szétszedni vagy eladni'}">${LOCK_SVG}${it.locked ? 'Feloldás' : 'Zárolás'}</button>
       <button class="btn ghost sm" data-act="try-on" data-v="${it.id}">${S.tryOn === it.id ? 'Bezárom' : 'Felpróbálom'}</button>
-      <button class="btn ${better === 'salvage' ? '' : 'ghost '}sm" data-act="salvage" data-v="${it.id}">${I.dust}Szétszedés (+${fmt(sv + rf)})</button>
-      <button class="btn ${better === 'sell' ? '' : 'ghost '}sm" data-act="sell" data-v="${it.id}">${I.silver}Eladás (+${fmt(E.sellValue(it))}${rf ? ` · ${I.dust}+${fmt(rf)}` : ''})</button></div></div>`;
+      <button class="btn ${better === 'salvage' ? '' : 'ghost '}sm" data-act="salvage" data-v="${it.id}" ${it.locked ? 'disabled title="Zárolva"' : ''}>${I.dust}Szétszedés (+${fmt(sv + rf)})</button>
+      <button class="btn ${better === 'sell' ? '' : 'ghost '}sm" data-act="sell" data-v="${it.id}" ${it.locked ? 'disabled title="Zárolva"' : ''}>${I.silver}Eladás (+${fmt(E.sellValue(it))}${rf ? ` · ${I.dust}+${fmt(rf)}` : ''})</button></div></div>`;
     }).join('');
-    const weak = h.inventory.filter(it => !it.mythic && (it.rarity === 'szurke' || it.rarity === 'zold') && !E.isUpgrade(h, it)).length;
+    const weak = h.inventory.filter(it => !it.mythic && !it.locked && (it.rarity === 'szurke' || it.rarity === 'zold') && !E.isUpgrade(h, it)).length;
     const tryIt = S.tryOn && h.inventory.filter(x => x.id === S.tryOn)[0];
     const tryHtml = tryIt ? (() => { const t = JSON.parse(JSON.stringify(h)); t.equipped[tryIt.slot] = tryIt; if (t.lookPick) delete t.lookPick[tryIt.slot];
       return `<section class="panel try-on"><div class="panel-title"><h2>Próbafülke: ${esc(tryIt.name)}</h2><button class="btn ghost sm" data-act="try-on" data-v="${tryIt.id}">Bezárom</button></div>
@@ -2239,6 +2253,7 @@
     'gear-apply'() { const h = hero(), plan = E.bestGear(h); if (!plan.changes.length) return; const prev = plan.changes.filter(c => c.from).map(c => c.from.id), empty = plan.changes.filter(c => !c.from).map(c => c.slot);
       act('equipIds', { ids: plan.changes.map(c => c.to.id) }, () => { S.gearUndo = { ids: prev, unequip: empty }; S.gearPrev = 0; toast('Felvetted a legerősebb tárgyakat.'); }); },
     'gear-undo'() { const u = S.gearUndo; if (!u) return; S.gearUndo = null; if (u.ids.length || u.unequip.length) act('equipIds', { ids: u.ids, unequip: u.unequip }, () => toast('Visszaállítottam a korábbi felszerelést.')); else render(); },
+    'lock-item'(v) { act('lockItem', { id: v }); },
     'salvage-weak'() { act('salvageWeak', {}, r => toast(`+${r.dust} Csillagpor`)); },
     autosalvage(v, x) { act('settings', { autoSalvage: !!x.checked }); },
     patrol(v) { act('patrolStart', { hours: +v }, () => toast('Őrjáratra indultál!')); },
