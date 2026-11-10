@@ -795,9 +795,20 @@ svg.nxi-misc { width: 1.3em; height: 1.3em; flex: none; display: inline-block; v
 .nx-goals li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 12px; background: var(--ej-900); border: 1px solid var(--ej-600); font-size: 14px; font-weight: 700; }
 .nx-goals li.here { border-color: var(--fakla-300); }
 .nx-goals li.done { opacity: .6; }
-.nx-members { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
-.nx-members li { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 12px; background: var(--ej-900); border: 1px solid var(--ej-600); font-size: 13px; }
-.nx-members .pt { width: 40px; height: 40px; border-radius: 10px; overflow: hidden; }
+.nx-members { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 8px; }
+.nx-members li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 12px; background: var(--ej-900); border: 1px solid var(--ej-600); font-size: 13px; }
+.nx-members li[hidden] { display: none; }
+.nx-gm-open { all: unset; box-sizing: border-box; display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 8px; align-items: center; min-width: 0; cursor: pointer; border-radius: 10px; padding: 2px; }
+@media (hover: hover) { .nx-gm-open:hover b { color: var(--fakla-300); } }
+.nx-gm-open:focus-visible b { color: var(--fakla-300); }
+.nx-gm-open:focus-visible { outline: 2px solid var(--fakla-400, #f0b44a); outline-offset: 2px; }
+.nx-gm-open > span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.nx-gm-open > span:last-child > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nx-gm-pw { color: var(--fakla-300); font-weight: 600; }
+.nx-gm-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+.nx-gm-tools .input { flex: 1 1 180px; height: 38px; min-width: 0; }
+.nx-gm-tools .seg { flex: 0 1 auto; }
+.nx-members .pt { width: 48px; height: 48px; flex: none; border-radius: 10px; overflow: hidden; }
 .nx-members .pt .art-img { object-fit: cover; }
 .nx-members b { display: block; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nx-glist { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }

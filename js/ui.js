@@ -1029,6 +1029,7 @@
   // ---------- együtt: Aréna, csapat, céh ----------
   function arenaBadge() { if (!S.save || !X) return null; const l = X.ARENA_FIGHTS - X.arenaState(S.save, now()).fights; return l > 0 ? [String(l), `ma még ${l} párbajod van`, 'warn'] : null; }
   function teamBadge() { if (!S.save || !X) return null; const l = X.TEAM_RUNS - X.teamState(S.save, now()).runs; return l > 0 ? [String(l), `ma még ${l} küldetésed van`, 'warn'] : null; }
+  function gmFold(t) { return String(t).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
   function snapPortrait(c) { return A.heroSvg({ name: c.name, classId: c.classId, rig: c.rig, look: c.look, people: c.people }); }
   function oppCard(c, body) {
     return `<span class="pt" aria-hidden="true">${snapPortrait(c)}</span><b>${esc(c.name)}</b><span class="small muted">${c.level}. szintű ${esc(D.CLASSES[c.classId].name.toLowerCase())}${c.bot ? ' · gépi' : ''}</span><span class="small">Harcerő ${fmt(c.power)}</span>${body || ''}`;
@@ -1075,7 +1076,10 @@
       const g = G2.guild, pr = G2.progress, top = G2.goals[G2.goals.length - 1].w;
       const goals = G2.goals.map(x => { const got = G2.claimed.indexOf(x.i) >= 0, can = !got && pr.wins >= x.w, rw = x.silverM ? ` <span class="small muted">· ${I.silver}${fmt(Math.round(E.silverBase(hero().level) * x.silverM))} ${I.dust}${x.dust}</span>` : '';
         return `<li class="${got ? 'done' : can ? 'here' : ''}"><span>${x.w} közös győzelem${rw}</span>${got ? '<span class="small" style="color:var(--jo-400)">Átvéve</span>' : can ? `<button class="btn sm primary" data-act="guild-claim" data-v="${x.i}">Átveszem</button>` : `<span class="small muted">még ${x.w - pr.wins}</span>`}</li>`; }).join('');
-      const mem = G2.members.map(m => `<li><span class="pt">${snapPortrait(m)}</span><span><b>${esc(m.name)}${m.role === 'vezeto' ? ' <span class="nx-tag">vezető</span>' : ''}</b><span class="small muted">${m.level}. szint · ${m.wins} győzelem a héten</span></span>${G2.owner && !m.me ? `<button class="btn ghost sm" data-act="guild-kick" data-v="${esc(m.uid)}" title="Elküldés a céhből">✕</button>` : ''}</li>`).join('');
+      const gs = S.gmSort || 'wins', MS = { wins: (a, b) => b.wins - a.wins || b.level - a.level, power: (a, b) => (b.power || 0) - (a.power || 0), level: (a, b) => b.level - a.level || (b.power || 0) - (a.power || 0), name: (a, b) => a.name.localeCompare(b.name, 'hu') };
+      const gq = gmFold(S.gmQ || ''), gmHit = m => !gq || gmFold(m.name).includes(gq), gmAny = G2.members.some(gmHit);
+      const mem = G2.members.slice().sort(MS[gs] || MS.wins).map(m => `<li data-gm="${esc(gmFold(m.name))}"${gmHit(m) ? '' : ' hidden'}><button class="nx-gm-open" data-act="profile-open" data-v="${esc(m.name)}" title="${esc(m.name)} profilja"><span class="pt">${snapPortrait(m)}</span><span><b>${esc(m.name)}${m.role === 'vezeto' ? ' <span class="nx-tag">vezető</span>' : ''}</b><span class="small muted">${m.level}. szint · ${D.CLASSES[m.classId] ? esc(D.CLASSES[m.classId].name) : ''}</span><span class="small nx-gm-pw">${fmt(m.power || 0)} harcerő</span><span class="small muted">${m.wins} heti győzelem</span></span></button>${G2.owner && !m.me ? `<button class="btn ghost sm" data-act="guild-kick" data-v="${esc(m.uid)}" title="Elküldés a céhből">✕</button>` : ''}</li>`).join('');
+      const memTools = G2.members.length > 1 ? `<div class="nx-gm-tools"><input class="input" id="gm-q" type="search" placeholder="Keresés név szerint" value="${esc(S.gmQ || '')}" autocomplete="off"><div class="seg" role="group" aria-label="Sorrend">${[['wins', 'Győzelem'], ['power', 'Harcerő'], ['level', 'Szint'], ['name', 'Név']].map(([k, l]) => `<button aria-pressed="${gs === k}" data-act="gm-sort" data-v="${k}">${l}</button>`).join('')}</div></div>` : '';
       const log = G2.log.map(l => `<li><span class="small muted">${new Date(l.t).toLocaleDateString('hu-HU', { month: 'short', day: 'numeric' })}</span> ${l.html}</li>`).join('');
       return `<section class="panel"><div class="nx-ch-head"><div class="nx-guild-head">${guildFlag(g)}<div><h1>${esc(g.name)} <span class="nx-tag">${esc(g.tag)}</span>${g.stars ? ` <span class="nx-stars" title="Megnyert céhháborúk">${'★'.repeat(Math.min(10, g.stars))}${g.stars > 10 ? '+' : ''}</span>` : ''}</h1>${g.motto ? `<p class="small muted">„${esc(g.motto)}”</p>` : ''}</div></div>
         <div class="nx-ch-stats"><span><small>Tagok</small><b>${pr.members} / ${G2.max}</b></span><span><small>Közös győzelem a héten</small><b>${pr.wins}</b></span></div></div>
@@ -1083,7 +1087,7 @@
         ${warHtml(G2)}
         <div class="nx-ch-body"><div><h2 style="font-size:18px">Heti közös célok</h2><p class="small muted">Minden tag győzelme beleszámít (kaland fáklyával, aréna, esemény, csapat). A jutalmat mindenki magának veszi át, ha a héten legalább egyszer ő is nyert.</p><ul class="nx-goals">${goals}</ul></div>
           <div><h2 style="font-size:18px">Céhkrónika</h2><ul class="nx-glog">${log || '<li>Még nem történt semmi.</li>'}</ul></div></div></section>
-        <section class="panel"><div class="row between"><h2>Tagok</h2><button class="btn ghost sm" data-act="guild-leave">Kilépek a céhből</button></div><ul class="nx-members">${mem}</ul></section>`;
+        <section class="panel"><div class="row between"><h2>Tagok</h2><button class="btn ghost sm" data-act="guild-leave">Kilépek a céhből</button></div>${memTools}<ul class="nx-members">${mem}</ul><p class="small muted nx-gm-none"${gmAny ? ' hidden' : ''}>Nincs ilyen nevű tag.</p></section>`;
     }
     const f = S.guildForm || (S.guildForm = { name: '', tag: '', color: '#7f8cff', emblem: 'hold', motto: '' });
     const list = (G2.guilds || []).map(g => `<li>${guildFlag(g)}<span><b>${esc(g.name)}</b> <span class="nx-tag">${esc(g.tag)}</span><br><span class="small muted">${g.members} / ${G2.max} tag · ${g.wins} győzelem a héten${g.motto ? ' · „' + esc(g.motto) + '”' : ''}</span></span><button class="btn primary sm" data-act="guild-join" data-v="${g.id}" ${g.members >= G2.max ? 'disabled' : ''}>Csatlakozom</button></li>`).join('');
@@ -1132,7 +1136,7 @@
     if (S.save && G.migrateItems) { try { G.migrateItems(S.save); } catch (e) { /* régi mentés: a következő műveletnél úgyis átalakul */ } }
     const fa = document.activeElement, sel = fa && fa !== document.body && fa.dataset && fa.dataset.act ? `[data-act="${fa.dataset.act}"]${fa.dataset.v != null ? `[data-v="${CSS.escape(fa.dataset.v)}"]` : ''}` : (fa && fa.id ? '#' + CSS.escape(fa.id) : null);
     // ugyanaz a gomb több helyen is lehet (oldalsáv, fülsáv): a sorszámát is megjegyezzük, hogy pontosan oda térjen vissza a fókusz
-    let selIdx = 0;
+    let selIdx = 0; let caret = null; try { if (fa && typeof fa.selectionStart === 'number') caret = [fa.selectionStart, fa.selectionEnd]; } catch (e) { /* nem szövegmező */ }
     if (sel) { const all = app.querySelectorAll(sel); for (let i = 0; i < all.length; i++) if (all[i] === fa) { selIdx = i; break; } }
     // a legendás tárgy felfedése: a harc lejátszása után, ha éppen nincs más ablak nyitva
     if (S.legendQueue && S.legendQueue.length && !S.combat && !S.modal) S.modal = { type: 'legend', item: S.legendQueue.shift() };
@@ -1143,7 +1147,7 @@
     const modal = app.querySelector('.modal');
     if (modal && S.modal !== lastModal) { beforeModal = sel ? { sel: sel, idx: selIdx } : null; const f = modal.querySelector('button, [href], input, select, textarea'); if (f) f.focus({ preventScroll: true }); }
     else if (!modal && lastModal && beforeModal) { const all = app.querySelectorAll(beforeModal.sel), e = all[beforeModal.idx] || all[0]; if (e) e.focus({ preventScroll: true }); }
-    else if (sel && !(modal && modal.contains(document.activeElement))) { const e = app.querySelector(sel); if (e && document.activeElement !== e) e.focus({ preventScroll: true }); }
+    else if (sel && !(modal && modal.contains(document.activeElement))) { const e = app.querySelector(sel); if (e && document.activeElement !== e) { e.focus({ preventScroll: true }); if (caret) try { e.setSelectionRange(caret[0], caret[1]); } catch (er) { /* nem szövegmező */ } } }
     lastModal = modal ? S.modal : null;
     // ha a fókusz elveszett (pl. Bubó tippje jelent meg), a tipp gombjára kerül
     if (document.activeElement === document.body) { const ow = app.querySelector('.owl [data-act="owl-ok"]') || app.querySelector('.nx-title .nx-continue'); if (ow) ow.focus({ preventScroll: true }); }
@@ -2153,6 +2157,7 @@
     'guild-create'() { const f = readGuildForm(); guildCall('guildCreate', f, 'Megvan a céhed!'); },
     'guild-join'(v) { guildCall('guildJoin', { id: +v }, 'Csatlakoztál!'); },
     'guild-leave'() { if (!S.leaveGuildArmed || Date.now() - S.leaveGuildArmed > 5000) { S.leaveGuildArmed = Date.now(); toast((S.guildData && S.guildData.owner) ? 'Biztosan kilépsz? A vezetést a legrégebbi tag kapja; ha nincs más tag, a céh megszűnik. Kattints újra.' : 'Biztosan kilépsz? Kattints újra a megerősítéshez.'); return; } S.leaveGuildArmed = 0; guildCall('guildLeave', {}, r => r.disbanded ? 'Kiléptél; a céh megszűnt.' : 'Kiléptél a céhből.'); },
+    'gm-sort'(v) { S.gmSort = v; render(); },
     'guild-kick'(v) { if (S.kickArmed !== v) { S.kickArmed = v; toast('Biztosan elküldöd? Kattints újra a megerősítéshez.'); return; } S.kickArmed = null; guildCall('guildKick', { uid: v }, 'A tagot elküldted a céhből.'); },
     'go-paths'() { window.NYX.ui.actions.screen('hos'); setTimeout(() => { const el = document.querySelector('.nx-paths-h'); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 60); },
     'hero-new'() { S.screen = 'ujhos'; render(); scrollTop(); },
@@ -2361,6 +2366,8 @@
   // súgó: keresés gépelés közben (a fókusz és a kurzor megmarad az újrarajzolás után)
   let helpT = 0;
   document.addEventListener('input', ev => {
+    if (/^g-(name|tag|motto|color)$/.test(ev.target.id)) { readGuildForm(); return; }
+    if (ev.target.id === 'gm-q') { const q = gmFold(ev.target.value); S.gmQ = ev.target.value; let n = 0; document.querySelectorAll('.nx-members li[data-gm]').forEach(li => { const on = !q || li.dataset.gm.includes(q); li.hidden = !on; if (on) n++; }); const e = document.querySelector('.nx-gm-none'); if (e) e.hidden = n > 0; return; }
     if (ev.target.id !== 'help-q') return;
     clearTimeout(helpT);
     helpT = setTimeout(() => { const v = ev.target.value, pos = ev.target.selectionStart; S.helpQ = v; render(); const n = el('help-q'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) { /* régi böngésző */ } } }, 160);
