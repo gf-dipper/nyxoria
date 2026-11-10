@@ -303,7 +303,8 @@
   function rightPanel() {
     const all = ONLINE ? S.chronicle : S.save.chronicle, cut = S.combat && !S.combat.done ? S.combat.chronCut : null;
     const list = cut ? all.filter(x => !(x.t > cut)) : all;
-    const items = list.slice(0, 7).map(chronItem).join('') || '<p class="small muted">Még nem történt semmi. Indulj el az első kalandodra!</p>';
+    const notable = ONLINE ? list : list.filter(chronNotable), shown = notable.length >= 3 ? notable : list;
+    const items = shown.slice(0, 7).map(chronItem).join('') || '<p class="small muted">Még nem történt semmi. Indulj el az első kalandodra!</p>';
     const community = ONLINE ? bossMini() : `<div class="panel"><div class="panel-title"><h3>Közösség</h3><span class="badge">GYAKORLÓ MÓD</span></div>
         <div class="soon">Ez a gyakorló mód: a hősöd csak ebben a böngészőben él. A közös szerveren jön a <b>Discord-belépés</b>, a <b>heti szörny</b>, a <b>ranglisták</b> és a közös krónika.</div></div>`;
     return `<aside class="col-right" aria-label="Közösség">
@@ -311,6 +312,8 @@
       <div class="panel"><div class="panel-title"><h3>${ONLINE ? 'Szerver-krónika' : 'Krónika'}</h3><button class="btn ghost sm" data-act="screen" data-v="kozosseg">Mind</button></div><div class="chron">${items}</div></div>
     </aside>`;
   }
+  // a saját krónikában a sima győzelmek és vereségek tömege elnyomja a fontos pillanatokat (szintlépés, ritka tárgy, eredmény)
+  function chronNotable(c) { return c.kind !== 'win' && c.kind !== 'lose' && c.kind !== ''; }
   function chronItem(c) {
     const d = new Date(c.t), today = new Date(Date.now());
     const same = d.toDateString() === today.toDateString();
@@ -388,13 +391,20 @@
         SOON.length ? { id: 'keszulo', name: 'Készülő funkciók', ic: 'keszulo', sub: 'Ami hamarosan érkezik', go: ['info', 'keszulo'], badge: null } : null
       ] }
     ];
-    g.forEach(x => { x.items = x.items.filter(Boolean); });
+    g.forEach(x => { x.items = x.items.filter(Boolean); x.items.forEach(it => { const l = lockLevel(it.id); if (l) { it.lock = l; it.badge = null; } }); });
     return g;
   }
   const SOON = [
   ];
+  // Menük fokozatos nyitása: az új hős nem kap egyszerre húsz menüpontot. Ami még zárva van, az halványan látszik a szinttel.
+  const UNLOCK = { orjarat: 2, megbizasok: 3, bolt: 4, torony: 5, ceh: 5, boss: 5, esemeny: 6, arena: 8, csapat: 10 };
+  const UNLOCK_NAME = { orjarat: 'Őrjárat', megbizasok: 'Megbízások', bolt: 'Vándorkereskedő', torony: 'Holdtorony', ceh: 'Céh', boss: 'Heti szörny', esemeny: 'Heti esemény', arena: 'Aréna', csapat: 'Csapatküldetések' };
+  // aki már használta (régi hős a bevezetés előttről), annak nyitva marad
+  const usedBefore = id => { const v = S.save, k = { orjarat: v.patrolDay || v.patrol, bolt: v.shop, torony: v.tower, esemeny: v.event, arena: v.arena, csapat: v.team, ceh: S.guild, boss: (S.bossMine || []).length }[id]; return !!k; };
+  const lockLevel = id => (S.save && UNLOCK[id] && hero().level < UNLOCK[id] && !usedBefore(id) ? UNLOCK[id] : 0);
   function currentNav() { return S.screen === 'beallitas' ? '' : S.screen; }
   function navBtn(it, withSub) {
+    if (it.lock) return `<li><button class="nx-locked" data-act="locked" data-v="${it.id}" aria-label="${esc(it.name)}: ${azN(it.lock)} ${it.lock}. szinttől érhető el">${ni(it.ic)}<span class="nm">${esc(it.name)}${withSub ? `<small>${azN(it.lock) === 'az' ? 'Az' : 'A'} ${it.lock}. szinttől érhető el</small>` : ''}</span><span class="nx-pill lock" aria-hidden="true">${it.lock}. sz.</span></button></li>`;
     const cur = it.go[0] === 'screen' && currentNav() === it.go[1];
     const badge = it.badge ? `<span class="nx-pill ${it.badge[2]}" aria-hidden="true">${esc(it.badge[0])}</span><span class="sr">, ${esc(it.badge[1])}</span>` : '';
     return `<li><button data-act="${it.go[0]}" data-v="${it.go[1]}"${cur ? ' aria-current="page"' : ''}${withSub ? '' : ` title="${esc(it.sub)}"`}>${ni(it.ic)}<span class="nm">${esc(it.name)}${withSub ? `<small>${esc(it.sub)}</small>` : ''}</span>${badge}</button></li>`;
@@ -449,19 +459,19 @@
     const out = [], add = (prio, html) => out.push({ prio, html });
     const p = S.save.patrol;
     if (p && p.end <= now()) add(10, `<button data-act="goto" data-v="patrol">${ni('orjarat')}Visszatért az őrjárat: vedd át a zsákmányt</button>`);
-    if (X && D.QUESTS && S.save.quests && S.save.quests.day === X.day(now())) { const n = S.save.quests.list.filter(q => q.prog >= q.n).length; if (n) add(11, `<button data-act="screen" data-v="megbizasok">${ni('kronika')}${n === 1 ? 'Teljesítettél egy megbízást: vedd át a jutalmat' : `${n} megbízás jutalma vár`}</button>`); }
+    if (X && D.QUESTS && !lockLevel('megbizasok') && S.save.quests && S.save.quests.day === X.day(now())) { const n = S.save.quests.list.filter(q => q.prog >= q.n).length; if (n) add(11, `<button data-act="screen" data-v="megbizasok">${ni('kronika')}${n === 1 ? 'Teljesítettél egy megbízást: vedd át a jutalmat' : `${n} megbízás jutalma vár`}</button>`); }
     if (X && X.giftState(S.save, now()).can) add(12, `<button data-act="info" data-v="gift">${ni('ajandek')}Vár a napi ajándékod</button>`);
     if (X) { const n = X.achList(S.save).filter(a => a.reached > a.claimed).length; if (n) add(13, `<button data-act="screen" data-v="eredmenyek">${ni('eredmeny')}${n === 1 ? 'Új eredményt értél el: vedd át a jutalmat' : `${n} eredmény jutalma vár`}</button>`); }
     if (h.inventory.length >= E.INVENTORY_MAX - 3) add(h.inventory.length >= E.INVENTORY_MAX ? 5 : 20, `<button data-act="screen" data-v="taska">${ni('taska')}${h.inventory.length >= E.INVENTORY_MAX ? 'Tele a táskád! Szedj szét vagy adj el valamit' : 'Majdnem tele a táskád'}</button>`);
     if (h.level >= D.PATH_LEVEL && h.path == null) add(21, `<button data-act="go-paths">${ni('karakter')}Válassz ösvényt!</button>`);
     if (X && D.STORY) { const st = X.storyState(S.save, now()), ch = X.storyChapters()[st.done]; if (ch && h.level >= ch.level && st.losses < X.STORY_TRIES && h.inventory.length < E.INVENTORY_MAX) add(30, `<button data-act="screen" data-v="holdkronika">${ni('kronika')}Új fejezet a Holdkrónikában: ${esc(ch.title)}</button>`); }
-    const tg = towerGoal(h);
+    const tg = lockLevel('torony') ? null : towerGoal(h);
     if (tg) add(31, `<button data-act="screen" data-v="torony">${ni('torony')}${tg.d === 1 ? `A Holdtorony ${tg.goal}. emeletén tárgy vár` : `Még ${tg.d} emelet a toronyban a következő tárgyig`}</button>`);
-    if (ONLINE && S.boss && S.boss.active) { const left = 3 - bossHitsToday(); if (left) add(40, `<button data-act="screen" data-v="boss">${ni('boss')}Heti szörny: ${left} ütésed van</button>`); }
-    if (!p && S.save.patrolDay !== G.budapestDate(now())) add(41, `<button data-act="goto" data-v="patrol">${ni('orjarat')}${t.count ? 'Őrjáratra küldheted a hősödet' : 'Nincs fáklyád: küldd őrjáratra a hősödet'}</button>`);
+    if (ONLINE && S.boss && S.boss.active && !lockLevel('boss')) { const left = 3 - bossHitsToday(); if (left) add(40, `<button data-act="screen" data-v="boss">${ni('boss')}Heti szörny: ${left} ütésed van</button>`); }
+    if (!p && S.save.patrolDay !== G.budapestDate(now()) && !lockLevel('orjarat')) add(41, `<button data-act="goto" data-v="patrol">${ni('orjarat')}${t.count ? 'Őrjáratra küldheted a hősödet' : 'Nincs fáklyád: küldd őrjáratra a hősödet'}</button>`);
     out.sort((a, b) => a.prio - b.prio);
     // legfeljebb négy, hogy a tábor ne zsúfolódjon; az első a kiemelt „következő lépés”
-    return out.slice(0, 4).map((x, i) => i === 0 ? x.html.replace('<button ', '<button class="nx-next" ').replace('">', '"><span class="nx-next-l">Következő lépés</span>') : x.html);
+    return out.slice(0, 3).map((x, i) => i === 0 ? x.html.replace('<button ', '<button class="nx-next" ').replace('">', '"><span class="nx-next-l">Következő lépés</span>') : x.html);
   }
   // a tábor színpada a kalandválasztó fölött: a hős a tűz mellett, ami most vár rá, és egyetlen fő gomb
   function campStage() {
@@ -903,7 +913,8 @@
     const byId = {}; secs.forEach(x => byId[x.id] = x);
     const toc = H.groups.map(g => { const items = g.ids.map(id => byId[id]).filter(x => x && match(x)); return items.length ? `<div class="hp-grp"><h4>${esc(g.title)}</h4>${items.map(x => `<a href="#hp-${x.id}" data-act="help-go" data-v="${x.id}">${esc(x.title)}</a>`).join('')}</div>` : ''; }).join('');
     const faq = (H.faq || []).filter(f => !q || helpTok(f.q + ' ' + f.a).toLowerCase().indexOf(q) >= 0);
-    const body = shown.map(x => `<section class="panel hp-sec" id="hp-${x.id}"><div class="hp-txt"><h2>${esc(x.title)}</h2><p class="hp-short">${esc(helpTok(x.short))}</p>${helpBlocks(x)}${x.go ? `<button class="btn ghost sm" data-act="screen" data-v="${x.go}" style="margin-top:10px">Megnézem a játékban →</button>` : ''}</div>
+    const open1 = x => !!q || S.helpOpen === x.id || shown.length <= 2;
+    const body = shown.map(x => `<section class="panel hp-sec${open1(x) ? '' : ' closed'}" id="hp-${x.id}"><div class="hp-txt"><button class="hp-tog" data-act="help-toggle" data-v="${x.id}" aria-expanded="${open1(x)}"><span><h2>${esc(x.title)}</h2><span class="hp-short">${esc(helpTok(x.short))}</span></span><span class="hp-chev" aria-hidden="true">${I.down}</span></button>${open1(x) ? helpBlocks(x) : ''}${x.go ? `<button class="btn ghost sm" data-act="screen" data-v="${x.go}" style="margin-top:10px">Megnézem a játékban →</button>` : ''}</div>
         <figure class="hp-fig">${helpFig(x.fig)}${x.figCaption ? `<figcaption>${esc(x.figCaption)}</figcaption>` : ''}</figure></section>`).join('');
     return `<section class="panel hp-head"><div class="row" style="gap:14px;align-items:center">${A.OWL.replace('width="64" height="64"', 'width="56" height="56"')}<div><h1>Súgó</h1><p class="muted">${esc(helpTok(H.intro))}</p></div></div>
         <label class="hp-search"><span class="sr-only">Keresés a súgóban</span><input type="search" id="help-q" placeholder="Keresés: pl. fáklya, legendás, elit…" value="${esc(S.helpQ || '')}" autocomplete="off"></label>
@@ -1160,6 +1171,7 @@
   }
   window.addEventListener('resize', () => requestAnimationFrame(scrollHints), { passive: true });
   function render() {
+    if (S.modal && S.modal !== S.sndModal) { S.sndModal = S.modal; const mt = S.modal.type; if (mt === 'level') SND('level'); else if (mt === 'legend') SND('loot'); else if (mt === 'chest' || mt === 'patrol') SND('coin'); } else if (!S.modal) S.sndModal = null;
     requestAnimationFrame(() => { scrollHints(); if (S.combat) skbUpdate(S.combat); });
     if (S.save && G.migrateItems) { try { G.migrateItems(S.save); } catch (e) { /* régi mentés: a következő műveletnél úgyis átalakul */ } }
     const fa = document.activeElement, sel = fa && fa !== document.body && fa.dataset && fa.dataset.act ? `[data-act="${fa.dataset.act}"]${fa.dataset.v != null ? `[data-v="${CSS.escape(fa.dataset.v)}"]` : ''}` : (fa && fa.id ? '#' + CSS.escape(fa.id) : null);
@@ -1209,6 +1221,7 @@
       app.innerHTML = (NEW_SHELL ? newTopbar() : topbar()) + `<div class="layout wide"><main class="main" id="main"><div class="exp-head"><div><div class="tiny">${esc(hero().name)}</div><h1>Kinézet átszabása</h1></div><button class="btn ghost sm" data-act="restyle-back">Vissza, mentés nélkül</button></div><div id="cr-ph"></div></main></div>` + modalHtml() + devbar();
       keepCreator('restyle'); return;
     }
+    if (lockLevel(S.screen)) S.screen = 'kaland';
     let main;
     if (S.combat) main = expHead() + renderCombat();
     else if (S.screen === 'kaland') main = S.save.expedition ? renderExpedition(S.save.expedition) : renderCamp();
@@ -1321,6 +1334,7 @@
   }
 
   function patrolPanel() {
+    if (lockLevel('orjarat')) return '';
     const h = hero(), p = S.save.patrol, today = G.budapestDate(now());
     let body;
     if (p && p.end <= now()) {
@@ -1351,6 +1365,7 @@
   }
   function bossMini() {
     const b = S.boss;
+    if (lockLevel('boss')) return `<div class="panel"><div class="panel-title"><h3>Heti szörny</h3><span class="nx-pill lock">${UNLOCK.boss}. sz.</span></div><p class="small muted">Az egész szerver együtt üti. Az ${UNLOCK.boss}. szinttől te is beszállhatsz.</p></div>`;
     if (!b) return `<div class="panel"><div class="panel-title"><h3>Heti szörny</h3></div><p class="small muted">${bossStatus(b)}</p></div>`;
     const left = 3 - bossHitsToday();
     return `<div class="panel boss-mini"><div class="panel-title"><h3>Heti szörny</h3>${b.rage ? '<span class="badge" style="color:var(--boss-400)">DÜHÖDT</span>' : ''}</div>
@@ -1362,7 +1377,7 @@
   }
   function bossStrip() {
     const b = S.boss;
-    if (!b) return '';
+    if (!b || lockLevel('boss')) return '';
     const left = 3 - bossHitsToday();
     return `<button class="panel mobile-only boss-strip" data-act="screen" data-v="boss" style="margin-bottom:12px;width:100%;text-align:left;color:inherit;font:inherit;cursor:pointer">
       <div class="row between"><b style="font-family:var(--display)">${esc(b.name)}</b><span class="small" style="color:${b.active && left ? 'var(--fakla-300)' : 'var(--hold-500)'};font-weight:800">${b.active ? (left ? `${left} ütésed van ma` : 'Mára kész') : (b.killedAt ? 'Legyőzve' : 'Szünet')}</span></div>
@@ -1408,8 +1423,9 @@
   // ---------- közösség: ranglisták és krónika ----------
   function renderCommunity() {
     if (!ONLINE) {
-      const items = S.save.chronicle.map(chronItem).join('') || '<p class="muted">Még üres.</p>';
-      return `<section class="panel"><div class="panel-title"><div><h1>Krónika</h1><p class="small muted">A hősöd története.</p></div></div><div class="chron" style="max-height:none">${items}</div></section>`;
+      const all = S.chronAll, src = all ? S.save.chronicle : S.save.chronicle.filter(chronNotable);
+      const items = src.map(chronItem).join('') || `<p class="muted">${all ? 'Még üres.' : 'Még nincs kiemelt pillanat. A szintlépések, a ritka tárgyak és a nagy győzelmek kerülnek ide.'}</p>`;
+      return `<section class="panel"><div class="panel-title"><div><h1>Krónika</h1><p class="small muted">A hősöd története.</p></div><div class="seg" role="group" aria-label="Szűrés"><button data-act="chron-all" data-v="0" aria-pressed="${!all}">Fontosabbak</button><button data-act="chron-all" data-v="1" aria-pressed="${!!all}">Minden</button></div></div><div class="chron" style="max-height:none">${items}</div></section>`;
     }
     const rows = S.ranks[S.rankTab];
     const rankHtml = rows ? (rows.length ? rows.map((r, i) => `<div class="rank-row${r.me ? ' me' : ''}"><span class="rank-n">${i + 1}.</span><span class="rank-name">${ONLINE && !r.guild ? `<button class="nx-lnk" data-act="profile-open" data-v="${esc(r.name)}">${esc(r.name)}</button>` : esc(r.name)}</span><span class="small muted rank-cls">${r.guild ? `${r.level} tag` : `${D.CLASSES[r.classId] ? D.CLASSES[r.classId].name : ''} · ${r.level}. szint`}</span><b>${S.rankTab === 'szint' || S.rankTab === 'ujonc' ? r.level + '.' : fmt(r.value)}</b><span class="small muted rank-unit">${S.rankTab === 'szint' || S.rankTab === 'ujonc' ? 'szint' : RANK_UNIT[S.rankTab]}</span></div>`).join('') : '<p class="small muted">Még üres ez a lista.</p>') : '<p class="small muted">Betöltés…</p>';
@@ -1459,7 +1475,7 @@
         <div class="event-choices${E.eventOptions(h, ev).length > 2 ? ' many' : ''}">${opts}</div></div>`;
     } else if (exp.phase === 'cardResult') body = cardResultHtml(exp.lastOut);
     const introCl = exp.clearings[Math.min(exp.phase === 'cardResult' ? exp.step - 1 : exp.step, 2)];
-    return expHead() + `<div class="exp-scene">${A.sceneSvg(r.scene, exp.step + 3)}<p class="intro">${esc(exp.step === 0 && exp.phase === 'clearing' ? r.intro + ' ' + introCl.intro : introCl.intro)}</p></div>` + body + modsHtml(exp);
+    return expHead() + `<div class="exp-scene has-hero">${A.sceneSvg(r.scene, exp.step + 3)}<div class="exp-hero" aria-hidden="true">${A.heroSvg(hero(), { full: true })}</div><p class="intro">${esc(exp.step === 0 && exp.phase === 'clearing' ? r.intro + ' ' + introCl.intro : introCl.intro)}</p></div>` + body + modsHtml(exp);
   }
   function modsHtml(exp) {
     const m = [];
@@ -1628,7 +1644,8 @@
   async function playStage(c, st, g) {
     const log = c.fight.log, basic = D.CLASSES[hero().classId].basic;
     const ok = () => st.alive(g) && S.combat === c && !c.done;
-    const take = e => { if (log[c.idx] === e) { c.idx++; applyEvent(e, true); } };
+    const sndOf = e => e.kind === 'hit' ? (e.dodge ? 'dodge' : e.who === 'm' || e.who === 'mpet' ? 'hurt' : e.crit || e.first ? 'crit' : 'hit') : e.kind === 'heal' ? (e.amount > 0 ? 'heal' : null) : e.kind === 'shield' ? 'shield' : e.kind === 'stun' ? 'stun' : e.kind === 'dot' ? 'poison' : e.kind === 'skill' ? 'skill' : null;
+    const take = e => { if (log[c.idx] === e) { c.idx++; applyEvent(e, true); const sn = sndOf(e); if (sn) SND(sn); } };
     // újrarajzolás után nincs újabb bevezető szünet, és a folyamatban lévő képesség sem vész el
     if (c.idx === 0) await st.wait(420);
     let pending = c.pending || null;
@@ -1756,6 +1773,7 @@
   }
   function finishCombatAnim() {
     const c = S.combat;
+    if (!c.done) SND(c.fight.win ? 'win' : 'lose');
     c.done = true;
     // a legyőzött fél elesik, a győztes az arénában is látszik
     if (!c.boss && !c.stage) { const lose = el(c.fight.win ? 'fig-m' : 'fig-h'); if (lose) lose.classList.add('ko'); const ar = el(c.fight.win ? 'f-h' : 'f-m'); if (ar && c.fight.win) ar.classList.add('winner'); }
@@ -1961,6 +1979,9 @@
     return `<section class="panel"><h1>Beállítások</h1>
       <div class="stack" style="margin-top:14px">
         ${account}<hr class="divider">
+        ${window.NYX.sound && window.NYX.sound.supported ? (() => { const sn = window.NYX.sound.get(); return `<div class="row between wrap"><div><b>Hanghatások</b><p class="small muted">Halk jelzések a harchoz és a gombokhoz.</p></div><div class="seg"><button data-act="snd-fx" data-v="1" aria-pressed="${sn.fx}">Be</button><button data-act="snd-fx" data-v="0" aria-pressed="${!sn.fx}">Ki</button></div></div>
+        <div class="row between wrap"><div><b>Háttérzene</b><p class="small muted">Lassú, holdfényes aláfestés. Ha a lap a háttérbe kerül, elhallgat.</p></div><div class="seg"><button data-act="snd-music" data-v="1" aria-pressed="${sn.music}">Be</button><button data-act="snd-music" data-v="0" aria-pressed="${!sn.music}">Ki</button></div></div>
+        <div class="row between wrap"><div><b>Hangerő</b></div><input type="range" min="0" max="100" step="5" value="${Math.round(sn.vol * 100)}" data-act="snd-vol" aria-label="Hangerő" style="width:min(220px,60vw)"></div>`; })() : ''}
         <div class="row between wrap"><div><b>Harc sebessége</b><p class="small muted">Alapértelmezett lejátszási sebesség.</p></div><div class="seg">${[1, 2, 4].map(v => `<button data-act="speed" data-v="${v}" aria-pressed="${st.speed === v}">${v}×</button>`).join('')}</div></div>
         <div class="row between wrap"><div><b>Bubó tippjei</b><p class="small muted">A kalauz bagoly rövid tanácsai.</p></div><div class="row"><button class="chip" data-act="owl-toggle" aria-pressed="${st.owl}">${st.owl ? 'Bekapcsolva' : 'Kikapcsolva'}</button><button class="btn ghost sm" data-act="owl-reset">Újra mind</button></div></div>
         ${save}${reset}${admin}
@@ -1991,7 +2012,7 @@
         <div class="portrait md" style="margin:0 auto 12px">${A.heroSvg(h)}</div>
         <div class="tiny" style="color:var(--fakla-300)">Szintlépés</div><h2 id="lvl-t">${last.level}. szint!</h2>
         <p class="muted" style="margin-top:6px">+${fmt(g.elet[1] * n)} ÉLET · +${dec(g.tam[1] * n)} TÁM · +${dec(g.ved[1] * n)} VÉD · +${dec(g.fur[1] * n)} FÜR</p>
-        ${skills}${m.ups.some(u => u.level === D.PATH_LEVEL) ? `<div class="skill" style="text-align:left;margin-top:8px"><span class="num">★</span><div><div class="sn">Megnyíltak az ösvények</div><div class="sd">A Hős képernyőn választhatsz egyet a kasztod három útja közül. Az első választás ingyenes.</div></div></div>` : ''}<button class="btn primary lg block" style="margin-top:16px" data-act="modal-close">Szuper!</button></div></div>`;
+        ${skills}${Object.keys(UNLOCK).filter(k => (ONLINE || (k !== 'boss' && k !== 'ceh')) && !usedBefore(k) && m.ups.some(u => u.level === UNLOCK[k])).map(k => `<div class="skill" style="text-align:left;margin-top:8px"><span class="num">★</span><div><div class="sn">Megnyílt: ${UNLOCK_NAME[k]}</div><div class="sd">Mostantól eléred a menüből.</div></div></div>`).join('')}${m.ups.some(u => u.level === D.PATH_LEVEL) ? `<div class="skill" style="text-align:left;margin-top:8px"><span class="num">★</span><div><div class="sn">Megnyíltak az ösvények</div><div class="sd">A Hős képernyőn választhatsz egyet a kasztod három útja közül. Az első választás ingyenes.</div></div></div>` : ''}<button class="btn primary lg block" style="margin-top:16px" data-act="modal-close">Szuper!</button></div></div>`;
     }
     if (m.type === 'chest' || m.type === 'patrol') {
       const r = m.res;
@@ -2154,6 +2175,14 @@
     if (S.cr && S.cr.mode === 'new' && S.cr.host.isConnected) return; // már a lapon van
     app.innerHTML = `<div class="creator-shell"><div class="creator-head"><div class="logo" style="justify-content:center">${A.LOGO}<span>Nyxoria</span></div><h1 style="margin-top:10px">Rakd össze a hősödet</h1><p class="muted small">Húzd oldalra a hőst, és megfordul. Bármikor visszaléphetsz, és minden mozdulatod visszavonható.</p></div><div id="cr-ph"></div></div>`;
     keepCreator('new');
+    let seen = true; try { seen = localStorage.getItem('nyx-intro') === '1'; } catch (e) { /* privát mód */ }
+    if (!seen && !el('nx-intro')) app.insertAdjacentHTML('beforeend', `<div class="modal-back" id="nx-intro" role="dialog" aria-modal="true" aria-labelledby="nx-intro-t"><div class="modal nx-intro">
+      <div class="logo" style="justify-content:center">${A.LOGO}<span>Nyxoria</span></div><h2 id="nx-intro-t">Üdv a holdfényes kalandok között!</h2>
+      <ul><li><b>Rakd össze a hősödet</b><span>Nyolc kaszt, öt nép, rengeteg kinézet. Később bármikor átszabhatod.</span></li>
+      <li><b>Indulj kalandra</b><span>Egy kaland egy perc: három tisztáson választasz, a végén vár az őrző. A harcot a hősöd vívja, te a felkészítésről döntesz.</span></li>
+      <li><b>Erősödj és gyűjts</b><span>Tárgyak, képességek, Holdtorony, aréna, céh: ahogy szintet lépsz, egyre több minden nyílik meg.</span></li></ul>
+      <button class="btn fakla lg block" data-act="intro-ok" id="nx-intro-ok">Kezdjük a hősömmel!</button></div></div>`);
+    const iok = el('nx-intro-ok'); if (iok) iok.focus({ preventScroll: true });
   }
   function syncCreatorInputs() {
     const c = S.creator; if (!c) return;
@@ -2164,8 +2193,12 @@
 
   // ---------- gombok ----------
   const actions = {
+    'chron-all'(v) { S.chronAll = v === '1'; render(); },
+    'intro-ok'() { try { localStorage.setItem('nyx-intro', '1'); } catch (e) { /* privát mód */ } const o = el('nx-intro'); if (o) o.remove(); },
+    locked(v) { toast(`${UNLOCK_NAME[v] || 'Ez'}: ${azN(UNLOCK[v])} ${UNLOCK[v]}. szinttől érhető el.`); },
     screen(v) {
       if (S.combat) { toast('Előbb fejezd be a harcot.'); return; }
+      if (lockLevel(v)) { actions.locked(v); return; }
       if (v !== S.screen && !leaveOk()) return;
       if (S.phase === 'title') { markTitle(); S.phase = 'game'; }
       S.modal = S.modal && S.modal.type === 'info' ? null : S.modal;
@@ -2260,7 +2293,8 @@
     'quest-drop'(v) { S.questDone = null; act('questDrop', { id: v }); },
     'help-open'() { if (D.HELP) { S.screen = 'sugo'; S.helpQ = ''; render(); scrollTop(); } else actions.info('sugo'); },
     'help-jump'(v, t) { const id = t && t.value; if (id) actions['help-go'](id); },
-    'help-go'(v) { const el = document.getElementById('hp-' + v); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
+    'help-go'(v) { S.helpOpen = v; render(); const el = document.getElementById('hp-' + v); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
+    'help-toggle'(v) { S.helpOpen = S.helpOpen === v ? null : v; render(); const e = document.getElementById('hp-' + v); if (e) { const r = e.getBoundingClientRect(); if (r.top < 60 || r.top > innerHeight - 120) e.scrollIntoView({ block: 'start' }); const b = e.querySelector('.hp-tog'); if (b) b.focus({ preventScroll: true }); } },
     'look-pick'(v, t) { act('lookPick', { slot: v, key: t ? t.value : 'auto' }); },
     'dye-pick'(v) { const [k, c] = String(v).split('|'); S.dyePend = Object.assign({}, S.dyePend, { [k]: c }); S.dyeOpen = true; render(); },
     dye(v) {
@@ -2287,7 +2321,10 @@
     camp() { act('camp', {}, () => { scrollTop(); if (ONLINE) refreshState().catch(() => {}); }); },
     retreat() { act('retreat', {}, res => { toast('Visszafordultál. Amit gyűjtöttél, megmaradt.'); if (res.levelUps && res.levelUps.length) S.modal = { type: 'level', ups: res.levelUps }; }); },
     slot(v) { S.slot = v; render(); const d = document.querySelector('.eq-detail'); if (d) { const r = d.getBoundingClientRect(); if (r.top > innerHeight - 120) d.scrollIntoView({ behavior: 'smooth', block: 'start' }); } },
-    upgrade(v) { act('upgrade', { id: v }, r => toast(`Fejlesztve: +${r.plus}`)); },
+    upgrade(v) { act('upgrade', { id: v }, r => { SND('upgrade'); toast(`Fejlesztve: +${r.plus}`); }); },
+    'snd-fx'(v) { window.NYX.sound.setFx(v === '1'); render(); },
+    'snd-music'(v) { window.NYX.sound.setMusic(v === '1'); render(); },
+    'snd-vol'(v, t) { window.NYX.sound.setVol(+t.value / 100); SND('tab'); },
     reroll(v) { act('reroll', { id: v }, () => toast('Új tárgyjellemzők!')); },
     transfer(v) { act('transfer', { id: v }, r => toast(`A fejlesztés átkerült: ${r.name} +${r.plus}`)); },
     'shop-dust'() { act('shopDust', {}, r => toast(`+${r.dust} Csillagpor`)); },
@@ -2397,6 +2434,10 @@
     remote('ranks', { tab: tab }).then(r => { S.ranks[tab] = r.rows; if (!S.combat) render(); }).catch(() => {});
   }
 
+  // hang: az első mozdulat oldja fel (a böngészők addig nem engednek hangot), a gombok halk kattanást adnak
+  function SND(n) { try { if (window.NYX.sound) window.NYX.sound.play(n); } catch (e) { /* a hang sosem akaszthatja meg a játékot */ } }
+  ['pointerdown', 'keydown'].forEach(evn => document.addEventListener(evn, () => { try { if (window.NYX.sound) window.NYX.sound.unlock(); } catch (e) { /* nincs hang */ } }, { capture: true, passive: true }));
+  document.addEventListener('click', ev => { const b = ev.target.closest && ev.target.closest('button, [data-act]'); if (b && !b.disabled && !(b.dataset && /^snd-/.test(b.dataset.act || ''))) SND(b.getAttribute('role') === 'tab' || b.closest('.seg, .nx-tabbar, .nx-rail') ? 'tab' : 'click'); }, true);
   document.addEventListener('click', ev => {
     // a tájékoztató ablak a háttérre kattintva is bezárul (a szintlépés-ablak nem, azt el kell olvasni)
     if (ev.target.classList && ev.target.classList.contains('modal-back') && S.modal && S.modal.type === 'info') { actions['modal-close'](); return; }

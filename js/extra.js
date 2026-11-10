@@ -558,7 +558,7 @@
     vendor:     { n: [1, 1], effort: 2.0, min: 1 },
     riddle:     { n: [1, 1], effort: 2.0, min: 1 },
     towerWin:   { n: [1, 2], effort: 0.5, min: 7 },
-    arenaWin:   { n: [2, 2], effort: 0.6, min: 1 }
+    arenaWin:   { n: [2, 2], effort: 0.6, min: 8 }
   };
   const REGION_IN = { kodlap: 'a Ködlápon', holdfeny: 'a Holdfény-erdőben', arnyromok: 'az Árnyromokban', szirtek: 'a Csillaghullás-szirteken', ejkatlan: 'az Éjkatlanban' };
   function questTpls() { return (D.QUESTS && D.QUESTS.templates) || []; }
