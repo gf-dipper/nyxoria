@@ -502,7 +502,7 @@
         ${li('Mi a Holdtorony?', 'Az 5. szinttől: emeletről emeletre egyre erősebb ellenfelek. Amíg nyersz, mászhatsz, naponta 5 vereség fér bele. Hétfőn elölről indul; az új (a legjobbad feletti) emeletekért jár a teljes jutalom.')}
         ${li('Mi a heti esemény?', 'Minden héten más, saját szörnnyel. Naponta 3 harc: győzelem 10, vereség 3 pont. A pontokért jutalmak járnak, a legfelső egy csak azon a héten megszerezhető tárgy.')}
         ${li('Mi az Aréna?', 'Párbaj más hősök ellen (gyakorló módban gépi ellenfelekkel). Naponta 5 párbaj; a győzelem pontot hoz, a vereség elvisz belőle. Naponta egyszer kérhetsz új ellenfeleket.')}
-        ${li('Mik a csapatküldetések?', 'Egy-két társat viszel egy erős őrző ellen; a társak minden körben veled ütnek. Naponta 3 küldetés, bőkezűbb jutalommal.')}
+        ${li('Mik a csapatküldetések?', 'Egy-két társat viszel egy erős őrző ellen; a társak a kasztjuk szerint segítenek (gyógyítanak, védenek, gyorsítanak vagy ütnek). Naponta 3 küldetés, bőkezűbb jutalommal.')}
         ${li('Mi a céh?', 'A közös szerveren: a tagok győzelmei összeadódnak, a heti célokért mindenki jutalmat kap. Az 5. szinttől alapíthatsz egyet.')}
         ${li('Mi a céhháború?', 'Minden héten két hasonló erejű céh kerül össze. Amelyik a héten több győzelmet gyűjt, az nyer: a zászlójára csillag kerül, és aki legalább egyszer győzött, jövő héten átveheti a jutalmat.')}
         ${li('Lehet több hősöm?', `Igen, legfeljebb 3. A Hőseim oldalon (a Hős menüben) újat készíthetsz, és bármikor válthatsz köztük. Mindegyik külön fejlődik; a hőseid osztoznak ${ONLINE ? 'a heti szörny napi 3 ütésén, ládáin és címein, a céheden és ' : ''}a napi ajándékon.`)}
@@ -994,7 +994,7 @@
         <p class="small" style="margin-top:12px">${pick.length ? `Az őrző a csapatotok erejéhez igazodik: nagyjából <b>50–55%</b> az esélyetek. Győzelemért: ${I.xp}${fmt(Math.round(E.xpBase(hero().level) * 1.5))} TP · ${I.silver}${fmt(E.silverBase(hero().level) * 2)} · ${I.dust}${fmt(15 + hero().level)} · 60% eséllyel legalább ${D.RARITIES[E.gateRarity('kek', hero().level)].name} tárgy${hero().level >= E.RARITY_GATE.legendas ? ', szerencsével lila vagy legendás' : hero().level >= E.RARITY_GATE.lila ? ', szerencsével lila' : ''}.` : 'Kattints a társakra: egyet vagy kettőt vihetsz.'}</p>
         <button class="btn fakla lg" style="margin-top:8px" data-act="team-go" ${pick.length ? '' : 'disabled'}>${ni('csapat')}${pick.length ? `Indulunk (${pick.length + 1} fő)` : 'Válassz 1 vagy 2 társat'}</button>`
       : `<button class="btn fakla lg" style="margin-top:14px" data-act="team-find" ${left > 0 ? '' : 'disabled'}>${ni('csapat')}${left > 0 ? 'Társakat keresek' : 'Mára elfogytak a küldetések'}</button>`;
-    return `<section class="panel"><div class="nx-ch-head"><div><h1>Csapatküldetések</h1><p class="small muted">Egy vagy két társat viszel magaddal, és együtt mentek egy erős őrző ellen. A társak minden körben veled ütnek, a szörny a csapat erejéhez igazodik. A jutalom bőkezűbb${ONLINE ? ', és a társaid gazdái is kapnak belőle részt' : ''}.</p></div>
+    return `<section class="panel"><div class="nx-ch-head"><div><h1>Csapatküldetések</h1><p class="small muted">Egy vagy két társat viszel magaddal, és együtt mentek egy erős őrző ellen. A társak a kasztjuk szerint segítenek: a gyógyító gyógyít, a harcos pajzsot tart eléd, a dalnok gyorsítja a képességeidet, a többiek veled ütnek. A szörny a csapat erejéhez igazodik. A jutalom bőkezűbb${ONLINE ? ', és a társaid gazdái is kapnak belőle részt' : ''}.</p></div>
       <div class="nx-ch-stats"><span><small>Mai küldetés</small><b>${left} / ${X.TEAM_RUNS}</b></span></div></div>${cards}</section>`;
   }
   const EMB = { // céhjelvények (24×24, a zászló közepére)
@@ -1440,12 +1440,13 @@
         if (e.who === 'h') {
           if (e.dodge) return `<p class="muted">${M} félreugrik, az ütés célt téveszt.</p>`;
           if (e.first) return `<p class="crit">Meglepetésszerű támadás! ${fmt(e.dmg)} sebzés.</p>`;
-          if (e.crit) return `<p class="crit">Telitalálat! ${fmt(e.dmg)} sebzés.</p>`;
-          return `<p>${H} eltalálja: ${fmt(e.dmg)} sebzés.</p>`;
+          const ab = e.absorbed ? ` (a pajzsa ${fmt(e.absorbed)} pontot elnyelt)` : '';
+          if (e.crit) return `<p class="crit">Telitalálat! ${fmt(e.dmg)} sebzés${ab}.</p>`;
+          return `<p>${H} eltalálja: ${fmt(e.dmg)} sebzés${ab}.</p>`;
         }
         if (e.who === 'ally') { const an = esc((c.allies || [])[e.ally] || 'A társad'); return e.dodge ? `<p class="muted">${an} mellécsap.</p>` : `<p>${an} odasújt: ${fmt(e.dmg)}${e.crit ? ' (telitalálat!)' : ''}.</p>`; }
         if (e.who === 'mpet') return e.dodge ? `<p class="heal">${M} társa mellécsap.</p>` : `<p class="mon">${M} társa odakap: ${fmt(e.dmg)}${e.crit ? ' (telitalálat!)' : ''}${e.absorbed ? ` (a pajzs ${fmt(e.absorbed)} pontot elnyelt)` : ''}.</p>`;
-        if (e.who === 'pet') return e.dodge ? `<p class="muted">${c.pet} mellécsap.</p>` : `<p>${c.pet} odakap: ${fmt(e.dmg)}${e.crit ? ' (telitalálat!)' : ''}.</p>`;
+        if (e.who === 'pet') return e.dodge ? `<p class="muted">${c.pet} mellécsap.</p>` : `<p>${c.pet} odakap: ${fmt(e.dmg)}${e.crit ? ' (telitalálat!)' : ''}${e.absorbed ? ` (a pajzsa ${fmt(e.absorbed)} pontot elnyelt)` : ''}.</p>`;
         if (e.dodge) return `<p class="heal">${H} ügyesen kitér!</p>`;
         return `<p class="mon">${M} ${e.special ? esc(c.special) : 'üt'}: ${fmt(e.dmg)} sebzés${e.special ? '!' : '.'}${e.crit ? ' Ez fájt!' : ''}${e.absorbed ? ` (a pajzs ${fmt(e.absorbed)} pontot elnyelt)` : ''}</p>`;
       case 'heal': if (e.who === 'ally') return e.amount > 0 ? `<p class="heal">${esc((c.allies || [])[e.ally] || 'A társad')} gyógyít: +${fmt(e.amount)} ÉLET.</p>` : '';
@@ -1630,7 +1631,7 @@
   function endLine() {
     const c = S.combat, f = c.fight, H = esc(c.heroName), M = esc(art(c.monName));
     if (c.boss) return `<p class="r">VÉGE</p><p class="crit">${H} ${fmt(c.extra.damage || c.dealt)} sebzést vitt be a heti szörnynek (${esc(c.monName)})${c.extra.weak ? ', telibe találta a gyenge pontját' : ''}!</p>`;
-    if (f.timeout) return `<p class="r">VÉGE</p><p><b>Letelt a ${E.MAX_ROUNDS} kör!</b> Az nyer, akinek százalékban több élete maradt: ${f.win ? H : M}.</p>`;
+    if (f.timeout) return `<p class="r">VÉGE</p><p><b>Letelt a ${E.MAX_ROUNDS} kör!</b> ${f.tie ? `Mindkét félnek ugyanannyi élete maradt, ezért az nyer, aki több sebzést vitt be: ${f.win ? H : M}.` : `Az nyer, akinek százalékban több élete maradt: ${f.win ? H : M}.`}</p>`;
     return f.win ? `<p class="r">VÉGE</p><p class="crit">${M} a földre rogy. Győzelem!</p>` : `<p class="r">VÉGE</p><p class="mon">${H} megbotlik és elesik. Most nem sikerült.</p>`;
   }
   function finishCombatAnim() {

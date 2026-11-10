@@ -406,6 +406,8 @@
           { p: 'Az Arénában más hősökkel párbajozol. A hősöd itt is magától harcol: a felszerelés, a képességek sorrendje és a taktika dönt. Naponta {ARENA_FIGHTS} párbajod van.' },
           { list: [
             'Az Ellenfelet keresek gomb három, hozzád hasonló erejű ellenfelet hoz.',
+            'Az ellenfél hőse is a saját képességeivel harcol: gyógyít, pajzsot húz, kábít, mérgez, ahogy a te hősöd.',
+            'Hogy ne a kasztpárosítás döntsön, az ellenfél erejét a motor a valódi erőviszonyokhoz igazítja.',
             'Minden jelöltnél látod a győzelmi esélyt, és azt, hány pontot nyerhetsz vagy veszíthetsz.',
             'A pontszámod 1000-ről indul. Erősebb ellenfél legyőzése több pontot ér.',
             'Győzelemért pont, Holdezüst és Csillagpor jár, vereségért kevesebb Holdezüst.',
@@ -417,7 +419,7 @@
       { id: 'csapat', title: 'Csapatküldetések', short: 'Egy-két társsal egy erős őrző ellen, bőkezűbb jutalomért.',
         fig: 'team', figCaption: 'Együtt erősebbek vagytok', go: 'csapat',
         blocks: [
-          { p: 'A csapatküldetésen egy vagy két társat viszel magaddal egy erős őrző ellen. A társak minden körben veled együtt ütnek, az őrző pedig a csapat erejéhez igazodik. Naponta {TEAM_RUNS} küldetésed van.' },
+          { p: 'A csapatküldetésen egy vagy két társat viszel magaddal egy erős őrző ellen. A társak minden körben veled harcolnak, mégpedig a kasztjuk szerint: a gyógyító gyógyít, a harcos pajzsot tart eléd, a dalnok gyorsítja a képességeidet, a többiek teljes erővel ütnek. Az őrző a csapat erejéhez igazodik. Naponta {TEAM_RUNS} küldetésed van.' },
           { list: [
             'Társakat keresek: négy jelölt közül kattintással választasz egyet vagy kettőt, aztán Indulunk.',
             'Az esélyetek nagyjából 50–55%.',

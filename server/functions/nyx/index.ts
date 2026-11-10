@@ -2006,6 +2006,24 @@ import postgres from 'npm:postgres@3.4.9';
           emit({ who: 'pet', kind: 'hit', dmg: Math.round(pr.dmg), crit: !!pr.crit, dodge: !!pr.dodge });
         }
       }
+      // csapattársak (csapatküldetés): a kasztjuk szerint segítenek. A gyógyító gyógyít, a harcos pajzsot ad, a dalnok
+      // a hős képességeit hamarabb tölti újra (legfeljebb eggyel, és sosem ad plusz lépést ugyanabban a körben); közben
+      // ők is ütnek (a támogatók gyengébben), a többiek teljes erővel. Az ellenfelet a teljes csapathoz méri a motor.
+      if (hero.allies && mhp > 0) {
+        var tempoDone = false;
+        for (var k = 0; k < hero.allies.length && mhp > 0; k++) {
+          var al = hero.allies[k], role = ALLY_ROLE[al.classId] || 'dmg', sh = al.share || 0.4, w = sh / 0.5;
+          if (role === 'heal' && rnd % 2 === 0 && hp < hero.maxHp) { var hb = hp; hp = Math.min(hero.maxHp, hp + hero.maxHp * 0.08 * w); emit({ who: 'ally', ally: k, kind: 'heal', amount: Math.round(hp - hb) }); }
+          else if (role === 'shield' && rnd % 3 === 1) { var sa = hero.maxHp * 0.1 * w; st.shield += sa; emit({ who: 'ally', ally: k, kind: 'shield', amount: Math.round(st.shield) }); }
+          else if (role === 'tempo' && rnd % 2 === 0 && !tempoDone) {
+            tempoDone = true; (hero.loadout || []).forEach(function (id) { ready[id] = Math.max(rnd + 1, ready[id] - 1); });
+            emit({ who: 'ally', ally: k, kind: 'tempo' });
+          }
+          var ar = attackRoll(hero, mon, role === 'dmg' || role === 'tempo' ? sh : sh * 0.5); // a dalnok gyorsítása kicsi, ezért ő teljes erővel üt
+          mhp -= ar.dmg; dmgDealt += ar.dmg;
+          emit({ who: 'ally', ally: k, kind: 'hit', dmg: Math.round(ar.dmg), crit: !!ar.crit, dodge: !!ar.dodge });
+        }
+      }
       // méreg
       if (mhp > 0 && rnd <= ms.dotUntil && ms.dot > 0) {
         var dd = hero.tam * 2 * ms.dot * K / (K + mon.ved) * T.out * COMBAT.dmg;
@@ -2043,6 +2061,143 @@ import postgres from 'npm:postgres@3.4.9';
     return { win: win, rounds: rounds, timeout: timeout, hpLeft: Math.max(0, hp), hpPct: Math.max(0, hp) / hero.maxHp,
              monHpPct: Math.max(0, mhp) / mon.maxHp, dmgDealt: dmgDealt, dmgTaken: dmgTaken, dodged: dodged, crits: crits,
              log: log, seed: seed };
+  }
+
+  var ALLY_ROLE = { gyogyito: 'heal', harcos: 'shield', dalnok: 'tempo' };
+  // ---------- párbaj: két hős, mindkét oldal a saját képességeivel (csak az Arénában) ----------
+  // Ugyanazok a képesség-hatások, mint a szörny elleni harcban, de szimmetrikusan: a másik hős is gyógyít, pajzsot húz,
+  // kábít, mérgez, és az idézett társa is támad. A napló „h” (te) és „m” (az ellenfél) oldalra bontva készül,
+  // ugyanúgy, mint a szörnyharcban, így a lejátszás és a HP-sávok változatlanul működnek.
+  // Párbajban a gyógyítás és a pajzs gyengébb (ahogy a legtöbb szerepjáték PvP-jében), különben a gyógyító fél
+  // egyszerűen kivárná a körlimitet; ezt mérésekkel hangoltuk, hogy egyik kasztpárosítás se legyen eleve eldöntött.
+  var PVP = { heal: 1, shield: 1, fatigueFrom: 12, fatigue: 0.15 };
+  function simulateDuel(a, b, tacA, tacB, seed, withLog, opts) {
+    var maxR = (opts && opts.maxRounds) || MAX_ROUNDS;
+    var rng = mulberry32(seed);
+    var L = Math.max(1, Math.round((a.level + b.level) / 2)), K = 50 + 10 * L, sc = scaleFor(L);
+    var log = withLog ? [] : null, rnd = 0, dmgDealt = 0, dmgTaken = 0, dodged = 0, crits = 0;
+    function side(f, tac, who) {
+      var sd = { f: f, hp: f.hpStart, T: D.TACTICS[tac] || D.TACTICS.kiegy, who: who, petWho: who === 'h' ? 'pet' : 'mpet', ready: {}, firstDone: false,
+        st: { buffDmg: 0, buffUntil: 0, guard: 1, guardUntil: 0, shield: 0, dodge: 0, dodgeUntil: 0, haste: 0, hasteUntil: 0, regen: 0, regenUntil: 0, packUntil: 0, petGoneUntil: 0 },
+        deb: { stunned: false, slow: 0, slowUntil: 0, weak: 1, weakUntil: 0, armor: 0, armorUntil: 0, dot: 0, dotUntil: 0 } };
+      (f.loadout || []).forEach(function (id, i) { if (D.SKILLS[id]) sd.ready[id] = COMBAT.readyAtStart ? i + 1 : D.SKILLS[id].cd; });
+      return sd;
+    }
+    var A = side(a, tacA, 'h'), B = side(b, tacB, 'm');
+    function emit(e) { if (log) { e.r = rnd; e.hp = Math.max(0, A.hp); e.mhp = Math.max(0, B.hp); log.push(e); } }
+    // kifáradás: a 12. kör után minden körben erősebbek az ütések és gyengébb a gyógyulás, így két gyógyító sem
+    // húzhatja a párbajt a körlimitig eredmény nélkül
+    function fatigue() { return rnd > PVP.fatigueFrom ? 1 + PVP.fatigue * (rnd - PVP.fatigueFrom) : 1; }
+    function fur(sd) { return sd.f.fur * (rnd <= sd.deb.slowUntil ? 1 - sd.deb.slow : 1) * (rnd <= sd.st.hasteUntil ? 1 + sd.st.haste : 1); }
+    function roll(att, def, mult, o) {
+      o = o || {};
+      var dF = fur(def), aF = fur(att);
+      var dodgeP = 0.03 + 0.12 * dF / (dF + sc) + (def.f.dodgePct || 0) / 100 + (rnd <= def.st.dodgeUntil ? def.st.dodge : 0);
+      if (rng() < dodgeP) return { dmg: 0, dodge: true };
+      var ved = def.f.ved * (rnd <= def.deb.armorUntil ? 1 - def.deb.armor : 1);
+      var d = att.f.tam * 2 * mult * K / (K + ved) * (0.7 + rng() * 0.6);
+      d *= 1 + (att.f.dmgPct || 0) / 100;
+      d *= att.T.out * def.T.inc * fatigue();
+      if (rnd <= att.st.buffUntil) d *= 1 + att.st.buffDmg;
+      if (rnd === 1) d *= 1 + (att.f.firstPct || 0) / 100;
+      if (rnd <= att.deb.weakUntil) d *= att.deb.weak;
+      if (rnd <= def.st.guardUntil) d *= def.st.guard;
+      var crit = rng() < 0.05 + 0.25 * aF / (aF + sc) + (att.f.critPct || 0) / 100 + (o.crit || 0);
+      if (crit) d *= 1.75;
+      return { dmg: d * COMBAT.dmg, crit: crit };
+    }
+    function land(att, def, res) {
+      var d = res.dmg;
+      if (def.st.shield > 0 && d > 0) { var ab = Math.min(def.st.shield, d); def.st.shield -= ab; d -= ab; res.absorbed = Math.round(ab); }
+      def.hp -= d;
+      if (att === A) { dmgDealt += d; if (res.dodge) dodged++; if (res.crit) crits++; } else dmgTaken += d;
+      return d;
+    }
+    function hit(att, def, mult, skillId, extra) {
+      var res = roll(att, def, mult, extra);
+      if (!res.dodge && !att.firstDone && att.f.firstStrike > 1) { res.dmg *= att.f.firstStrike; res.first = true; }
+      if (!res.dodge) att.firstDone = true;
+      var d = land(att, def, res);
+      emit({ who: att.who, kind: 'hit', skill: skillId, dmg: Math.round(d), crit: !!res.crit, dodge: !!res.dodge, first: !!res.first, absorbed: res.absorbed || 0 });
+      return res;
+    }
+    function heal(sd, amount, skillId) {
+      var x = amount * (1 + (sd.f.healPct || 0) / 100) * PVP.heal / fatigue(), before = sd.hp; sd.hp = Math.min(sd.f.maxHp, sd.hp + x);
+      emit({ who: sd.who, kind: 'heal', skill: skillId, amount: Math.round(sd.hp - before) });
+    }
+    function turn(me, foe) {
+      if (me.deb.stunned) { me.deb.stunned = false; emit({ who: me.who, kind: 'skip' }); return; }
+      if (rnd <= me.st.regenUntil && me.st.regen > 0) heal(me, me.f.maxHp * me.st.regen, 'regen');
+      var lo = me.f.loadout || [], skillId = null;
+      for (var i = 0; i < lo.length; i++) if (D.SKILLS[lo[i]] && rnd >= me.ready[lo[i]]) { skillId = lo[i]; break; }
+      if (!skillId) hit(me, foe, 1.0, me.f.basic);
+      else {
+        var sk = D.SKILLS[skillId], mult = sk.mult == null ? 1.0 : sk.mult, st = me.st, fd = foe.deb;
+        me.ready[skillId] = rnd + sk.cd;
+        emit({ who: me.who, kind: 'skill', skill: skillId });
+        switch (sk.type) {
+          case 'hit': hit(me, foe, mult, skillId, { crit: sk.crit || 0 }); break;
+          case 'multi': for (var h = 0; h < sk.hits && foe.hp > 0; h++) hit(me, foe, mult, skillId); break;
+          case 'stun': var r1 = hit(me, foe, mult, skillId); if (!r1.dodge && rng() < sk.chance) { fd.stunned = true; emit({ who: me.who, kind: 'stun', skill: skillId }); } break;
+          case 'skip': hit(me, foe, mult, skillId); fd.stunned = true; emit({ who: me.who, kind: 'stun', skill: skillId }); break;
+          case 'buff': st.buffDmg = sk.dmg; st.buffUntil = rnd + sk.rounds; hit(me, foe, mult, skillId); break;
+          case 'guard': st.guard = sk.taken; st.guardUntil = rnd + sk.rounds; hit(me, foe, mult, skillId); break;
+          case 'shield': st.shield += me.f.maxHp * sk.pct * (1 + (me.f.healPct || 0) / 100) * PVP.shield; emit({ who: me.who, kind: 'shield', skill: skillId, amount: Math.round(st.shield) }); hit(me, foe, mult, skillId); break;
+          case 'dodge': st.dodge = sk.bonus; st.dodgeUntil = rnd + sk.rounds; hit(me, foe, mult, skillId); break;
+          case 'slow': fd.slow = sk.fur; fd.slowUntil = rnd + sk.rounds; hit(me, foe, mult, skillId); break;
+          case 'dot': hit(me, foe, mult, skillId); fd.dot = sk.dot; fd.dotUntil = rnd + sk.rounds; fd.dotTam = me.f.tam; fd.dotOut = me.T.out; break;
+          case 'execute': hit(me, foe, (fd.stunned || rnd <= fd.slowUntil) ? sk.bonusMult : mult, skillId); break;
+          case 'pack': st.packUntil = rnd + sk.rounds; hit(me, foe, 1.0, skillId); break;
+          case 'sacrifice': st.petGoneUntil = rnd + sk.rounds; hit(me, foe, mult, skillId); break;
+          case 'weaken': fd.weak = sk.enemyDmg; fd.weakUntil = rnd + sk.rounds; hit(me, foe, mult, skillId); break;
+          case 'armorbreak': fd.armor = sk.ved; fd.armorUntil = rnd + sk.rounds; hit(me, foe, mult, skillId); break;
+          case 'heal': if (mult > 0) hit(me, foe, mult, skillId); heal(me, me.f.maxHp * sk.pct, skillId); break;
+          case 'haste': st.haste = sk.fur; st.hasteUntil = rnd + sk.rounds; hit(me, foe, mult, skillId); break;
+          case 'regen': st.regen = sk.pct; st.regenUntil = rnd + sk.rounds; hit(me, foe, mult, skillId); break;
+          default: hit(me, foe, mult, skillId);
+        }
+      }
+      if (me.f.pet && foe.hp > 0 && rnd > me.st.petGoneUntil) {
+        var pets = rnd <= me.st.packUntil ? 2 : 1;
+        for (var p = 0; p < pets && foe.hp > 0; p++) {
+          var pr = roll(me, foe, me.f.pet), pd = land(me, foe, pr);
+          emit({ who: me.petWho, kind: 'hit', dmg: Math.round(pd), crit: !!pr.crit, dodge: !!pr.dodge, absorbed: pr.absorbed || 0 });
+        }
+      }
+      // a rajtam lévő méreg az én körömben mar (ahogy a szörnyharcban is a szörny körével együtt)
+      if (foe.hp > 0 && rnd <= foe.deb.dotUntil && foe.deb.dot > 0) {
+        var dd = me.f.tam * 2 * foe.deb.dot * K / (K + foe.f.ved) * me.T.out * COMBAT.dmg;
+        foe.hp -= dd; if (me === A) dmgDealt += dd; else dmgTaken += dd;
+        emit({ who: me.who, kind: 'dot', dmg: Math.round(dd) });
+      }
+    }
+    for (rnd = 1; rnd <= maxR; rnd++) {
+      var af = fur(A), bf = fur(B);
+      var aFirst = rng() < clamp(0.5 + 1.5 * (af - bf) / Math.max(1, af + bf), 0.2, 0.8);
+      emit({ kind: 'round' });
+      var order = aFirst ? [A, B] : [B, A];
+      for (var o = 0; o < 2; o++) {
+        if (A.hp <= 0 || B.hp <= 0) break;
+        turn(order[o], order[o] === A ? B : A);
+      }
+      if (A.hp <= 0 || B.hp <= 0) break;
+    }
+    var rounds = Math.min(rnd, maxR), win, timeout = false;
+    var tie = false;
+    if (A.hp > 0 && B.hp > 0) {
+      timeout = true; var pa = A.hp / a.maxHp, pb = B.hp / b.maxHp;
+      // egyenlő életerőnél a több bevitt sebzés dönt (nem a véletlen és nem automatikusan a védekező fél)
+      if (Math.abs(pa - pb) < 1e-9) { tie = true; win = dmgDealt >= dmgTaken; } else win = pa > pb;
+    }
+    else win = A.hp > 0;
+    return { win: win, rounds: rounds, timeout: timeout, tie: tie, hpLeft: Math.max(0, A.hp), hpPct: Math.max(0, A.hp) / a.maxHp,
+             monHpPct: Math.max(0, B.hp) / b.maxHp, dmgDealt: dmgDealt, dmgTaken: dmgTaken, dodged: dodged, crits: crits,
+             log: log, seed: seed, duel: true };
+  }
+  function duelChance(a, b, tacA, tacB, n, seed) {
+    var rng = mulberry32(seed || 777), w = 0; n = n || 200;
+    for (var i = 0; i < n; i++) if (simulateDuel(a, b, tacA, tacB, newSeed(rng), false).win) w++;
+    return w / n;
   }
 
   function winChance(hero, mon, tacticId, n, seed) {
@@ -2537,7 +2692,7 @@ import postgres from 'npm:postgres@3.4.9';
     refBase: refBase, xpNeeded: xpNeeded, xpBase: xpBase, silverBase: silverBase,
     itemStats: itemStats, makeItem: makeItem, affixText: affixText, salvageValue: salvageValue, sellValue: sellValue, upgradeCost: upgradeCost,
     newHero: newHero, unlockedSkills: unlockedSkills, nextSkillUnlock: nextSkillUnlock, heroStats: heroStats, power: power, powerRaw: powerRaw, lootLevel: lootLevel,
-    fighterFromHero: fighterFromHero, monsterFighter: monsterFighter, simulateFight: simulateFight, winChance: winChance,
+    fighterFromHero: fighterFromHero, monsterFighter: monsterFighter, simulateFight: simulateFight, simulateDuel: simulateDuel, duelChance: duelChance, PVP: PVP, winChance: winChance,
     findMonsterLevel: findMonsterLevel, COMBAT: COMBAT, regionFor: regionFor, makeOffers: makeOffers, offerTarget: offerTarget, ELITE: ELITE, offerMoon: offerMoon, eliteTarget: eliteTarget, normEvent: normEvent, eventOptions: eventOptions, eventCost: eventCost, eventCheckChance: eventCheckChance, applyFollow: applyFollow, offerChance: offerChance,
     startExpedition: startExpedition, resolveCard: resolveCard, guardPreview: guardPreview, fightGuard: fightGuard,
     finishExpedition: finishExpedition, applyChoice: applyChoice, lossAdvice: lossAdvice,
@@ -3454,6 +3609,21 @@ import postgres from 'npm:postgres@3.4.9';
     return g;
   }
   const scaleGhost = (g, m) => Object.assign({}, g, { tam: g.tam * m, maxHp: g.maxHp * m, hpStart: g.hpStart * m });
+  // Párbaj (Aréna): az ellenfél hőse a saját képességeivel harcol (E.simulateDuel). Hogy a kasztpárosítás ne döntse el
+  // előre a párbajt, az ellenfél erejét úgy igazítjuk, hogy az esélyed ugyanannyi legyen, mint az erőalapú
+  // összevetésben (a hős a saját szelleme ellen 50%); a gépi ellenfél pedig a kitűzött esélyhez igazodik.
+  function duelBase(hero) {
+    const f = E.fighterFromHero(hero);
+    return Object.assign(f, { side: 'm', lm: f.level, name: hero.name, ghostOf: { classId: hero.classId }, tactic: hero.tactic || (D.CLASSES[hero.classId] || {}).tactic || 'kiegy' });
+  }
+  function duelTune(myF, tactic, g, target) {
+    let lo = 0.35, hi = 2.6; // pontosabb mérés (több párbaj), szűkebb keresési tartomány
+    for (let i = 0; i < 8; i++) { const mid = (lo + hi) / 2; if (E.duelChance(myF, scaleGhost(g, mid), tactic, g.tactic, 220, 777 + i) > target) lo = mid; else hi = mid; }
+    return +((lo + hi) / 2).toFixed(3);
+  }
+  // valódi ellenfél: az erőalapú esély (a régi, kasztfüggetlen összevetés) a cél
+  const fairTarget = (myF, tactic, opp) => Math.min(0.95, Math.max(0.05, E.winChance(myF, ghostFighter(opp), tactic, 200, 2024)));
+  const DUEL_V = 3;
   // gépi ellenfél hangolása: akkorára állítjuk, hogy ellened épp a kívánt esélyed legyen (a kasztok közti különbség így nem számít)
   function tuneFor(myF, tactic, g, target) {
     let lo = 0.3, hi = 3;
@@ -3502,6 +3672,7 @@ import postgres from 'npm:postgres@3.4.9';
     let s = save.arena || { rating: 1000, wins: 0, losses: 0, day: today, fights: 0, cands: [], week: wk, weekWins: 0 };
     if (s.day !== today) { s.day = today; s.fights = 0; s.cands = []; s.rerolls = 0; }
     if (s.week !== wk) { s.week = wk; s.weekWins = 0; }
+    if (s.v !== DUEL_V) { s.v = DUEL_V; s.cands = []; } // a régi (képesség nélküli) harcra számolt esélyek elavultak
     return s;
   }
   A.arenaFind = (save, a, ctx) => {
@@ -3514,16 +3685,20 @@ import postgres from 'npm:postgres@3.4.9';
     const used = pool.map(c => c.name), myF = E.fighterFromHero(h), TARGET = [0.65, 0.5, 0.35];
     while (pool.length < 3) { // gépi ellenfelek pótolják a hiányt: egy könnyebb, egy kiegyenlített, egy nehezebb
       const i = pool.length, gp = gearProfile(h), b = botHero(rng, h.level + [-1, 0, 1][i], gp.rarity, i, used, gp.level);
-      const sn = snap(b, null, 1000); sn.hero = b; sn.target = TARGET[i]; sn.tune = tuneFor(myF, h.tactic, ghostFighter(b), TARGET[i]);
+      const sn = snap(b, null, 1000); sn.hero = b; sn.target = TARGET[i]; sn.tune = duelTune(myF, h.tactic, duelBase(b), TARGET[i]);
       pool.push(sn);
     }
     // minden jelöltnél kiszámoljuk a győzelmi esélyt és azt, hány pont jár a győzelemért / vész el vereségnél
     pool = pool.map(c => {
       const out = Object.assign({}, c);
-      if (c.hero) { const g = ghostFighter(c.hero); out.chance = +E.winChance(myF, c.tune ? scaleGhost(g, c.tune) : g, h.tactic, 200, 2024).toFixed(2); }
+      if (c.hero) {
+        const g = duelBase(c.hero), tune = c.tune || duelTune(myF, h.tactic, g, fairTarget(myF, h.tactic, c.hero));
+        out.chance = +E.duelChance(myF, scaleGhost(g, tune), h.tactic, g.tactic, 200, 2024).toFixed(2);
+      }
       // a gépi ellenfél pontszáma az esélyből adódik (Élő-képlet visszafelé), így a nyerhető pont is igazságos
       // gépi ellenfél: a pontszáma a kitűzött esélyből adódik (Élő-képlet visszafelé), így a tét mindig ehhez az esélyhez illik
-      if (c.target) { out.rating = Math.round(s.rating + 400 * Math.log10((1 - c.target) / c.target)); out.power = Math.round(out.power * c.tune); }
+      // gépi ellenfél: a pontszáma a ténylegesen mért (és kiírt) esélyből adódik, így a tét pontosan ehhez illik
+      if (c.target) { const pc = Math.min(0.95, Math.max(0.05, out.chance != null ? out.chance : c.target)); out.rating = Math.round(s.rating + 400 * Math.log10((1 - pc) / pc)); out.power = Math.round(out.power * c.tune); }
       // a tét a két pontszámból jön (Élő-rendszer): idővel mindenki a valódi erejének megfelelő helyre kerül
       const ex = 1 / (1 + Math.pow(10, (out.rating - s.rating) / 400));
       out.gain = Math.round(32 * (1 - ex)); out.loss = Math.round(32 * ex);
@@ -3539,12 +3714,12 @@ import postgres from 'npm:postgres@3.4.9';
     if (!c) fail('state', 'Előbb keress ellenfelet.');
     const opp = c.hero || ctx.arenaOpp;
     if (!opp) fail('state', 'Ez az ellenfél már nem elérhető. Keress újat.');
-    const heroF = E.fighterFromHero(h), g0 = ghostFighter(opp);
-    // gépi ellenfél: a harc előtt a mostani felszereléshez hangoljuk újra (keresés előtti átöltözéssel nem lehet csalni)
-    const tune = c.target ? tuneFor(heroF, h.tactic, g0, c.target) : c.tune;
-    const mon = tune ? Object.assign(scaleGhost(g0, tune), { name: g0.name }) : g0;
-    const f = E.simulateFight(heroF, mon, h.tactic, E.newSeed(), true);
-    const oppRating = c.target ? Math.round(s.rating + 400 * Math.log10((1 - c.target) / c.target)) : c.rating;
+    const heroF = E.fighterFromHero(h), g0 = duelBase(opp);
+    // a harc előtt a mostani felszerelésekhez hangolunk újra (keresés előtti átöltözéssel nem lehet csalni)
+    const tune = duelTune(heroF, h.tactic, g0, c.target || fairTarget(heroF, h.tactic, opp));
+    const mon = Object.assign(scaleGhost(g0, tune), { name: g0.name });
+    const f = E.simulateDuel(heroF, mon, h.tactic, g0.tactic, E.newSeed(), true);
+    const oppRating = c.rating;
     const exp = 1 / (1 + Math.pow(10, (oppRating - s.rating) / 400)), delta = Math.round(32 * ((f.win ? 1 : 0) - exp));
     s.rating = Math.max(100, s.rating + delta); s.fights++;
     if (f.win) { s.wins++; s.weekWins++; } else s.losses++;
@@ -3552,12 +3727,12 @@ import postgres from 'npm:postgres@3.4.9';
     h.silver += silver; const dGot = dust ? E.addDust(save, h, dust, ctx.now) : 0;
     s.cands = []; save.arena = s;
     if (f.win && !c.bot) G.personal(save, ctx.now, `<b>${G.esc(h.name)}</b> legyőzte az arénában: <b>${G.esc(c.name)}</b>.`, 'win');
-    return { fight: { log: f.log, win: f.win, timeout: f.timeout, rounds: f.rounds, heroF: heroF, mon: mon }, out: { win: f.win, delta: delta, rating: s.rating, opp: Object.assign({}, c, { hero: undefined }), silver: silver, dust: dGot } };
+    return { fight: { log: f.log, win: f.win, timeout: f.timeout, tie: f.tie, rounds: f.rounds, heroF: heroF, mon: mon, duel: true }, out: { win: f.win, delta: delta, rating: s.rating, opp: Object.assign({}, c, { hero: undefined }), silver: silver, dust: dGot } };
   };
 
   // ===================== Csapatküldetések =====================
   // Naponta 3 küldetés. 1–2 társat viszel (más játékosok hősei, vagy gépi társak); a társak minden körben veled ütnek.
-  // A szörny a csapat erejéhez igazodik (kb. 60% győzelmi esély), a jutalom bőkezűbb; a valódi társak gazdái is kapnak részt.
+  // A szörny a csapat erejéhez igazodik (kb. 53% győzelmi esély), a jutalom bőkezűbb; a valódi társak gazdái is kapnak részt.
   const TEAM_RUNS = 3;
   function teamState(save, now) {
     const today = day(now);
@@ -3589,7 +3764,8 @@ import postgres from 'npm:postgres@3.4.9';
     const heroes = allies.map((c, k) => c.hero || (ctx.teamHeroes && ctx.teamHeroes[k]));
     if (heroes.some(x => !x)) fail('state', 'Az egyik társ már nem elérhető. Keress újakat.');
     const heroF = E.fighterFromHero(h);
-    heroF.pet = (heroF.pet || 0) + heroes.reduce((t, x) => t + allyShare(heroF, x), 0);
+    // a társak külön harcolnak a kasztjuk szerepében (gyógyít, véd, gyorsít vagy sebez); a hős saját társa (idéző) megmarad
+    heroF.allies = heroes.map(x => ({ classId: x.classId, share: allyShare(heroF, x) }));
     const names = allies.map(x => x.name);
     const lm = E.findMonsterLevel(heroF, h.tactic, 0.53, { n: 160, power: 1.25 });
     const reg = E.regionFor(lm, 'nehez') || D.REGIONS[0], region = reg.id;

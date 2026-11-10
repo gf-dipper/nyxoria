@@ -149,10 +149,11 @@
       if (!e.dodge) { pose(monSvg(), 'act-hit'); V.number(stage, p.mon.x + 30, p.mon.y - 20, String(e.dmg), 'hit'); } else V.number(stage, p.mon.x + 30, p.mon.y - 20, 'mellé', 'miss');
       onHit && onHit(e);
     }
-    function heal(g, amount) { if (!alive(g)) return; const p = points(); if (amount > 0) { if (!quiet()) V.heal(stage, { at: p.hero.center }); V.number(stage, p.hero.head.x + 10, p.hero.head.y - 50, '+' + amount, 'heal'); } }
-    function shield(g) { if (!alive(g)) return; const p = points(); if (!quiet()) V.shield(stage, { at: p.hero.center, box: p.hero.box }); V.number(stage, p.hero.head.x + 10, p.hero.head.y - 50, 'pajzs', 'heal'); }
-    function stun(g) { if (!alive(g) || quiet()) return; V.stun(stage, { to: points().monHead }); }
-    function dot(g, e) { if (!alive(g)) return; const p = points(); if (!quiet()) V.poison(stage, { to: p.mon }); V.number(stage, p.mon.x, p.mon.y - 30, String(e.dmg), 'poison'); }
+    // side: 'm' = a hatás az ellenfélen látszik (párbajban az ellenfél is gyógyul, pajzsot húz, kábít, mérgez)
+    function heal(g, amount, side) { if (!alive(g)) return; const p = points(); if (amount > 0) { if (side === 'm') { if (!quiet()) V.heal(stage, { at: p.mon }); V.number(stage, p.mon.x + 10, p.monHead.y - 30, '+' + amount, 'heal'); return; } if (!quiet()) V.heal(stage, { at: p.hero.center }); V.number(stage, p.hero.head.x + 10, p.hero.head.y - 50, '+' + amount, 'heal'); } }
+    function shield(g, side) { if (!alive(g)) return; const p = points(); if (side === 'm') { V.number(stage, p.mon.x + 10, p.monHead.y - 30, 'pajzs', 'heal'); return; } if (!quiet()) V.shield(stage, { at: p.hero.center, box: p.hero.box }); V.number(stage, p.hero.head.x + 10, p.hero.head.y - 50, 'pajzs', 'heal'); }
+    function stun(g, onHero) { if (!alive(g) || quiet()) return; V.stun(stage, { to: onHero ? points().hero.head : points().monHead }); }
+    function dot(g, e, onHero) { if (!alive(g)) return; const p = points(); if (onHero) { if (!quiet()) V.poison(stage, { to: p.hero.center }); V.number(stage, p.hero.head.x, p.hero.head.y - 30, String(e.dmg), 'poison'); return; } if (!quiet()) V.poison(stage, { to: p.mon }); V.number(stage, p.mon.x, p.mon.y - 30, String(e.dmg), 'poison'); }
     // harc vége: a vesztes elesik (a heti szörny nem – ő marad), a győztes ünnepel
     function finish(win) {
       const hs = heroSvg(), ms = monSvg();

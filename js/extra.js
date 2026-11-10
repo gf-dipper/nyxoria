@@ -284,6 +284,21 @@
     return g;
   }
   const scaleGhost = (g, m) => Object.assign({}, g, { tam: g.tam * m, maxHp: g.maxHp * m, hpStart: g.hpStart * m });
+  // Párbaj (Aréna): az ellenfél hőse a saját képességeivel harcol (E.simulateDuel). Hogy a kasztpárosítás ne döntse el
+  // előre a párbajt, az ellenfél erejét úgy igazítjuk, hogy az esélyed ugyanannyi legyen, mint az erőalapú
+  // összevetésben (a hős a saját szelleme ellen 50%); a gépi ellenfél pedig a kitűzött esélyhez igazodik.
+  function duelBase(hero) {
+    const f = E.fighterFromHero(hero);
+    return Object.assign(f, { side: 'm', lm: f.level, name: hero.name, ghostOf: { classId: hero.classId }, tactic: hero.tactic || (D.CLASSES[hero.classId] || {}).tactic || 'kiegy' });
+  }
+  function duelTune(myF, tactic, g, target) {
+    let lo = 0.35, hi = 2.6; // pontosabb mérés (több párbaj), szűkebb keresési tartomány
+    for (let i = 0; i < 8; i++) { const mid = (lo + hi) / 2; if (E.duelChance(myF, scaleGhost(g, mid), tactic, g.tactic, 220, 777 + i) > target) lo = mid; else hi = mid; }
+    return +((lo + hi) / 2).toFixed(3);
+  }
+  // valódi ellenfél: az erőalapú esély (a régi, kasztfüggetlen összevetés) a cél
+  const fairTarget = (myF, tactic, opp) => Math.min(0.95, Math.max(0.05, E.winChance(myF, ghostFighter(opp), tactic, 200, 2024)));
+  const DUEL_V = 3;
   // gépi ellenfél hangolása: akkorára állítjuk, hogy ellened épp a kívánt esélyed legyen (a kasztok közti különbség így nem számít)
   function tuneFor(myF, tactic, g, target) {
     let lo = 0.3, hi = 3;
@@ -332,6 +347,7 @@
     let s = save.arena || { rating: 1000, wins: 0, losses: 0, day: today, fights: 0, cands: [], week: wk, weekWins: 0 };
     if (s.day !== today) { s.day = today; s.fights = 0; s.cands = []; s.rerolls = 0; }
     if (s.week !== wk) { s.week = wk; s.weekWins = 0; }
+    if (s.v !== DUEL_V) { s.v = DUEL_V; s.cands = []; } // a régi (képesség nélküli) harcra számolt esélyek elavultak
     return s;
   }
   A.arenaFind = (save, a, ctx) => {
@@ -344,16 +360,20 @@
     const used = pool.map(c => c.name), myF = E.fighterFromHero(h), TARGET = [0.65, 0.5, 0.35];
     while (pool.length < 3) { // gépi ellenfelek pótolják a hiányt: egy könnyebb, egy kiegyenlített, egy nehezebb
       const i = pool.length, gp = gearProfile(h), b = botHero(rng, h.level + [-1, 0, 1][i], gp.rarity, i, used, gp.level);
-      const sn = snap(b, null, 1000); sn.hero = b; sn.target = TARGET[i]; sn.tune = tuneFor(myF, h.tactic, ghostFighter(b), TARGET[i]);
+      const sn = snap(b, null, 1000); sn.hero = b; sn.target = TARGET[i]; sn.tune = duelTune(myF, h.tactic, duelBase(b), TARGET[i]);
       pool.push(sn);
     }
     // minden jelöltnél kiszámoljuk a győzelmi esélyt és azt, hány pont jár a győzelemért / vész el vereségnél
     pool = pool.map(c => {
       const out = Object.assign({}, c);
-      if (c.hero) { const g = ghostFighter(c.hero); out.chance = +E.winChance(myF, c.tune ? scaleGhost(g, c.tune) : g, h.tactic, 200, 2024).toFixed(2); }
+      if (c.hero) {
+        const g = duelBase(c.hero), tune = c.tune || duelTune(myF, h.tactic, g, fairTarget(myF, h.tactic, c.hero));
+        out.chance = +E.duelChance(myF, scaleGhost(g, tune), h.tactic, g.tactic, 200, 2024).toFixed(2);
+      }
       // a gépi ellenfél pontszáma az esélyből adódik (Élő-képlet visszafelé), így a nyerhető pont is igazságos
       // gépi ellenfél: a pontszáma a kitűzött esélyből adódik (Élő-képlet visszafelé), így a tét mindig ehhez az esélyhez illik
-      if (c.target) { out.rating = Math.round(s.rating + 400 * Math.log10((1 - c.target) / c.target)); out.power = Math.round(out.power * c.tune); }
+      // gépi ellenfél: a pontszáma a ténylegesen mért (és kiírt) esélyből adódik, így a tét pontosan ehhez illik
+      if (c.target) { const pc = Math.min(0.95, Math.max(0.05, out.chance != null ? out.chance : c.target)); out.rating = Math.round(s.rating + 400 * Math.log10((1 - pc) / pc)); out.power = Math.round(out.power * c.tune); }
       // a tét a két pontszámból jön (Élő-rendszer): idővel mindenki a valódi erejének megfelelő helyre kerül
       const ex = 1 / (1 + Math.pow(10, (out.rating - s.rating) / 400));
       out.gain = Math.round(32 * (1 - ex)); out.loss = Math.round(32 * ex);
@@ -369,12 +389,12 @@
     if (!c) fail('state', 'Előbb keress ellenfelet.');
     const opp = c.hero || ctx.arenaOpp;
     if (!opp) fail('state', 'Ez az ellenfél már nem elérhető. Keress újat.');
-    const heroF = E.fighterFromHero(h), g0 = ghostFighter(opp);
-    // gépi ellenfél: a harc előtt a mostani felszereléshez hangoljuk újra (keresés előtti átöltözéssel nem lehet csalni)
-    const tune = c.target ? tuneFor(heroF, h.tactic, g0, c.target) : c.tune;
-    const mon = tune ? Object.assign(scaleGhost(g0, tune), { name: g0.name }) : g0;
-    const f = E.simulateFight(heroF, mon, h.tactic, E.newSeed(), true);
-    const oppRating = c.target ? Math.round(s.rating + 400 * Math.log10((1 - c.target) / c.target)) : c.rating;
+    const heroF = E.fighterFromHero(h), g0 = duelBase(opp);
+    // a harc előtt a mostani felszerelésekhez hangolunk újra (keresés előtti átöltözéssel nem lehet csalni)
+    const tune = duelTune(heroF, h.tactic, g0, c.target || fairTarget(heroF, h.tactic, opp));
+    const mon = Object.assign(scaleGhost(g0, tune), { name: g0.name });
+    const f = E.simulateDuel(heroF, mon, h.tactic, g0.tactic, E.newSeed(), true);
+    const oppRating = c.rating;
     const exp = 1 / (1 + Math.pow(10, (oppRating - s.rating) / 400)), delta = Math.round(32 * ((f.win ? 1 : 0) - exp));
     s.rating = Math.max(100, s.rating + delta); s.fights++;
     if (f.win) { s.wins++; s.weekWins++; } else s.losses++;
@@ -382,12 +402,12 @@
     h.silver += silver; const dGot = dust ? E.addDust(save, h, dust, ctx.now) : 0;
     s.cands = []; save.arena = s;
     if (f.win && !c.bot) G.personal(save, ctx.now, `<b>${G.esc(h.name)}</b> legyőzte az arénában: <b>${G.esc(c.name)}</b>.`, 'win');
-    return { fight: { log: f.log, win: f.win, timeout: f.timeout, rounds: f.rounds, heroF: heroF, mon: mon }, out: { win: f.win, delta: delta, rating: s.rating, opp: Object.assign({}, c, { hero: undefined }), silver: silver, dust: dGot } };
+    return { fight: { log: f.log, win: f.win, timeout: f.timeout, tie: f.tie, rounds: f.rounds, heroF: heroF, mon: mon, duel: true }, out: { win: f.win, delta: delta, rating: s.rating, opp: Object.assign({}, c, { hero: undefined }), silver: silver, dust: dGot } };
   };
 
   // ===================== Csapatküldetések =====================
   // Naponta 3 küldetés. 1–2 társat viszel (más játékosok hősei, vagy gépi társak); a társak minden körben veled ütnek.
-  // A szörny a csapat erejéhez igazodik (kb. 60% győzelmi esély), a jutalom bőkezűbb; a valódi társak gazdái is kapnak részt.
+  // A szörny a csapat erejéhez igazodik (kb. 53% győzelmi esély), a jutalom bőkezűbb; a valódi társak gazdái is kapnak részt.
   const TEAM_RUNS = 3;
   function teamState(save, now) {
     const today = day(now);
@@ -419,7 +439,8 @@
     const heroes = allies.map((c, k) => c.hero || (ctx.teamHeroes && ctx.teamHeroes[k]));
     if (heroes.some(x => !x)) fail('state', 'Az egyik társ már nem elérhető. Keress újakat.');
     const heroF = E.fighterFromHero(h);
-    heroF.pet = (heroF.pet || 0) + heroes.reduce((t, x) => t + allyShare(heroF, x), 0);
+    // a társak külön harcolnak a kasztjuk szerepében (gyógyít, véd, gyorsít vagy sebez); a hős saját társa (idéző) megmarad
+    heroF.allies = heroes.map(x => ({ classId: x.classId, share: allyShare(heroF, x) }));
     const names = allies.map(x => x.name);
     const lm = E.findMonsterLevel(heroF, h.tactic, 0.53, { n: 160, power: 1.25 });
     const reg = E.regionFor(lm, 'nehez') || D.REGIONS[0], region = reg.id;
