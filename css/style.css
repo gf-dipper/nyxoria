@@ -1144,3 +1144,22 @@ html { scrollbar-width: thin; scrollbar-color: rgba(127, 140, 255, .35) transpar
   .combat-log { height: clamp(84px, calc(100svh - 690px), 160px); max-height: clamp(84px, calc(100svh - 690px), 160px); }
   .nx-arena { height: min(420px, calc(100svh - 304px - clamp(84px, calc(100svh - 690px), 160px))); min-height: 190px; }
 }
+/* tábor: a rangsor első eleme a kiemelt „következő lépés” */
+.nx-chips button.nx-next { border-color: var(--fakla-400, #f2b544); background: linear-gradient(180deg, rgba(60, 44, 14, .92), rgba(28, 20, 8, .92)); box-shadow: 0 0 0 1px rgba(242, 181, 68, .35), 0 4px 14px rgba(0, 0, 0, .35); }
+.nx-chips button.nx-next:hover { border-color: var(--fakla-300); }
+.nx-next-l { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: #1a1206; background: var(--fakla-300); border-radius: 999px; padding: 2px 7px; margin-right: 2px; }
+@media (max-width: 760px) {
+  /* telefonon a kiemelt lépés nem lóghat ki: két sorba tördelhető, a címke fölötte */
+  .nx-chips button.nx-next { max-width: calc(100vw - 64px); white-space: normal; flex-wrap: wrap; text-align: left; line-height: 17px; padding: 7px 14px; border-radius: 16px; row-gap: 4px; }
+  .nx-chips button.nx-next .nx-next-l { flex-basis: 100%; width: max-content; max-width: max-content; }
+}
+/* kalandkártyák: ugyanaz a táj, nehézség szerint egyre közelebbi és fenyegetőbb őrző-sziluett, más fény */
+.offer .scene { overflow: hidden; }
+.offer .o-mood { position: absolute; inset: 0; pointer-events: none; }
+.offer .o-mood.m-konnyu { background: radial-gradient(120% 90% at 18% 10%, rgba(255, 226, 160, .22), transparent 60%); }
+.offer .o-mood.m-nehez { background: radial-gradient(130% 110% at 70% 60%, transparent 35%, rgba(70, 0, 20, .55) 100%), linear-gradient(180deg, transparent 55%, rgba(120, 20, 40, .35)); }
+.offer .o-threat { position: absolute; bottom: 0; pointer-events: none; display: flex; align-items: flex-end; }
+.offer .o-threat svg { height: 100%; width: auto; display: block; position: static; }
+.offer .o-threat.t-konnyu { right: 12%; height: 40%; opacity: .65; filter: brightness(0) drop-shadow(0 0 2px rgba(190, 210, 255, .55)); }
+.offer .o-threat.t-kozepes { right: 7%; height: 56%; opacity: .72; filter: brightness(0) drop-shadow(0 0 3px rgba(205, 175, 255, .65)); }
+.offer .o-threat.t-nehez { right: 0; height: 92%; opacity: .9; filter: brightness(0) drop-shadow(0 0 5px rgba(255, 80, 90, .8)); }

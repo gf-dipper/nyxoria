@@ -414,17 +414,46 @@
     return `<nav class="bottomnav nx-tabbar" aria-label="Fő fülek">${tabs.map(([id, l, ic]) => `<button data-act="screen" data-v="${id}"${currentNav() === id ? ' aria-current="page"' : ''}>${ni(ic)}${l}</button>`).join('')}<button data-act="info" data-v="menu" class="nx-menu-btn">${ni('menu')}Menü${mp ? `<span class="nx-dot" aria-label="${mp} teendő vár">${mp}</span>` : ''}</button></nav>`;
   }
   function greetLine(n) { const h = new Date(now()).getHours(); return h < 5 ? `Még ébren vagy, ${n}?` : h < 10 ? `Jó reggelt, ${n}!` : h < 18 ? `Szia, ${n}!` : `Szép estét, ${n}!`; }
+  // ---------- „ami most rád vár”: rangsorolt lépések, az első kiemelve ----------
+  // Sorrend: átvehető jutalom → ami akadályoz (tele táska, ösvény) → elérhető fejlődési cél (új fejezet, közeli
+  // toronyjutalom) → napi lehetőségek. Csak olyat ajánl, ami most tényleg elvégezhető. Ha egyik sem, a fő gomb a kaland.
+  const STEP_MEMO = { k: null, v: null };
+  function towerGoal(h) {
+    if (!X || h.level < 5) return null;
+    const tw = X.towerState(S.save, now()), left = X.TOWER_TRIES - tw.tries;
+    if (left <= 0 || tw.floor >= 200) return null;
+    const best = (h.stats || {}).towerMax || 0;
+    let goal = null; for (let n = tw.floor + 1; n <= tw.floor + 5; n++) if (X.towerReward(h, n, best).item) { goal = n; break; }
+    if (!goal) return null;
+    const key = [h.level, h.tactic, h.path, (h.loadout || []).join('.'), tw.floor, goal, D.SLOT_ORDER.map(sl => { const i = h.equipped[sl]; return i ? i.id + '+' + (i.plus || 0) : '-'; }).join(',')].join('|');
+    // a hirdetett (tárgyas) emeletre számolunk esélyt: nem ajánlunk olyat, ami most valószínűleg nem sikerül
+    if (STEP_MEMO.k !== key) { STEP_MEMO.k = key; STEP_MEMO.v = chanceOf(X.towerMonster(goal)); }
+    if (STEP_MEMO.v < 0.45) return null;
+    const d = goal - tw.floor;
+    return { goal, d };
+  }
+  function nextSteps(h, t) {
+    const out = [], add = (prio, html) => out.push({ prio, html });
+    const p = S.save.patrol;
+    if (p && p.end <= now()) add(10, `<button data-act="goto" data-v="patrol">${ni('orjarat')}Visszatért az őrjárat: vedd át a zsákmányt</button>`);
+    if (X && D.QUESTS && S.save.quests && S.save.quests.day === X.day(now())) { const n = S.save.quests.list.filter(q => q.prog >= q.n).length; if (n) add(11, `<button data-act="screen" data-v="megbizasok">${ni('kronika')}${n === 1 ? 'Teljesítettél egy megbízást: vedd át a jutalmat' : `${n} megbízás jutalma vár`}</button>`); }
+    if (X && X.giftState(S.save, now()).can) add(12, `<button data-act="info" data-v="gift">${ni('ajandek')}Vár a napi ajándékod</button>`);
+    if (X) { const n = X.achList(S.save).filter(a => a.reached > a.claimed).length; if (n) add(13, `<button data-act="screen" data-v="eredmenyek">${ni('eredmeny')}${n === 1 ? 'Új eredményt értél el: vedd át a jutalmat' : `${n} eredmény jutalma vár`}</button>`); }
+    if (h.inventory.length >= E.INVENTORY_MAX - 3) add(h.inventory.length >= E.INVENTORY_MAX ? 5 : 20, `<button data-act="screen" data-v="taska">${ni('taska')}${h.inventory.length >= E.INVENTORY_MAX ? 'Tele a táskád! Szedj szét vagy adj el valamit' : 'Majdnem tele a táskád'}</button>`);
+    if (h.level >= D.PATH_LEVEL && h.path == null) add(21, `<button data-act="go-paths">${ni('karakter')}Válassz ösvényt!</button>`);
+    if (X && D.STORY) { const st = X.storyState(S.save, now()), ch = X.storyChapters()[st.done]; if (ch && h.level >= ch.level && st.losses < X.STORY_TRIES && h.inventory.length < E.INVENTORY_MAX) add(30, `<button data-act="screen" data-v="holdkronika">${ni('kronika')}Új fejezet a Holdkrónikában: ${esc(ch.title)}</button>`); }
+    const tg = towerGoal(h);
+    if (tg) add(31, `<button data-act="screen" data-v="torony">${ni('torony')}${tg.d === 1 ? `A Holdtorony ${tg.goal}. emeletén tárgy vár` : `Még ${tg.d} emelet a toronyban a következő tárgyig`}</button>`);
+    if (ONLINE && S.boss && S.boss.active) { const left = 3 - bossHitsToday(); if (left) add(40, `<button data-act="screen" data-v="boss">${ni('boss')}Heti szörny: ${left} ütésed van</button>`); }
+    if (!p && S.save.patrolDay !== G.budapestDate(now())) add(41, `<button data-act="goto" data-v="patrol">${ni('orjarat')}${t.count ? 'Őrjáratra küldheted a hősödet' : 'Nincs fáklyád: küldd őrjáratra a hősödet'}</button>`);
+    out.sort((a, b) => a.prio - b.prio);
+    // legfeljebb négy, hogy a tábor ne zsúfolódjon; az első a kiemelt „következő lépés”
+    return out.slice(0, 4).map((x, i) => i === 0 ? x.html.replace('<button ', '<button class="nx-next" ').replace('">', '"><span class="nx-next-l">Következő lépés</span>') : x.html);
+  }
   // a tábor színpada a kalandválasztó fölött: a hős a tűz mellett, ami most vár rá, és egyetlen fő gomb
   function campStage() {
     const h = hero(), t = E.torchState(S.save, now()), offers = S.save.offers || [], rec = offers.filter(o => o.diff === 'kozepes')[0];
-    const chips = [];
-    if (ONLINE && S.boss && S.boss.active) { const left = 3 - bossHitsToday(); if (left) chips.push(`<button data-act="screen" data-v="boss">${ni('boss')}Heti szörny: ${left} ütésed van</button>`); }
-    if (h.inventory.length >= E.INVENTORY_MAX - 3) chips.push(`<button data-act="screen" data-v="taska">${ni('taska')}${h.inventory.length >= E.INVENTORY_MAX ? 'Tele a táskád!' : 'Majdnem tele a táskád'}</button>`);
-    if (h.level >= D.PATH_LEVEL && h.path == null) chips.push(`<button data-act="go-paths">${ni('karakter')}Válassz ösvényt!</button>`);
-    if (X && X.giftState(S.save, now()).can) chips.push(`<button data-act="info" data-v="gift">${ni('ajandek')}Vár a napi ajándékod</button>`);
-    const p = S.save.patrol;
-    if (p && p.end <= now()) chips.push(`<button data-act="goto" data-v="patrol">${ni('orjarat')}Az őrjárat kész</button>`);
-    else if (!p && S.save.patrolDay !== G.budapestDate(now())) chips.push(`<button data-act="goto" data-v="patrol">${ni('orjarat')}Őrjáratra küldheted a hősödet</button>`);
+    const chips = nextSteps(h, t);
     const narrow = window.matchMedia ? matchMedia('(max-width: 760px)').matches : false;
     const hint = rec ? `Ajánlott: ${esc(region(rec.region).name)}, ${pct(rec.chance)} győzelmi esély.` : '';
     const torch = t.count < E.TORCH.max ? ` A következő fáklya ${timeLeft(t.nextIn)} múlva gyullad.` : t.rested ? ' Minden fáklyád ég, Frissességet gyűjtesz.' : '';
@@ -1178,7 +1207,7 @@
       const tf = tired ? ((S.save.tiredRun || 0) < 8 ? 0.5 : (S.save.tiredRun || 0) < 16 ? 0.25 : 0.1) : 1;
       const xp = Math.round(o.rewards.xp * (t.rested && !tired ? 2 : 1) * xm * tf);
       return `<button class="offer${rec ? ' rec' : ''}${o.elite ? ' elite' : ''}" data-act="start" data-v="${o.diff}" aria-label="${E.DIFF[o.diff].name} kaland: ${esc(r.name)}, győzelmi esély ${pct(o.chance)}">
-        <div class="scene">${A.sceneSvg(r.scene, A.hash(o.guard) % 997)}<span class="diff-pill d-${o.diff}">${E.DIFF[o.diff].name}</span>${rec ? '<span class="rec-pill">AJÁNLOTT</span>' : ''}</div>
+        <div class="scene">${A.sceneSvg(r.scene, A.hash(o.guard) % 997)}<i class="o-mood m-${o.diff}" aria-hidden="true"></i><div class="o-threat t-${o.diff}" aria-hidden="true">${A.monsterSvg(o.guard, o.region, { guard: true })}</div><span class="diff-pill d-${o.diff}">${E.DIFF[o.diff].name}</span>${rec ? '<span class="rec-pill">AJÁNLOTT</span>' : ''}</div>
         <div class="body">
           <div><h3>${esc(r.name)}</h3><div class="small muted">Őrző: ${esc(o.guard)} · <span style="white-space:nowrap">${o.level}. szint</span></div>${o.elite ? '<div class="elite-line">Elit őrző: kisebb esély, több jutalom</div>' : ''}</div>
           <div class="chance"><b class="d-${o.diff}">${pct(o.chance)}</b><span class="small muted">győzelmi esély</span></div>
@@ -1405,7 +1434,8 @@
     const H = esc(c.heroName), M = esc(art(c.monName));
     switch (e.kind) {
       case 'round': return `<p class="r">${e.r}. KÖR</p>`;
-      case 'skill': return `<p>${H}: <b style="color:var(--hold-300)">${esc(D.SKILLS[e.skill].name)}</b></p>`;
+      case 'tempo': return `<p class="heal">${esc((c.allies || [])[e.ally] || 'A társad')} dala felgyorsítja ${H} képességeit.</p>`;
+      case 'skill': return `<p${e.who === 'm' ? ' class="mon"' : ''}>${e.who === 'm' ? M : H}: <b style="color:${e.who === 'm' ? '#ffc1c1' : 'var(--hold-300)'}">${esc(D.SKILLS[e.skill].name)}</b></p>`;
       case 'hit':
         if (e.who === 'h') {
           if (e.dodge) return `<p class="muted">${M} félreugrik, az ütés célt téveszt.</p>`;
@@ -1413,14 +1443,18 @@
           if (e.crit) return `<p class="crit">Telitalálat! ${fmt(e.dmg)} sebzés.</p>`;
           return `<p>${H} eltalálja: ${fmt(e.dmg)} sebzés.</p>`;
         }
+        if (e.who === 'ally') { const an = esc((c.allies || [])[e.ally] || 'A társad'); return e.dodge ? `<p class="muted">${an} mellécsap.</p>` : `<p>${an} odasújt: ${fmt(e.dmg)}${e.crit ? ' (telitalálat!)' : ''}.</p>`; }
+        if (e.who === 'mpet') return e.dodge ? `<p class="heal">${M} társa mellécsap.</p>` : `<p class="mon">${M} társa odakap: ${fmt(e.dmg)}${e.crit ? ' (telitalálat!)' : ''}${e.absorbed ? ` (a pajzs ${fmt(e.absorbed)} pontot elnyelt)` : ''}.</p>`;
         if (e.who === 'pet') return e.dodge ? `<p class="muted">${c.pet} mellécsap.</p>` : `<p>${c.pet} odakap: ${fmt(e.dmg)}${e.crit ? ' (telitalálat!)' : ''}.</p>`;
         if (e.dodge) return `<p class="heal">${H} ügyesen kitér!</p>`;
         return `<p class="mon">${M} ${e.special ? esc(c.special) : 'üt'}: ${fmt(e.dmg)} sebzés${e.special ? '!' : '.'}${e.crit ? ' Ez fájt!' : ''}${e.absorbed ? ` (a pajzs ${fmt(e.absorbed)} pontot elnyelt)` : ''}</p>`;
-      case 'heal': return e.amount > 0 ? `<p class="heal">${H} ${e.skill === 'regen' ? 'erőre kap a holdfénytől' : 'gyógyul'}: +${fmt(e.amount)} ÉLET.</p>` : '';
-      case 'shield': return `<p class="heal">Védőpajzs: ${fmt(e.amount)} sebzést fog fel.</p>`;
-      case 'stun': return `<p>${M} megszédül, és kihagy egy kört.</p>`;
-      case 'dot': return `<p>A méreg tovább mar: ${fmt(e.dmg)}.</p>`;
-      case 'skip': return `<p class="muted">${M} még kábult, nem tud támadni.</p>`;
+      case 'heal': if (e.who === 'ally') return e.amount > 0 ? `<p class="heal">${esc((c.allies || [])[e.ally] || 'A társad')} gyógyít: +${fmt(e.amount)} ÉLET.</p>` : '';
+        return e.amount > 0 ? `<p class="${e.who === 'm' ? 'mon' : 'heal'}">${e.who === 'm' ? M : H} ${e.skill === 'regen' ? 'erőre kap a holdfénytől' : 'gyógyul'}: +${fmt(e.amount)} ÉLET.</p>` : '';
+      case 'shield': if (e.who === 'ally') return `<p class="heal">${esc((c.allies || [])[e.ally] || 'A társad')} pajzsot emel ${H} elé: ${fmt(e.amount)} sebzést fog fel.</p>`;
+        return e.who === 'm' ? `<p class="mon">${M} védőpajzsot von maga köré: ${fmt(e.amount)} sebzést fog fel.</p>` : `<p class="heal">Védőpajzs: ${fmt(e.amount)} sebzést fog fel.</p>`;
+      case 'stun': return e.who === 'm' ? `<p class="mon">${H} megszédül, és kihagy egy kört.</p>` : `<p>${M} megszédül, és kihagy egy kört.</p>`;
+      case 'dot': return e.who === 'm' ? `<p class="mon">A méreg tovább mar: ${fmt(e.dmg)}.</p>` : `<p>A méreg tovább mar: ${fmt(e.dmg)}.</p>`;
+      case 'skip': return e.who === 'h' ? `<p class="mon">${H} még kábult, nem tud támadni.</p>` : `<p class="muted">${M} még kábult, nem tud támadni.</p>`;
     }
     return '';
   }
@@ -1431,7 +1465,7 @@
       // a harc eredményét a krónika csak a harc végén árulja el (az utolsó pár másodperc bejegyzései addig rejtve)
       chronCut: now() - 3000,
       kind: kind, fight: fight, heroF: fight.heroF, mon: fight.mon, idx: 0, done: false, mounted: false, timer: null,
-      heroName: h.name, monName: fight.mon.name, pet: fight.allies && fight.allies.length ? fight.allies.join(' és ') : petName(h), special: (extra && extra.special) || D.MONSTER_SPECIALS[Math.floor(Math.random() * D.MONSTER_SPECIALS.length)],
+      heroName: h.name, monName: fight.mon.name, pet: petName(h), allies: fight.allies || [], special: (extra && extra.special) || D.MONSTER_SPECIALS[Math.floor(Math.random() * D.MONSTER_SPECIALS.length)],
       // Aréna: az ellenfél hőse (kinézettel) rajzolódik a szörny helyére
       oppHero: extra && extra.opp ? { name: extra.opp.name, classId: extra.opp.classId, rig: safeRig({ classId: extra.opp.classId, rig: extra.opp.rig, look: extra.opp.look, people: extra.opp.people }) } : null,
       region: rid, guard: kind === 'guard' || kind === 'story', boss: !!fight.boss, hp: fight.heroF.hpStart, mhp: fight.mon.hpStart, round: 1, logHtml: '', extra: extra || {}, dealt: 0
@@ -1506,6 +1540,7 @@
       const start = c.idx, e = log[c.idx];
       try {
         if (e.kind === 'round') { take(e); await st.wait(300); }
+        else if (e.kind === 'skill' && e.who === 'm') take(e); // párbaj: az ellenfél képessége (a hatása a következő eseményeken látszik)
         else if (e.kind === 'skill') {
           take(e); pending = c.pending = e.skill;
           const nx = log[c.idx];
@@ -1516,12 +1551,13 @@
           const hits = []; for (let j = c.idx; j < log.length && log[j].kind === 'hit' && log[j].who === 'h'; j++) hits.push(log[j]);
           await st.heroSkill(g, pending || basic, hits, take); if (st.alive(g)) pending = c.pending = null; await st.wait(380);
         }
-        else if (e.kind === 'hit' && e.who === 'pet') { await st.pet(g, e, take); await st.wait(300); }
-        else if (e.kind === 'hit' && e.who === 'm') { await st.monAttack(g, e.special, e, take, c.special); await st.wait(480); }
-        else if (e.kind === 'heal') { st.heal(g, e.amount); take(e); await st.wait(320); }
-        else if (e.kind === 'shield') { st.shield(g); take(e); await st.wait(320); }
-        else if (e.kind === 'stun' || e.kind === 'skip') { st.stun(g); take(e); await st.wait(e.kind === 'skip' ? 650 : 260); }
-        else if (e.kind === 'dot') { st.dot(g, e); take(e); await st.wait(320); }
+        else if (e.kind === 'hit' && (e.who === 'pet' || e.who === 'ally')) { await st.pet(g, e, take); await st.wait(300); }
+        else if (e.kind === 'hit' && (e.who === 'm' || e.who === 'mpet')) { await st.monAttack(g, e.special, e, take, c.special); await st.wait(480); }
+        else if (e.kind === 'heal') { st.heal(g, e.amount, e.who); take(e); await st.wait(320); }
+        else if (e.kind === 'shield') { st.shield(g, e.who); take(e); await st.wait(320); }
+        // kábítás: a „stun” annak a nevében jön, aki kábított, a „skip” annak, aki kimarad
+        else if (e.kind === 'stun' || e.kind === 'skip') { st.stun(g, e.kind === 'stun' ? e.who === 'm' : e.who === 'h'); take(e); await st.wait(e.kind === 'skip' ? 650 : 260); }
+        else if (e.kind === 'dot') { st.dot(g, e, e.who === 'm'); take(e); await st.wait(320); }
         else take(e);
       } catch (err) { /* a látvány hibája nem akaszthatja meg a harcot */ }
       // ha a látvány valamiért nem léptetett (de a lejátszás még érvényes), az eseményt akkor is alkalmazzuk
@@ -1562,11 +1598,11 @@
       if (f) { const s = document.createElement('span'); s.className = 'skill-flash'; s.textContent = D.SKILLS[e.skill].name; f.appendChild(s); setTimeout(() => s.remove(), 1100); }
     }
     if (e.kind === 'hit' || e.kind === 'dot') {
-      if (e.who === 'm') { anim('fig-m', 'lunge-l'); if (!e.dodge) anim('fig-h', 'hit-shake'); floatAt('fig-h', e.dodge ? 'kitért' : '-' + fmt(e.dmg), e.dodge ? 'miss' : e.crit ? 'crit' : 'dmg'); }
+      if (e.who === 'm' || e.who === 'mpet') { anim('fig-m', 'lunge-l'); if (!e.dodge) anim('fig-h', 'hit-shake'); floatAt('fig-h', e.dodge ? 'kitért' : '-' + fmt(e.dmg), e.dodge ? 'miss' : e.crit ? 'crit' : 'dmg'); }
       else { if (e.kind === 'hit' && e.who === 'h') anim('fig-h', 'lunge-r'); if (!e.dodge) anim('fig-m', 'hit-shake'); floatAt('fig-m', e.dodge ? 'mellé' : '-' + fmt(e.dmg), e.dodge ? 'miss' : (e.crit || e.first) ? 'crit' : 'dmg'); }
     }
-    if (e.kind === 'heal' && e.amount > 0) floatAt('fig-h', '+' + fmt(e.amount), 'heal');
-    if (e.kind === 'shield') floatAt('fig-h', 'pajzs', 'heal');
+    if (e.kind === 'heal' && e.amount > 0) floatAt(e.who === 'm' ? 'fig-m' : 'fig-h', '+' + fmt(e.amount), 'heal');
+    if (e.kind === 'shield') floatAt(e.who === 'm' ? 'fig-m' : 'fig-h', 'pajzs', 'heal');
     updateBars();
   }
   function updateBars() {

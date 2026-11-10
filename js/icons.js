@@ -87,7 +87,7 @@
       // négyágú csillogás
       spark(x, y, r, color = '#ffffff', op = 1) { return `<path d="M${x} ${y - r} Q${x + r * 0.18} ${y - r * 0.18} ${x + r} ${y} Q${x + r * 0.18} ${y + r * 0.18} ${x} ${y + r} Q${x - r * 0.18} ${y + r * 0.18} ${x - r} ${y} Q${x - r * 0.18} ${y - r * 0.18} ${x} ${y - r} Z" fill="${color}" opacity="${op}"/>`; },
       // tárgy alatti puha árnyék
-      shadow(cx = 32, cy = 57, rx = 16, ry = 3.5) { return `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="#000" opacity="0.28"/>`; },
+      shadow(cx = 32, cy = 57, rx = 16, ry = 3.5) { return `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="#000" opacity="0.28" data-sh="1"/>`; },
       // képesség-háttér: elemhez illő sugaras fény + finom sugarak + belső perem
       bg(elem, o = {}) {
         const e = Array.isArray(elem) ? elem : ELEM[elem] || ELEM.arcane;
@@ -139,7 +139,66 @@
     if (hit && REG.item[hit]) return hit;
     return REG.item['slot-' + item.slot] ? 'slot-' + item.slot : null;
   }
-  function item(it, o) { const key = itemKey(it); return key ? svg('item', key, o) : ''; }
+  // ---------- ritkaság a tárgy formáján (nem csak a kereten) ----------
+  // A rajz maga a tárgy; köré/rá a ritkaság szerinti réteg kerül. A minták a tárgy saját körvonalára vannak vágva
+  // (maszk), így minden tárgycsaládon a helyükön maradnak. Epikustól a körvonal is megváltozik (színes perem).
+  //  szürke: fakóbb, kopott (karcok)   zöld: tiszta, gondos   kék: ezüst vésett minta
+  //  lila: lila perem + izzó rúnák     legendás: aranyperem, aranyfiligrán, hátul sugárkoszorú
+  const TIER = { szurke: 0, zold: 1, kek: 2, lila: 3, legendas: 4 };
+  function dressed(key, tier, o) {
+    const base = svg('item', key, o);
+    if (!base || tier === 1 || tier == null) return base;
+    const p = 'nr' + (++UID).toString(36), open = base.indexOf('>') + 1, inner = base.slice(open, base.lastIndexOf('</svg>'));
+    const head = base.slice(0, open);
+    // az árnyékot külön rajzoljuk: a perem, a maszk és a minták csak magát a tárgyat kövessék
+    const shadows = (inner.match(/<ellipse[^>]*data-sh="1"\/>/g) || []).join('');
+    const body = inner.replace(/<ellipse[^>]*data-sh="1"\/>/g, '');
+    const sil = `<mask id="${p}m" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64"><g filter="url(#${p}w)"><use href="#${p}b"/></g></mask>` +
+      `<filter id="${p}w" x="-10%" y="-10%" width="120%" height="120%"><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0"/></filter>`;
+    // a tárgy (árnyék nélkül nem választható szét, de az árnyék alacsony és sötét: a minták ott alig látszanak)
+    // kéktől felfelé a perem helyet kér: a tárgy kicsit kisebb, hogy a perem ne vágódjon le a 64-es doboz szélén
+    const fit = tier >= 2 ? ' transform="translate(3.2 3.2) scale(0.9)"' : '';
+    let defs = `<g id="${p}b"><g${fit}>${body}</g></g>` + sil, back = '', over = '', look = '';
+    if (tier === 0) {
+      defs += `<filter id="${p}f"><feColorMatrix type="saturate" values="0.2"/><feComponentTransfer><feFuncR type="linear" slope="0.8"/><feFuncG type="linear" slope="0.8"/><feFuncB type="linear" slope="0.84"/></feComponentTransfer></filter>`;
+      look = ` filter="url(#${p}f)"`;
+      over = `<g mask="url(#${p}m)" opacity="0.6" fill="none" stroke="${INK}" stroke-width="1.1" stroke-linecap="round">` +
+        `<path d="M14 22 l5 3 M38 14 l3 4 M44 40 l-4 2 M24 44 l2 -4 M30 30 l4 1"/></g>`;
+    } else if (tier === 2) {
+      // vékony, hideg ezüstperem: kis méretben is elválik a zöldtől
+      defs += `<filter id="${p}r" x="-20%" y="-20%" width="140%" height="140%"><feMorphology in="SourceAlpha" operator="dilate" radius="1.3" result="d"/><feFlood flood-color="#a8d4ff"/><feComposite in2="d" operator="in"/></filter>`;
+      back = `<g filter="url(#${p}r)" opacity="0.9"><use href="#${p}b"/></g>`;
+      defs += `<pattern id="${p}p" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)"><path d="M0 4 H8" stroke="#eaf4ff" stroke-width="0.7" opacity="0.55"/><circle cx="4" cy="4" r="0.9" fill="#bfe0ff" opacity="0.8"/></pattern>`;
+      over = `<g mask="url(#${p}m)"><rect width="64" height="64" fill="url(#${p}p)" opacity="0.55"/></g>`;
+    } else if (tier >= 3) {
+      const L = tier === 4, rim = L ? '#ffd36a' : '#b78cff', rim2 = L ? '#7a4a08' : '#3a1a6e';
+      defs += `<filter id="${p}r" x="-20%" y="-20%" width="140%" height="140%"><feMorphology in="SourceAlpha" operator="dilate" radius="${L ? 2.2 : 1.6}" result="d"/>` +
+        `<feFlood flood-color="${rim}"/><feComposite in2="d" operator="in" result="c"/>` +
+        `<feMorphology in="SourceAlpha" operator="dilate" radius="${L ? 3.4 : 2.6}" result="d2"/><feFlood flood-color="${rim2}"/><feComposite in2="d2" operator="in" result="c2"/>` +
+        `<feGaussianBlur in="c" stdDeviation="${L ? 1.6 : 1.2}" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="c2"/><feMergeNode in="c"/></feMerge></filter>`;
+      // perem: a tárgy körvonala kihízik (kis méretben is látszik)
+      back += `<g filter="url(#${p}r)" opacity="${L ? 1 : 0.95}"><use href="#${p}b"/></g>`;
+      if (L) {
+        // sugárkoszorú a tárgy mögött
+        back = `<g opacity="0.55">${[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map(a => `<path d="M32 32 L${(32 + 30 * Math.cos((a - 4) * Math.PI / 180)).toFixed(1)} ${(32 + 30 * Math.sin((a - 4) * Math.PI / 180)).toFixed(1)} L${(32 + 30 * Math.cos((a + 4) * Math.PI / 180)).toFixed(1)} ${(32 + 30 * Math.sin((a + 4) * Math.PI / 180)).toFixed(1)} Z" fill="#ffe9a8"/>`).join('')}</g>` + back;
+        defs += `<pattern id="${p}p" patternUnits="userSpaceOnUse" width="10" height="10"><path d="M0 5 C2.5 1 7.5 1 10 5 M0 5 C2.5 9 7.5 9 10 5" fill="none" stroke="#ffe08a" stroke-width="0.8" opacity="0.85"/><circle cx="5" cy="5" r="0.9" fill="#fff6d0"/></pattern>`;
+        over = `<g mask="url(#${p}m)"><rect width="64" height="64" fill="url(#${p}p)" opacity="0.5"/></g>`;
+      } else {
+        defs += `<pattern id="${p}p" patternUnits="userSpaceOnUse" width="12" height="12"><path d="M3 2 L3 8 L6 5 M8 3 L10 7 L8 10" fill="none" stroke="#e6d4ff" stroke-width="0.9" stroke-linecap="round" opacity="0.9"/></pattern>`;
+        over = `<g mask="url(#${p}m)"><rect width="64" height="64" fill="url(#${p}p)" opacity="0.55"/></g>`;
+      }
+      over += L ? `<path d="M54 8 l1.2 3.6 3.6 1.2 -3.6 1.2 -1.2 3.6 -1.2 -3.6 -3.6 -1.2 3.6 -1.2 Z" fill="#fff8d8"/><path d="M9 50 l0.9 2.6 2.6 0.9 -2.6 0.9 -0.9 2.6 -0.9 -2.6 -2.6 -0.9 2.6 -0.9 Z" fill="#fff8d8" opacity="0.85"/>`
+        : `<path d="M54 9 l1 3 3 1 -3 1 -1 3 -1 -3 -3 -1 3 -1 Z" fill="#f2e6ff" opacity="0.9"/>`;
+    }
+    return head + `<defs>${defs}</defs>` + shadows + back + `<g${look}><use href="#${p}b"/></g>` + over + '</svg>';
+  }
+  function item(it, o) {
+    const key = itemKey(it); if (!key) return '';
+    if (o && o.plain) return svg('item', key, o);
+    // a mitikus tárgyak saját, ragyogó rajzot kaptak: azokra nem kerül perem (sárossá tenné a fényüket)
+    if (it && it.mythic) return svg('item', key, o);
+    return dressed(key, TIER[it && it.rarity], o);
+  }
   function skill(id, o) { return svg('skill', id, o); }
   function misc(id, o) { return svg('misc', id, o); }
 
