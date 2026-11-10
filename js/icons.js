@@ -176,6 +176,16 @@
         `<feFlood flood-color="${rim}"/><feComposite in2="d" operator="in" result="c"/>` +
         `<feMorphology in="SourceAlpha" operator="dilate" radius="${L ? 3.4 : 2.6}" result="d2"/><feFlood flood-color="${rim2}"/><feComposite in2="d2" operator="in" result="c2"/>` +
         `<feGaussianBlur in="c" stdDeviation="${L ? 1.6 : 1.2}" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="c2"/><feMergeNode in="c"/></feMerge></filter>`;
+      // forma: epikustól a tárgy mögött saját alkatrész nő ki – lila: két kristályszilánk, legendás: arany szárnyas
+      // díszkeret – így a ritkaság szín, perem és fény nélkül, csak a körvonalból is felismerhető
+      back += L
+        ? `<g stroke="#5a3a08" stroke-width="1.2" stroke-linejoin="round">` +
+          `<path d="M32 52 C18 52 6 44 0 30 C6 33 11 33 15 31 C8 27 3 19 1 9 C8 14 15 17 21 17 C17 12 16 7 17 1 C24 11 30 24 32 38 Z" fill="#e6b84a"/>` +
+          `<path d="M32 52 C46 52 58 44 64 30 C58 33 53 33 49 31 C56 27 61 19 63 9 C56 14 49 17 43 17 C47 12 48 7 47 1 C40 11 34 24 32 38 Z" fill="#e6b84a"/>` +
+          `<path d="M14 30 C18 32 22 32 26 30 M50 30 C46 32 42 32 38 30" fill="none" stroke="#fff2c0" stroke-width="1"/></g>` +
+          `<path d="M32 2 L36 8 L32 14 L28 8 Z" fill="#fff2b0" stroke="#7a4a08" stroke-width="1"/>`
+        : `<g stroke="#2a1660" stroke-width="1.1" stroke-linejoin="round"><path d="M53 0 L63 12 L57 28 L47 13 Z" fill="#b48cff"/><path d="M55 3 L58 13 L56 23" fill="none" stroke="#efe4ff" stroke-width="0.9"/>` +
+          `<path d="M7 36 L15 49 L8 64 L1 49 Z" fill="#9d72f0"/><path d="M8 40 L11 49 L8 59" fill="none" stroke="#efe4ff" stroke-width="0.8"/></g>`;
       // perem: a tárgy körvonala kihízik (kis méretben is látszik)
       back += `<g filter="url(#${p}r)" opacity="${L ? 1 : 0.95}"><use href="#${p}b"/></g>`;
       if (L) {

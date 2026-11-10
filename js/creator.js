@@ -60,14 +60,14 @@
   const STEPS = [
     { id: 'alap', name: 'Alap', desc: RESTYLE ? 'Nem, testalkat, bőrszín és farok. A kaszt és a faj nem változik.' : 'Nem, kaszt, faj, testalkat és farok. Ezzel kezdődik minden.', zoom: 'full', keys: ['sex', 'body', 'height', 'skin', 'tail'],
       groups: RESTYLE ? [['ideas'], ['sex'], ['opt', 'body'], ['opt', 'height'], ['color', 'skin'], ['opt', 'tail']] : [['sex'], ['class'], ['ideas'], ['people'], ['opt', 'body'], ['opt', 'height'], ['color', 'skin'], ['opt', 'tail']] },
-    { id: 'arc', name: 'Arc', desc: 'Arcforma, szemek és az, hogy milyen képet vág a hősöd.', zoom: 'face', keys: ['face', 'eyeShape', 'eye', 'eye2', 'eyeGlow', 'brows', 'nose', 'mouth', 'mark'],
-      groups: [['opt', 'face'], ['opt', 'eyeShape'], ['color', 'eye'], ['color', 'eye2', true], ['toggle', 'eyeGlow'], ['opt', 'brows'], ['opt', 'nose'], ['opt', 'mouth'], ['opt', 'mark']] },
+    { id: 'arc', name: 'Arc', desc: 'Arcforma, szemek, faji jegy és az, hogy milyen képet vág a hősöd.', zoom: 'face', keys: ['face', 'eyeShape', 'eye', 'eye2', 'eyeGlow', 'brows', 'nose', 'mouth', 'feature', 'mark'],
+      groups: [['opt', 'face'], ['opt', 'eyeShape'], ['color', 'eye'], ['color', 'eye2', true], ['toggle', 'eyeGlow'], ['opt', 'brows'], ['opt', 'nose'], ['opt', 'mouth'], ['opt', 'feature'], ['opt', 'mark']] },
     { id: 'haj', name: 'Haj', desc: 'Válassz frizurát és hajszínt. A haj végét külön is átszínezheted.', zoom: 'upper', keys: ['hairFront', 'hairBack', 'hair', 'tip', 'beard'],
       groups: [['opt', 'hairStyle'], ['color', 'hair'], ['color', 'tip', true], ['opt', 'beard']] },
     { id: 'fej', name: 'Fej', desc: 'Fül, szarv és ékszerek: ettől lesz igazán egyedi.', zoom: 'face', keys: ['ears', 'horns', 'hornColor', 'headwear', 'earring'],
       groups: [['opt', 'ears'], ['opt', 'horns'], ['color', 'hornColor'], ['opt', 'headwear'], ['opt', 'earring']] },
-    { id: 'ruha', name: 'Öltözet', desc: 'A ruhád szabása végig a tiéd marad. A színét, a díszeit és a köpenyt később a felvett páncél adja: minél ritkább, annál díszesebb. Ezeket a színeket a Ruhatárban bármikor visszaveheted.', zoom: 'full', keys: ['outfit', 'c1', 'c2', 'metal', 'cape'],
-      groups: [['opt', 'outfit'], ['color', 'c1'], ['color', 'c2'], ['metal'], ['opt', 'cape']] },
+    { id: 'ruha', name: 'Öltözet', desc: 'A ruhád szabása végig a tiéd marad. A színét, a díszeit és a köpenyt később a felvett páncél adja: minél ritkább, annál díszesebb. Ezeket a színeket a Ruhatárban bármikor visszaveheted.', zoom: 'full', keys: ['outfit', 'c1', 'c2', 'metal', 'cape', 'clsAcc'],
+      groups: [['opt', 'outfit'], ['color', 'c1'], ['color', 'c2'], ['metal'], ['opt', 'cape'], ['opt', 'clsAcc']] },
     { id: 'fegyver', name: 'Fegyver', desc: 'A kedvenc fegyvered: ez marad a kezedben végig. A ritkább fegyverek ugyanezt a fegyvert díszítik fel: a lila halványan izzik, a legendás aranyban ragyog.', zoom: 'full', keys: ['weapon'],
       groups: [['opt', 'weapon']] },
     RESTYLE ? { id: 'nev', name: 'Összegzés', desc: 'Nézd át, mit raktál össze, és mentsd el.', zoom: 'full', keys: [], groups: [['summary']] }
@@ -80,13 +80,13 @@
   const TH = {
     sex: { head: true, vb: '76 2 168 178' }, people: { head: true, vb: '76 2 168 178' }, class: { vb: VB_FULL }, body: { vb: VB_FULL }, height: { vb: VB_FULL },
     face: { head: true, vb: '82 30 156 158', bare: true }, eyeShape: { head: true, vb: VB_EYES, bare: true }, brows: { head: true, vb: VB_EYES, bare: true },
-    nose: { head: true, vb: VB_LOW, bare: true }, mouth: { head: true, vb: VB_LOW, bare: true }, mark: { head: true, vb: '88 50 144 136', bare: true },
+    nose: { head: true, vb: VB_LOW, bare: true }, mouth: { head: true, vb: VB_LOW, bare: true }, mark: { head: true, vb: '88 50 144 136', bare: true }, feature: { head: true, vb: '88 50 144 136', bare: true },
     hairStyle: { head: true, vb: '66 -4 188 222', yaw: 28, bare: true }, beard: { head: true, vb: '88 62 144 136', bare: true },
     ears: { head: true, vb: VB_HEAD, bare: true }, horns: { head: true, vb: VB_HEAD, bare: true }, headwear: { head: true, vb: VB_HEAD }, earring: { head: true, vb: '80 66 160 134', yaw: -38, bare: true },
-    outfit: { vb: '40 60 240 380' }, cape: { vb: VB_FULL, yaw: 150 }, weapon: { vb: VB_FULL }, wings: { vb: VB_FULL, yaw: 165 }, tail: { vb: VB_FULL, yaw: 125 }, aura: { vb: VB_FULL },
+    outfit: { vb: '40 60 240 380' }, clsAcc: { vb: VB_FULL }, cape: { vb: VB_FULL, yaw: 150 }, weapon: { vb: VB_FULL }, wings: { vb: VB_FULL, yaw: 165 }, tail: { vb: VB_FULL, yaw: 125 }, aura: { vb: VB_FULL },
     _me: { head: true, vb: '76 0 168 186' }
   };
-  const FULL_KEYS = ['class', 'body', 'height', 'outfit', 'cape', 'weapon', 'wings', 'tail', 'aura'];
+  const FULL_KEYS = ['class', 'body', 'height', 'outfit', 'cape', 'clsAcc', 'weapon', 'wings', 'tail', 'aura'];
   const ratio = vb => { const p = vb.split(' ').map(Number); return `${p[2]} / ${p[3]}`; };
   const FEMALE = ['Lumi', 'Szirom', 'Ködvirág', 'Zsálya', 'Éjke', 'Holdvirág', 'Bodza', 'Vadóc', 'Rezeda', 'Harmat', 'Ilka', 'Liliom', 'Csillagszem', 'Szellő', 'Mirtill', 'Hajnal', 'Ezüstke', 'Nádja', 'Ibolya', 'Lenke'];
   const MALE = ['Nox', 'Ében', 'Hollós', 'Tüske', 'Vadon', 'Kord', 'Dorian', 'Zord', 'Örs', 'Kelen', 'Bátor', 'Vazul', 'Sólyom', 'Darvas', 'Farkas', 'Torda', 'Kopján', 'Ármin', 'Bodor', 'Szilaj'];
@@ -648,6 +648,8 @@
     if (p && PEOPLE[p] && ['roka', 'macska'].indexOf(L.ears) < 0) L.ears = PEOPLE[p].ears;
     STEPS.forEach(st => { if (C.locks.has(st.id)) st.keys.forEach(k => { L[k] = C.look[k]; }); });
     if (keepAlap) L.ears = C.look.ears;
+    // a faji jegy többnyire a fajhoz illik (de nem mindig: választható)
+    if (!C.locks.has('arc') && p && PEOPLE[p]) L.feature = rnd() < 0.7 ? PEOPLE[p].feature || 'nincs' : 'nincs';
     if (L.sex === 'no') L.beard = 'nincs';
     return { look: tidy(L), people: p, name: RESTYLE || C.locks.has('nev') ? C.name : randomName(L.sex, C.name) };
   }

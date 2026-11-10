@@ -334,7 +334,7 @@
   // A szerver is ez alapján ellenőriz: csak az itt felsorolt értékek mehetnek át. A rig.js választéka és ez a lista
   // egyezését teszt figyeli (tools/teszt-kinezet.js).
   var LOOK_ENUMS = {
-    sex: ['no', 'ferfi'], body: ['karcsu', 'atlagos', 'eros'], height: ['alacsony', 'kozepes', 'magas'], face: ['ovalis', 'kerek', 'szogletes'],
+    sex: ['no', 'ferfi'], body: ['karcsu', 'atlagos', 'eros'], height: ['alacsony', 'kozepes', 'magas'], face: ['ovalis', 'kerek', 'szogletes', 'sziv', 'hosszu'],
     eyeShape: ['kerek', 'nagy', 'mandula', 'macska', 'almos', 'eles'], brows: ['ivelt', 'egyenes', 'vastag', 'vekony', 'mergues'],
     mouth: ['mosoly', 'vigyor', 'magabiztos', 'huncut', 'komoly', 'meglepett'], nose: ['pici', 'gomb', 'egyenes'],
     ears: ['ember', 'tunde', 'hosszutunde', 'roka', 'macska'],
@@ -342,6 +342,7 @@
     hairFront: ['egyenes', 'oldal', 'tuskes', 'kozep', 'kocos', 'hatra', 'aszim', 'katonai', 'felnyirt', 'felfesult', 'oldalvalasztott', 'irokez', 'kopasz'],
     beard: ['nincs', 'borosta', 'bajusz', 'kecske', 'teli'], horns: ['nincs', 'kicsi', 'kos', 'sarlo', 'agancs', 'demon'],
     mark: ['nincs', 'holdjel', 'csillagok', 'csikok', 'szeplok', 'forradas', 'harcifestek', 'konnycsepp'],
+    feature: ['nincs', 'koerezet', 'arnyrajz', 'csillagkep', 'holdfeny'], clsAcc: ['be', 'ki'],
     headwear: ['nincs', 'diadem', 'abroncs', 'csuklya', 'suveg', 'koszoru', 'szemkoto', 'sisak'], earring: ['nincs', 'karika', 'kristaly'],
     metal: ['arany', 'ezust', 'bronz', 'ejacel'], cape: ['nincs', 'rovid', 'hosszu', 'rongyos', 'csillagos'],
     wings: ['nincs', 'tunder', 'denever', 'feny', 'toll', 'kristaly', 'lang', 'holdezust', 'csillag', 'arny'], tail: ['nincs', 'roka', 'macska', 'sarkany'], aura: ['nincs', 'holdfeny', 'parazs', 'arny', 'csillagpor', 'villam']
@@ -350,7 +351,7 @@
   var LOOK_BASE = {
     sex: 'no', body: 'atlagos', height: 'kozepes', skin: '#f0c8a8', face: 'ovalis', eyeShape: 'nagy', eye: '#3d8cf0', eye2: null, eyeGlow: false,
     brows: 'ivelt', mouth: 'mosoly', nose: 'pici', ears: 'ember', hairBack: 'vallig', hairFront: 'oldal', hair: '#e9ecff', tip: '#7f8cff',
-    beard: 'nincs', horns: 'nincs', hornColor: '#efe4cc', mark: 'nincs', headwear: 'nincs', earring: 'nincs',
+    beard: 'nincs', horns: 'nincs', hornColor: '#efe4cc', mark: 'nincs', feature: 'nincs', clsAcc: 'be', headwear: 'nincs', earring: 'nincs',
     outfit: 0, c1: '#2c3a8c', c2: '#5a3e9e', metal: 'arany', cape: 'nincs', weapon: 0, wings: 'nincs', tail: 'nincs', aura: 'nincs'
   };
   var CLASS_LOOK = {
@@ -361,8 +362,8 @@
   };
   // a faj kiinduló bőrszíne és füle (a készítőben utána szabadon módosítható)
   var PEOPLE_LOOK = {
-    ember: { skin: '#f0c8a8', ears: 'ember' }, holdtunde: { skin: '#d9def5', ears: 'tunde' }, koszivu: { skin: '#a7a3ad', ears: 'ember' },
-    arnyszulott: { skin: '#8f8aa6', ears: 'hosszutunde' }, csillagfenyu: { skin: '#f2d79a', ears: 'tunde' }
+    ember: { skin: '#f0c8a8', ears: 'ember', feature: 'nincs' }, holdtunde: { skin: '#d9def5', ears: 'tunde', feature: 'holdfeny' }, koszivu: { skin: '#a7a3ad', ears: 'ember', feature: 'koerezet' },
+    arnyszulott: { skin: '#8f8aa6', ears: 'hosszutunde', feature: 'arnyrajz' }, csillagfenyu: { skin: '#f2d79a', ears: 'tunde', feature: 'csillagkep' }
   };
 
   root.NYX = root.NYX || {};

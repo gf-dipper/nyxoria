@@ -122,7 +122,7 @@
     sex: { label: 'Nem', items: { no: 'Nő', ferfi: 'Férfi' } },
     body: { label: 'Testalkat', items: { karcsu: 'Karcsú', atlagos: 'Átlagos', eros: 'Erős' } },
     height: { label: 'Magasság', items: { alacsony: 'Alacsony', kozepes: 'Közepes', magas: 'Magas' } },
-    face: { label: 'Arcforma', items: { ovalis: 'Ovális', kerek: 'Kerek', szogletes: 'Szögletes' } },
+    face: { label: 'Arcforma', items: { ovalis: 'Ovális', kerek: 'Kerek', szogletes: 'Szögletes', sziv: 'Szív alakú', hosszu: 'Hosszúkás' } },
     eyeShape: { label: 'Szemforma', items: { kerek: 'Kerek', nagy: 'Nagy, csillogó', mandula: 'Mandulavágású', macska: 'Macskaszem', almos: 'Álmos', eles: 'Éles' } },
     brows: { label: 'Szemöldök', items: { ivelt: 'Ívelt', egyenes: 'Egyenes', vastag: 'Vastag', vekony: 'Vékony', mergues: 'Mérges' } },
     mouth: { label: 'Arckifejezés', items: { mosoly: 'Mosolygós', vigyor: 'Vigyorgó', magabiztos: 'Magabiztos', huncut: 'Huncut', komoly: 'Komoly', meglepett: 'Meglepett' } },
@@ -131,6 +131,8 @@
     hairStyle: { label: 'Frizura', items: {} },
     beard: { label: 'Szakáll', items: { nincs: 'Nincs', borosta: 'Borosta', bajusz: 'Bajusz', kecske: 'Kecskeszakáll', teli: 'Dús szakáll' } },
     horns: { label: 'Szarv', items: { nincs: 'Nincs', kicsi: 'Kis szarvak', kos: 'Kosszarv', sarlo: 'Sarlószarv', agancs: 'Agancs', demon: 'Démonszarv' } },
+    clsAcc: { label: 'Kasztkiegészítő', items: { be: 'Látszik', ki: 'Rejtve' } },
+    feature: { label: 'Faji jegy', items: { nincs: 'Nincs', koerezet: 'Kőerezet', arnyrajz: 'Árnyrajzolat', csillagkep: 'Csillagkép', holdfeny: 'Holdfény-jel' } },
     mark: { label: 'Arcjegy', items: { nincs: 'Nincs', holdjel: 'Holdjel', csillagok: 'Csillagok', csikok: 'Törzsi csíkok', szeplok: 'Szeplők', forradas: 'Forradás', harcifestek: 'Harci festék', konnycsepp: 'Könnycsepp' } },
     headwear: { label: 'Fejdísz', items: { nincs: 'Nincs', diadem: 'Diadém', abroncs: 'Fejabroncs', csuklya: 'Csuklya', suveg: 'Varázslósüveg', koszoru: 'Virágkoszorú', szemkoto: 'Szemkötő', sisak: 'Sisak' } },
     earring: { label: 'Fülbevaló', items: { nincs: 'Nincs', karika: 'Karika', kristaly: 'Kristály' } },
@@ -202,7 +204,7 @@
     return {
       sex: 'no', body: 'atlagos', height: 'kozepes', skin: '#f0c8a8', face: 'ovalis', eyeShape: 'nagy', eye: '#3d8cf0', eye2: null, eyeGlow: false,
       brows: 'ivelt', mouth: 'mosoly', nose: 'pici', ears: 'ember', hairBack: 'vallig', hairFront: 'oldal', hair: '#e9ecff', tip: '#7f8cff',
-      beard: 'nincs', horns: 'nincs', hornColor: '#efe4cc', mark: 'nincs', headwear: 'nincs', earring: 'nincs',
+      beard: 'nincs', horns: 'nincs', hornColor: '#efe4cc', mark: 'nincs', feature: 'nincs', clsAcc: 'be', headwear: 'nincs', earring: 'nincs',
       outfit: 0, c1: d.c1, c2: d.c2, metal: d.metal, cape: 'nincs', weapon: 0, wings: 'nincs', tail: 'nincs', aura: 'nincs'
     };
   }
@@ -267,14 +269,20 @@
   const HEAD = {
     ovalis: 'M114 116 C114 80 132 64 160 64 C188 64 206 80 206 116 C206 140 196 158 182 168 C174 174 167 177 160 177 C153 177 146 174 138 168 C124 158 114 140 114 116 Z',
     kerek: 'M112 118 C112 80 132 64 160 64 C188 64 208 80 208 118 C208 148 190 174 160 175 C130 174 112 148 112 118 Z',
-    szogletes: 'M114 114 C114 80 132 64 160 64 C188 64 206 80 206 114 C206 136 204 152 194 163 C184 172 172 177 160 177 C148 177 136 172 126 163 C116 152 114 136 114 114 Z'
+    szogletes: 'M114 114 C114 80 132 64 160 64 C188 64 206 80 206 114 C206 136 204 152 194 163 C184 172 172 177 160 177 C148 177 136 172 126 163 C116 152 114 136 114 114 Z',
+    // szív alakú: széles járomcsont, keskeny, hegyes áll
+    sziv: 'M112 112 C112 78 132 64 160 64 C188 64 208 78 208 112 C208 132 199 148 186 161 C177 170 168 178 160 181 C152 178 143 170 134 161 C121 148 112 132 112 112 Z',
+    // hosszúkás: keskenyebb, nyújtott arc, lejjebb ülő áll
+    hosszu: 'M116 112 C116 78 134 63 160 63 C186 63 204 78 204 112 C204 142 198 162 187 173 C179 181 169 184 160 184 C151 184 141 181 133 173 C122 162 116 142 116 112 Z'
   };
   // Férfi koponyák: szélesebb, szögletesebb állkapocs és lapos, széles áll – a felső fejforma azonos
   const HEAD_M = {
     // egyenes állkapocsél, látható állkapocsszöglet és széles, lapos áll; hosszabb arc, mint a nőknél
     ovalis: 'M115 112 C115 80 132 64 160 64 C188 64 205 80 205 112 C205 128 204 140 200 151 L189 175 C185 183 177 188 167 189 L153 189 C143 188 135 183 131 175 L120 151 C116 140 115 128 115 112 Z',
     kerek: 'M113 114 C113 80 132 64 160 64 C188 64 207 80 207 114 C207 132 205 146 201 156 L192 176 C187 184 178 188 168 188 L152 188 C142 188 133 184 128 176 L119 156 C115 146 113 132 113 114 Z',
-    szogletes: 'M114 110 C114 80 132 64 160 64 C188 64 206 80 206 110 C206 130 206 146 204 158 L196 178 C193 185 184 189 172 189 L148 189 C136 189 127 185 124 178 L116 158 C114 146 114 130 114 110 Z'
+    szogletes: 'M114 110 C114 80 132 64 160 64 C188 64 206 80 206 110 C206 130 206 146 204 158 L196 178 C193 185 184 189 172 189 L148 189 C136 189 127 185 124 178 L116 158 C114 146 114 130 114 110 Z',
+    sziv: 'M113 110 C113 78 132 64 160 64 C188 64 207 78 207 110 C207 130 202 146 194 158 L179 180 C173 187 166 190 160 190 C154 190 147 187 141 180 L126 158 C118 146 113 130 113 110 Z',
+    hosszu: 'M116 110 C116 78 134 62 160 62 C186 62 204 78 204 110 C204 134 203 150 199 163 L190 183 C186 190 177 193 167 193 L153 193 C143 193 134 190 130 183 L121 163 C117 150 116 134 116 110 Z'
   };
   const EARS = {
     ember: 'M118 108 C104 102 101 126 108 135 C111 140 117 140 119 134 Z',
@@ -414,6 +422,73 @@
     return '';
   }
 
+  // faji jegyek: a fajhoz illő, de külön választható rajzolat az arcon (forgatáskor az arc görbületét követi)
+  function featureSvg(f, skin, place) {
+    const pl = place || ((x, y, g) => g);
+    switch (f) {
+      case 'koerezet': { // Kőszívű: repedezett kőerezet mindkét arcon és az állkapocs mentén, világos peremmel
+        const darkSkin = lum(skin) < 0.45, dk = darkSkin ? light(skin, 0.6) : dark(skin, 0.6), lt = darkSkin ? dark(skin, 0.55) : light(skin, 0.4);
+        const crack = (d, cx, cy) => pl(cx, cy, `<path d="${d}" fill="none" stroke="${lt}" stroke-width="1.1" opacity="0.55" transform="translate(0.8 0.8)"/>` + S(d, dk, 1.9, { op: 0.85 }));
+        return crack('M200 136 L192 145 L196 153 L188 162 L191 170 M192 145 L184 143 M196 153 L203 158', 192, 152) +
+          crack('M120 140 L127 147 L123 156 L130 164 M127 147 L135 146', 126, 152) +
+          pl(176, 172, `<path d="M171 168 l6 -3 l5 3 l-1 5 l-7 2 Z" fill="${dark(skin, 0.22)}" stroke="${dk}" stroke-width="1" opacity="0.75"/>`) +
+          pl(134, 130, `<path d="M130 128 l5 -2 l3 3 l-2 4 l-5 0 Z" fill="${dark(skin, 0.2)}" stroke="${dk}" stroke-width="0.9" opacity="0.6"/>`);
+      }
+      case 'arnyrajz': { // Árnyszülött: halványan derengő, kanyargó árnyminta a szemek alatt a halántékig
+        const c = '#c39bff';
+        const sideD = ['M122 136 C126 148 134 154 146 154 C140 156 132 160 128 166', 'M198 136 C194 148 186 154 174 154 C180 156 188 160 192 166'];
+        return sideD.map((d, i) => pl(i ? 186 : 134, 152, `<path d="${d}" fill="none" stroke="${c}" stroke-width="4.5" opacity="0.28" stroke-linecap="round"/><g opacity="0.9">` + S(d, c, 1.7) + `<circle cx="${i ? 176 : 144}" cy="154" r="1.7" fill="#f0e2ff"/></g>`)).join('');
+      }
+      case 'csillagkep': { // Csillagfényű: összekötött, derengő csillagok az arcon (csillagkép), aranyban
+        const pts = [[186, 131], [195, 140], [190, 152], [199, 161], [182, 161]], c = '#ffd36a';
+        const d = 'M186 131 L195 140 L190 152 L199 161 M190 152 L182 161';
+        return pl(191, 148, `<path d="${d}" fill="none" stroke="${c}" stroke-width="3" opacity="0.22"/><path d="${d}" fill="none" stroke="#c4902a" stroke-width="1" opacity="0.8"/>` +
+          pts.map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${i === 1 ? 4.5 : 3.4}" fill="${c}" opacity="0.3"/><path d="${starD(x, y, i === 1 ? 3.6 : 2.7, 4, 0.38)}" fill="#fff4cc" stroke="#a8721e" stroke-width="0.6"/>`).join(''));
+      }
+      case 'holdfeny': { // Holdtünde: ezüst tündejel a járomcsonton a halántékig, végén kis holdsarlóval
+        const c = '#e8f1ff', st = '#6f86c4';
+        const sideD = ['M144 150 C136 148 128 142 123 132', 'M176 150 C184 148 192 142 197 132'];
+        return sideD.map((d, i) => pl(i ? 188 : 132, 142, `<path d="${d}" fill="none" stroke="${c}" stroke-width="4" opacity="0.25" stroke-linecap="round"/>` + S(d, st, 2.2, { op: 0.9 }) + S(d, c, 1.1) +
+          P(i ? 'M199 124 C193 125 192 133 198 135 C195 132 195 127 199 124 Z' : 'M121 124 C127 125 128 133 122 135 C125 132 125 127 121 124 Z', c, { stroke: st, sw: 0.9 }) +
+          `<circle cx="${i ? 182 : 138}" cy="152" r="1.4" fill="${c}"/>`)).join('');
+      }
+    }
+    return '';
+  }
+  // ---------- kasztkörvonal: kasztonként jellegzetes kiegészítő (külön kapcsolható réteg: L.clsAcc === 'ki' kikapcsolja) ----------
+  // part: 'back' (a test mögött) vagy 'front' (a test és a karok előtt, a fej alatt). A test 320-as vázához igazodik.
+  function classAcc(cls, L, id, part, m) {
+    if (L.clsAcc === 'ki') return '';
+    const c1 = L.c1, c2 = L.c2;
+    switch (cls) {
+      case 'harcos': // fémgallér (nyakvért) – széles, zárt vállvonal
+        return part === 'front' ? shaded(id, 'M134 184 C144 194 176 194 186 184 L192 196 C178 208 142 208 128 196 Z', metalFill(id), { base: m, off: [-3, -2] }) + S('M138 192 C150 199 170 199 182 192', dark(m, 0.45), 1.2) + `<circle cx="160" cy="200" r="2.6" fill="${light(m, 0.35)}" stroke="${dark(m, 0.5)}" stroke-width="0.8"/>` : '';
+      case 'vadasz': // átlós tegezszíj a mellkason (aszimmetrikus vállvédővel együtt)
+        return part === 'front' ? `<path d="M128 194 L134 190 L196 262 L190 268 Z" fill="#6a4630" stroke="${line('#6a4630')}" stroke-width="1.4"/>` + S('M131 192 L193 265', '#8a6040', 0.9, { op: 0.6 }) + `<rect x="156" y="222" width="9" height="7" rx="1.5" fill="${metalFill(id)}" stroke="${dark(m, 0.5)}" stroke-width="0.8" transform="rotate(48 160 225)"/>` : '';
+      case 'magus': // magas, merev gallér a nyak két oldalán + két lebegő rúna a vállak fölött
+        return part === 'back' ? shaded(id, 'M130 200 C100 190 86 160 88 118 C104 140 122 156 142 166 L152 194 Z', dark(c1, 0.12), { off: [-3, -2] }) + shaded(id, 'M190 200 C220 190 234 160 232 118 C216 140 198 156 178 166 L168 194 Z', dark(c1, 0.12), { off: [-3, -2] }) + S('M130 196 C104 184 92 158 91 126 M190 196 C216 184 228 158 229 126', light(c2, 0.35), 1.8, { op: 0.9 })
+          : `<g class="r-float"><circle cx="100" cy="166" r="9" fill="#9fd8ff" opacity="0.22" filter="url(#${id}-blur3)"/><path d="${aff(RUNES[1], 100, 166, 1, 1)}" fill="none" stroke="#bfe9ff" stroke-width="1.6"/></g><g class="r-float" style="animation-delay:-1.3s"><circle cx="222" cy="156" r="8" fill="#9fd8ff" opacity="0.22" filter="url(#${id}-blur3)"/><path d="${aff(RUNES[3], 222, 156, 0.85, 0.85)}" fill="none" stroke="#bfe9ff" stroke-width="1.5"/></g>`;
+      case 'gyogyito': // holdsarló-glória a fej mögött és holdsarlós nyakék a mellkason, ezüstben
+        if (part === 'back') return '';
+        return part === 'front' ? S('M142 188 C148 200 172 200 178 188', light(m, 0.2), 1.3) + `<circle cx="160" cy="210" r="11" fill="#fff6d8" opacity="0.25" filter="url(#${id}-blur3)"/>` + P('M166 200 C154 199 150 214 160 221 C164 223 168 223 171 221 C162 218 158 206 166 200 Z', '#eef3ff', { stroke: '#8aa4d8', sw: 1 }) + `<circle cx="168" cy="209" r="2.2" fill="#9fe8ff" stroke="#3a7fb0" stroke-width="0.7"/>` : '';
+      case 'orgyilkos': // hátra lobogó sálvégek és a nyak körüli sál
+        return part === 'back' ? shaded(id, 'M146 188 C120 192 92 186 64 200 C84 204 104 204 122 202 C104 214 88 226 78 246 C104 234 132 216 150 196 Z', c2, { off: [-3, -2] }) + S('M140 192 C116 196 90 194 70 201 M126 204 C108 214 94 228 84 240', light(c2, 0.3), 1.2, { op: 0.7 })
+          : shaded(id, 'M138 184 C146 194 174 194 182 184 L184 194 C174 202 146 202 136 194 Z', c2, { off: [-3, -2] }) + S('M140 191 C150 197 170 197 180 191', dark(c2, 0.4), 1.1, { op: 0.7 });
+      case 'idezo': // pecsétgyűrű a hát mögött, elöl két függő pecsétlap
+        return part === 'back' ? `<circle cx="160" cy="196" r="66" fill="none" stroke="#b58cff" stroke-width="7" opacity="0.25" filter="url(#${id}-blur3)" class="r-glow"/><g><circle cx="160" cy="196" r="66" fill="none" stroke="#6a3fb8" stroke-width="3.2"/><circle cx="160" cy="196" r="66" fill="none" stroke="#d9c4ff" stroke-width="1.2"/><circle cx="160" cy="196" r="59" fill="none" stroke="#b58cff" stroke-width="1.2" opacity="0.8" stroke-dasharray="6 5"/>${[0, 60, 120, 180, 240, 300].map(a => { const x = 160 + 63 * Math.cos(a * DEG), y = 196 + 63 * Math.sin(a * DEG); return `<path d="${aff(RUNES[a / 60 % RUNES.length], x, y, 0.5, 0.5)}" fill="none" stroke="#f0e6ff" stroke-width="1.4"/>`; }).join('')}</g>`
+          : [[146, 0], [174, 1]].map(([x, i]) => `<g transform="rotate(${i ? 6 : -6} ${x} 206)"><rect x="${x - 5}" y="206" width="10" height="20" rx="1" fill="#f3ead2" stroke="#8a6a3a" stroke-width="0.9"/><path d="M${x - 2.5} 211 L${x + 2.5} 211 M${x} 211 L${x} 221 M${x - 2.5} 216 L${x + 2.5} 219" stroke="#b03a4a" stroke-width="1.1"/></g>`).join('') + S('M146 206 C150 196 170 196 174 206', '#8a6a3a', 1);
+      case 'dalnok': // féloldalas köpeny a bal vállon (a kép jobb oldalán a hangszer marad szabadon)
+        return part === 'back' ? shaded(id, 'M130 188 C104 200 88 246 90 316 C104 322 120 318 134 308 C130 270 132 226 142 194 Z', dark(c2, 0.05), { off: [-3, -2] }) + S('M92 312 C104 318 120 314 132 306', light(c2, 0.35), 2, { op: 0.9 })
+          : shaded(id, 'M120 190 C130 182 146 182 152 192 C146 206 136 214 122 216 C116 208 116 198 120 190 Z', c2, { off: [-3, -2] }) + S('M122 214 C134 212 144 206 150 194', light(c2, 0.35), 1.6) + `<circle cx="146" cy="194" r="3" fill="${metalFill(id)}" stroke="${dark(m, 0.5)}" stroke-width="0.8"/>`;
+      case 'alakvalto': { // prémes vállpalást csipkézett szőrrel és agyarfüzér
+        const fur = '#8a6a4a';
+        return part === 'back' ? shaded(id, 'M112 196 C118 182 202 182 208 196 L214 222 C190 232 130 232 106 222 Z', dark(fur, 0.1), { off: [-3, -2] })
+          : shaded(id, 'M104 200 C100 192 108 186 118 188 L116 196 Z', fur, { off: [-2, -2] }) + shaded(id, 'M216 200 C220 192 212 186 202 188 L204 196 Z', fur, { off: [-2, -2] }) + shaded(id, 'M116 192 C126 182 194 182 204 192 L208 204 L201 200 L196 210 L189 202 L182 211 L175 203 L167 212 L160 204 L153 212 L145 203 L138 211 L131 202 L124 210 L119 200 L112 204 Z', fur, { off: [-3, -2] }) + S('M124 196 C140 190 180 190 196 196', light(fur, 0.3), 1.2, { op: 0.7 }) +
+            [146, 153, 160, 167, 174].map((x, i) => `<path d="M${x} ${213 + Math.abs(i - 2) * -1.5} l-2 2 l2 7 l2 -7 Z" fill="#f3ead2" stroke="#8a7a5a" stroke-width="0.6"/>`).join('');
+      }
+    }
+    return '';
+  }
   // ---------- haj ----------
   const HAIR_BACK = {
     rovid: 'M104 124 C98 44 222 44 216 124 C214 142 208 152 200 160 L120 160 C112 152 106 142 106 122 Z',
@@ -802,7 +877,7 @@
     if (!A) return '';
     let s = '';
     const U = L.uniqW && UNIQ_W[uniqName(L.uniqW)];
-    if (L.wset && SET_ACC[L.wset] && !U) s += setWeaponDecor(A, gearCtx(L, id, L.wset, L.wtier));
+    if (L.wset && SET_ACC[L.wset] && !U) { const gc = gearCtx(L, id, L.wset, L.wtier); s += setWeaponDecor(A, gc) + tierWeaponParts(A, gc); }
     if (U) s += uniqWeaponDecor(A, uniqName(L.uniqW), id);
     return s;
   }
@@ -1429,6 +1504,13 @@
   };
   function wAxis(A) { const a = A.seg ? [A.seg[1][0] - A.seg[0][0], A.seg[1][1] - A.seg[0][1]] : [A.h[0] - A.g[0], A.h[1] - A.g[1]]; const ang = Math.atan2(a[1], a[0]) / DEG; return ang; }
   function segPts(A, n) { if (!A.seg) return []; const out = []; for (let i = 0; i < n; i++) { const t = n === 1 ? 0.5 : i / (n - 1); out.push([A.seg[0][0] + (A.seg[1][0] - A.seg[0][0]) * t, A.seg[0][1] + (A.seg[1][1] - A.seg[0][1]) * t]); } return out; }
+  // ugyanaz az alkatrész, mint az ikonon: lila kristályszilánk, legendás arany szárnypár (a keresztvasnál kifelé)
+  function tierWeaponParts(A, g) {
+    const t = g.t, ang = wAxis(A), [gx, gy] = A.g;
+    if (t === 2) return [[ang + 105, 34, 7], [ang - 105, 34, 7], [ang + 150, 20, 5], [ang - 150, 20, 5]].map(([a, l, w], i) => shaded(g.id, shardP(gx, gy, l, a, w), i % 2 ? '#9d72f0' : '#b48cff', { off: [-1.5, -1.5], rim: 1, sw: 1.3, stroke: '#2a1660' })).join('');
+    if (t >= 3) return [ang + 100, ang - 100].map(a => { const p = axis(gx, gy, a); return `<path d="M${p(0, 0)} C${p(10, -13)} ${p(23, -16)} ${p(34, -8)} C${p(26, -5)} ${p(21, -3)} ${p(18, 3)} C${p(26, 3)} ${p(31, 8)} ${p(34, 13)} C${p(21, 13)} ${p(8, 8)} ${p(0, 0)} Z" fill="${GOLD}" stroke="#5a3a08" stroke-width="1.1"/>`; }).join('');
+    return '';
+  }
   function setWeaponDecor(A, g) {
     const t = g.t, id = g.id, mat = g.mat, acc = g.acc, ang = wAxis(A), id2 = id;
     const sh = (d, fill, o) => shaded(id2, d, fill, Object.assign({ off: [-1.5, -1.5], rim: 1, sw: 1.2 }, o || {}));
@@ -1853,11 +1935,12 @@
     // férfiaknál vállvédő / vállkendő a karok tetején: szélesebb, szögletesebb vállvonal
     const PAUL = 'M183 196 C186 180 212 176 224 194 C226 205 219 213 208 213 C195 213 185 207 183 196 Z';
     const paulC = { harcos: null, alakvalto: '#8a6a4a', vadasz: '#6a4630', orgyilkos: dark(L.c1, 0.2) }[cls];
-    const paul = (d) => !male ? '' : cls === 'harcos' ? shaded(id, d, metalFill(id), { base: m, off: [-4, -3] }) : shaded(id, d, paulC || dark(L.c2, 0.08), { off: [-4, -3] });
+    const accOn = L.clsAcc !== 'ki';
+    const paul = (d, side) => !(male || (accOn && (cls === 'harcos' || cls === 'alakvalto' || (cls === 'vadasz' && side < 0)))) ? '' : (cls === 'vadasz' && side > 0 && !male) ? '' : cls === 'harcos' ? shaded(id, d, metalFill(id), { base: m, off: [-4, -3] }) : shaded(id, d, paulC || dark(L.c2, 0.08), { off: [-4, -3] });
     const gA = L.gset && SET_ACC[L.gset] && !uniqP(L) ? gearCtx(L, id, L.gset, L.gtier) : null, aType = ARMOR_TYPE[cls] || 'v';
     const gearPaul = side => uniqP(L) ? uniqPauldron(uniqP(L), side, id, L) : gA ? setPauldron(gA, aType, side) : null;
-    const paulR = gearPaul(1) != null ? gearPaul(1) : paul(PAUL) + (male && cls === 'harcos' ? `<path d="M190 200 C196 190 212 188 220 198" fill="none" stroke="${dark(m, 0.45)}" stroke-width="1.4"/><circle cx="204" cy="190" r="2" fill="${light(m, 0.4)}"/>` : male && cls === 'alakvalto' ? S('M186 204 l-3 6 M194 210 l-1 6 M204 212 l0 6 M214 210 l2 6', '#5a4030', 2) : '');
-    const paulL = gearPaul(-1) != null ? gearPaul(-1) : paul(mirror(PAUL)) + (male && cls === 'harcos' ? `<path d="${mirror('M190 200 C196 190 212 188 220 198')}" fill="none" stroke="${dark(m, 0.45)}" stroke-width="1.4"/><circle cx="116" cy="190" r="2" fill="${light(m, 0.4)}"/>` : male && cls === 'alakvalto' ? S(mirror('M186 204 L183 210 M194 210 L193 216 M204 212 L204 218 M214 210 L216 216'), '#5a4030', 2) : '');
+    const paulR = gearPaul(1) != null ? gearPaul(1) : paul(PAUL, 1) + (male && cls === 'harcos' ? `<path d="M190 200 C196 190 212 188 220 198" fill="none" stroke="${dark(m, 0.45)}" stroke-width="1.4"/><circle cx="204" cy="190" r="2" fill="${light(m, 0.4)}"/>` : male && cls === 'alakvalto' ? S('M186 204 l-3 6 M194 210 l-1 6 M204 212 l0 6 M214 210 l2 6', '#5a4030', 2) : '');
+    const paulL = gearPaul(-1) != null ? gearPaul(-1) : paul(mirror(PAUL), -1) + (male && cls === 'harcos' ? `<path d="${mirror('M190 200 C196 190 212 188 220 198')}" fill="none" stroke="${dark(m, 0.45)}" stroke-width="1.4"/><circle cx="116" cy="190" r="2" fill="${light(m, 0.4)}"/>` : male && cls === 'alakvalto' ? S(mirror('M186 204 L183 210 M194 210 L193 216 M204 212 L204 218 M214 210 L216 216'), '#5a4030', 2) : '');
     const AS = male ? ' translate(204 192) scale(1.08) translate(-204 -192)' : '', ASL = male ? ' translate(116 192) scale(1.08) translate(-116 -192)' : '';
     const armDist = 44 + armShift;
     let armR = `<g class="r-arm-r" style="transform-origin:${198 + armShift}px 196px"><g transform="translate(${armShift} 0)${AS}">${shaded(id, ARM_R, sleeve, { off: [-4, -3] })}${shaded(id, CUFF_R, cuffC, { base: cls === 'harcos' ? m : L.c2, off: [-3, -2], rim: 1.4 })}${gA ? setBracer(gA, aType, 1) : ''}${paulR}<g class="r-weapon${REV_GRIP[cls + L.weapon] ? ' rev' : ''}" style="transform-origin:${212 + armShift}px 282px"><g transform="rotate(${fx((WEAPON_ROT[cls + L.weapon] || 0) + (turned ? 22 * sn * sg : 0))} ${GRIP[0]} ${GRIP[1]})">${wWrap(weaponSvg(cls, +L.weapon, c < -0.2 ? Object.assign({}, L, { _back: true }) : L, id))}</g></g>${hand(HAND_R, THUMB_R, 1)}</g></g>`;
@@ -1919,7 +2002,7 @@
     face += feat(160, 134, (male ? S('M162 120 C163 128 164 134 163 140', dark(L.skin, 0.3), 1.4, { op: 0.45 }) : '') + noseSvg(L.nose, L.skin, male), 0.42);
     // r-shout: nyitott, kiabáló száj (harci kiáltásnál a CSS cseréli le a rendes szájra)
     if (!hideMouth) face += feat(160, 155, `<g class="r-mouth">${mouthSvg(L.mouth, L.skin, male)}</g><g class="r-shout" opacity="0"><path d="M151 150 C151 144 169 144 169 150 C169 163 151 163 151 150 Z" fill="#7a2034" stroke="${dark(mix(L.skin, '#8a4a3a', 0.35), 0.35)}" stroke-width="1.8"/><path d="M153 149.5 C157 147.5 163 147.5 167 149.5 L166 151.5 C162 150.5 158 150.5 154 151.5 Z" fill="#fff"/><path d="M155 158 C158 156 162 156 165 158 C162 160.5 158 160.5 155 158 Z" fill="#e8708a"/></g>`, 0.3);
-    face += `<g clip-path="url(#${id}-headclip)">${markSvg(L.mark, L.skin, turned ? (x, y, g) => feat(x, y, g, 0.15) : null)}</g>`;
+    face += `<g clip-path="url(#${id}-headclip)">${featureSvg(L.feature, L.skin, turned ? (x, y, g) => feat(x, y, g, 0.15) : null)}${markSvg(L.mark, L.skin, turned ? (x, y, g) => feat(x, y, g, 0.15) : null)}</g>`;
     const eyeL = L.headwear === 'szemkoto' ? '' : eyeSvg(id, -1, L.eyeShape, L.eye, L.eyeGlow, L.skin, male);
     const eyeR = eyeSvg(id, 1, L.eyeShape, L.eye2 || L.eye, L.eyeGlow, L.skin, male);
     // a távoli szem rövidül (perspektíva), a közeli kicsit szélesedik; ha már a fej mögé fordul, eltűnik
@@ -2087,7 +2170,10 @@
     const shortUnder = ['rovid', 'konty', 'nincs'].indexOf(L.hairBack) >= 0;
     const capRegion = L.headwear === 'sisak' && shortUnder ? `<path transform="${HS}" d="M-100 172 L420 172 L420 600 L-100 600 Z"/>` : L.headwear === 'sisak' ? `<path transform="${HS}${shellT}" d="M104 126 L216 126 L262 214 L420 240 L420 600 L-100 600 L-100 240 L58 214 Z"/>` : `<path transform="${HS}" d="M-100 ${capY} L420 ${capY} L420 600 L-100 600 Z"/>`;
     const capClip = capY == null ? '' : `<clipPath id="${id}-capline">${capRegion}</clipPath><clipPath id="${id}-hatline2"><path d="M-100 74 L420 74 L420 600 L-100 600 Z"/></clipPath>`;
-    let hairBackG = `<g class="r-hairback" style="transform-origin:160px 120px"><g transform="${HS}">${hairBack}</g></g>`;
+    // gyógyító: holdfényes glória a fej fölött (a fejjel mozog és fordul; a fejfedő alatt nem látszik)
+    const halo = cls === 'gyogyito' && L.clsAcc !== 'ki' && !opts.headOnly && ['suveg', 'sisak', 'csuklya'].indexOf(L.headwear) < 0
+      ? `<g class="r-glow"><ellipse cx="160" cy="31" rx="${fx(46 * (turned ? 0.55 + 0.45 * ac : 1))}" ry="11" fill="none" stroke="#fff6d8" stroke-width="8" opacity="0.25" filter="url(#${id}-blur3)"/></g><ellipse cx="160" cy="31" rx="${fx(46 * (turned ? 0.55 + 0.45 * ac : 1))}" ry="11" fill="none" stroke="#8aa4d8" stroke-width="4.6"/><ellipse cx="160" cy="31" rx="${fx(46 * (turned ? 0.55 + 0.45 * ac : 1))}" ry="11" fill="none" stroke="#eef3ff" stroke-width="2.4"/>` : '';
+    let hairBackG = `<g class="r-hairback" style="transform-origin:160px 120px"><g transform="${HS}">${halo}${hairBack}</g></g>`;
     // a sisak alól kilógó haj a sisaknál ne legyen szélesebb (különben a perem mellett vízszintesen levágott tincs látszana)
     const squeeze = L.headwear === 'sisak' ? ' translate(160 0) scale(0.9 1) translate(-160 0)' : '';
     if (capY != null) hairBackG = `${capClip}<g class="r-head" style="transform-origin:160px 176px"><g clip-path="url(#${id}-capline)"><g transform="${HS}${squeeze}">${hairBack}</g></g></g>`;
@@ -2101,14 +2187,20 @@
       const bx = tall ? [52, -24, 216, 252] : [52, 8, 216, 252];
       vb = [160 + (bx[0] - 160) * hs, 420 + (bx[1] - 420) * hs, bx[2] * hs, bx[3] * hs].map(v => fx(v)).join(' ');
     }
+    // kasztkiegészítő: a testtel együtt forog és szélesedik
+    const accWrap = s => !s ? '' : turned ? `<g transform="translate(${fx(160 + 10 * sn)} 0) scale(${fx(sg * bodyW)} 1) translate(-160 0)"><g transform="${bodyT}">${s}</g></g>` : `<g transform="${bodyT}">${s}</g>`;
+    let accBraw = classAcc(cls, L, id, 'back', m);
+    if (turned && yawD < -10 && cls === 'orgyilkos') accBraw = `<g transform="translate(320 0) scale(-1 1)">${accBraw}</g>`;
+    if (turned && yawD < -20 && cls === 'dalnok') accBraw = '';
+    const accB = opts.headOnly ? '' : accWrap(accBraw), accF = opts.headOnly ? '' : accWrap(classAcc(cls, L, id, 'front', m));
     // rétegsorrend a mélység szerint
     const behindArms = (zArmL < -0.15 ? armL : '') + (zArmR < -0.15 ? armR : '');
     const frontArmL = zArmL < -0.15 ? '' : armL, frontArmR = zArmR < -0.15 ? '' : armR;
     let layers;
     if (opts.headOnly) layers = backView && c < -0.42 ? `${neck}${headG}${hairBackG}${headTopG}` : `${hairBackG}${neck}${headG}`;
-    else if (!backView) layers = `${auraB}${wingsB}${capeB}${tailB}${hairBackG}${quiverB}${behindArms}${body}${frontArmL}${neck}${frontArmR}${headG}`;
+    else if (!backView) layers = `${auraB}${wingsB}${capeB}${tailB}${hairBackG}${accB}${quiverB}${behindArms}${body}${accF}${frontArmL}${neck}${frontArmR}${headG}`;
     // a hátsó haj csak a profilon túl (≈115°-tól) kerül a fej elé, addig az arc oldalt még látszik
-    else layers = `${auraB}${behindArms}${body}${frontArmL}${frontArmR}${neck}${capeB}${quiverB}${c < -0.42 ? headG + hairBackG + headTopG : hairBackG + headG}${tailB}${wingsB}`;
+    else layers = `${auraB}${behindArms}${body}${frontArmL}${frontArmR}${neck}${capeB}${accB}${quiverB}${c < -0.42 ? headG + hairBackG + headTopG : hairBackG + headG}${tailB}${wingsB}`;
     return `<svg class="rig wpn-${cls}${+L.weapon || 0}${opts.cls ? ' ' + opts.cls : ''}" viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(h.name || 'Hős')}">${defs}${opts.bust ? bustBack(vb, L, id) : ''}
       ${opts.headOnly || opts.bust ? '' : `<ellipse class="r-shadow" cx="160" cy="420" rx="${turned ? fx(70 * (0.75 + 0.25 * ac)) : 70}" ry="10" fill="#05071a" opacity="0.55"/>`}
       <g transform="${scaleT}"><g class="r-root"><g class="r-body" style="transform-origin:160px 420px">
