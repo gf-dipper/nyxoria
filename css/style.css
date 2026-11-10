@@ -805,6 +805,11 @@ svg.nxi-misc { width: 1.3em; height: 1.3em; flex: none; display: inline-block; v
 .nx-gm-open > span:last-child { display: flex; flex-direction: column; min-width: 0; }
 .nx-gm-open > span:last-child > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .nx-gm-pw { color: var(--fakla-300); font-weight: 600; }
+.nx-gm-open > span:last-child > .nx-gm-seen { white-space: normal; overflow: visible; }
+.nx-gm-seen { color: var(--hold-500); }
+.nx-gm-seen.on { color: var(--jo-400); font-weight: 600; }
+.nx-gm-seen.on i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--jo-400); margin-right: 5px; vertical-align: 1px; box-shadow: 0 0 6px var(--jo-400); }
+.nx-gm-seen.old { color: var(--veszely-400); opacity: .85; }
 .nx-gm-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
 .nx-gm-tools .input { flex: 1 1 180px; height: 38px; min-width: 0; }
 .nx-gm-tools .seg { flex: 0 1 auto; }
@@ -1206,3 +1211,7 @@ html { scrollbar-width: thin; scrollbar-color: rgba(127, 140, 255, .35) transpar
 .stat-diff { display: flex; flex-wrap: wrap; gap: 4px 8px; margin-top: 4px; font-size: 12px; font-weight: 700; }
 .stat-diff .sd.up { color: var(--tunde-400, #6fe0a0); }
 .stat-diff .sd.down { color: #ff8f9f; }
+@media (max-width: 480px) {
+  .nx-gm-tools .seg { display: flex; flex-wrap: nowrap; width: 100%; }
+  .nx-gm-tools .seg button { flex: 1 1 auto; padding: 0 5px; font-size: 12px; min-width: 0; }
+}

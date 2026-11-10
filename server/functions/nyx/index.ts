@@ -4863,7 +4863,7 @@ async function guildAction(user, action, args) {
   }
   if (action === 'guildInfo') {
     if (!me) return { guild: null };
-    const members = await sql`select h.name, h.class_id, h.level, h.power, h.save->'hero' as hx, h.save->'hero'->'look' as look, m.role, m.user_id,
+    const members = await sql`select h.name, h.class_id, h.level, h.power, h.active_at, h.save->'hero' as hx, h.save->'hero'->'look' as look, m.role, m.user_id,
                               case when m.week = ${weekNow()} then m.week_wins else 0 end as wins
                               from guild_members m join heroes h on h.user_id = m.user_id where m.guild_id = ${me.id} order by wins desc, h.level desc, h.name`;
     const log = await sql`select created_at, html from guild_log where guild_id = ${me.id} order by id desc limit 20`;
@@ -4875,7 +4875,7 @@ async function guildAction(user, action, args) {
       last.eligible = !!(mw && mw.wins > 0) && Date.parse(me.joined_at) <= Date.parse(prevWeek() + 'T00:00:00Z') + 3 * DAY; last.claimed = !!(await sql`select 1 from guild_claims where user_id = ${user.id} and week = ${prevWeek()} and goal = 100`).length; }
     return { guild: Object.assign(guildPublic(me), { stars: me.stars || 0 }), war: war, lastWar: last, warReward: WAR_REWARD, role: me.role, owner: me.owner === user.id, progress: pr, goals: GUILD_GOALS.map((g, i) => ({ w: goalFor(g, pr.members), i: i, silverM: g.silver, dust: g.dust })),
       claimed: (await sql`select goal from guild_claims where user_id = ${user.id} and week = ${weekNow()}`).map(r => r.goal), max: GUILD_MAX,
-      members: members.map(m => ({ name: m.name, classId: m.class_id, level: m.level, power: (() => { try { return E.power(E.heroStats(m.hx)); } catch (e) { return Number(m.power) || 0; } })(), rig: G.wornLook(m.hx), look: m.look, role: m.role, wins: m.wins, me: m.user_id === user.id, uid: m.user_id })),
+      members: members.map(m => ({ name: m.name, classId: m.class_id, level: m.level, power: (() => { try { return E.power(E.heroStats(m.hx)); } catch (e) { return Number(m.power) || 0; } })(), rig: G.wornLook(m.hx), look: m.look, role: m.role, wins: m.wins, active: m.active_at ? new Date(m.active_at).getTime() : null, me: m.user_id === user.id, uid: m.user_id })),
       log: log.map(l => ({ t: new Date(l.created_at).getTime(), html: l.html })) };
   }
   if (action === 'guildCreate') {
