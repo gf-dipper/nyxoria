@@ -1364,3 +1364,11 @@ html { scrollbar-width: thin; scrollbar-color: rgba(127, 140, 255, .35) transpar
 /* Hold-rang (50. szint után) */
 .bar.xp.moon > i { background: linear-gradient(90deg, #8fa8ff, #e8ecff); }
 .moon-rank { color: #c9d4ff; font-weight: 600; white-space: nowrap; }
+
+/* Felszerelés-előny a karakterlapon */
+.nx-edge { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--line, rgba(255,255,255,.08)); border-radius: 12px; }
+.nx-edge-t { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13px; margin-bottom: 6px; }
+.nx-edge-t b { color: var(--fakla-300); white-space: nowrap; }
+.nx-edge .bar.edge { height: 6px; }
+.nx-edge .bar.edge > i { background: linear-gradient(90deg, #e8a13a, #ffd98a); }
+.nx-edge p { margin-top: 6px; line-height: 1.4; }

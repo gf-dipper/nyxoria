@@ -266,7 +266,7 @@
   function offersKey(save) {
     const h = save.hero;
     const eq = D.SLOT_ORDER.map(s => h.equipped[s] ? h.equipped[s].id + ':' + (h.equipped[s].plus || 0) + ':' + (h.equipped[s].rerolls || 0) : '').join(',');
-    return ['v4', h.level, h.loadout.slice().sort().join('.'), save.settings.moon, eq, h.path == null ? '' : h.path].join('|'); // a taktika nem hoz új kalandot, csak az esélyt számolja újra
+    return ['v5', h.level, E.moonRank(h), h.loadout.slice().sort().join('.'), save.settings.moon, eq, h.path == null ? '' : h.path].join('|'); // a taktika nem hoz új kalandot, csak az esélyt számolja újra
   }
   function refreshOffers(save) {
     if (save.expedition) return;

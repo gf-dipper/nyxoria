@@ -2399,6 +2399,16 @@ import postgres from 'npm:postgres@3.4.9';
   // ---------- Expedíció-ajánlatok ----------
   // a hold kockázata a célesélyhez arányos: a Közepesnél teljes, a Nehéznél kisebb (különben a Nehéz Vérhold csapda lenne)
   function offerTarget(d, moon) { return DIFF[d].target - (moon.risk || 0) * DIFF[d].target / DIFF.kozepes.target; }
+  // Felszerelés-előny: minél többet ad a felszerelés (és a Hold-rang) a csupasz hőshöz képest, annál nagyobb győzelmi esélyre
+  // mérjük a szörnyet. Kezdő holmival (kb. +25%) nincs előny, maxra fejlesztett legendás készlettel és pár Hold-ranggal (kb. +90%) teljes.
+  var GEAR_EDGE = { from: 0.25, to: 0.9, bonus: { konnyu: 0.07, kozepes: 0.18, nehez: 0.22 }, cap: 0.97 };
+  function gearEdge(hero) {
+    var bare = Object.assign({}, hero, { equipped: {}, moonRank: 0 });
+    var g = powerRaw(heroStats(hero)) / Math.max(1, powerRaw(heroStats(bare))) - 1;
+    return Math.round(Math.max(0, Math.min(1, (g - GEAR_EDGE.from) / (GEAR_EDGE.to - GEAR_EDGE.from))) * 100) / 100;
+  }
+  function gearBonus(hero, d) { return (GEAR_EDGE.bonus[d] || 0) * gearEdge(hero); }
+  function heroTarget(hero, d, moon, elite) { return Math.min(GEAR_EDGE.cap, eliteTarget(d, moon, elite) + gearBonus(hero, d)); }
   // A szörny szintjét a hős ALAP felállásához mérjük (a képességek a megszerzés sorrendjében, a kaszt alap taktikájával),
   // nem a mostanihoz: így a jobb sorrend és a jól megválasztott taktika tényleg jobb esélyt ad, és nem tolja feljebb az ellenfelet.
   function canonHero(hero) {
@@ -2419,7 +2429,7 @@ import postgres from 'npm:postgres@3.4.9';
     return DIFF_ORDER.map(function (d, idx) {
       // az elit sorsolás független a felszereléstől: a szint és a megtett kalandok száma dönti el (felszerelés-cserével nem lehet „horgászni”)
       var elite = d !== 'konnyu' && hero.level >= ELITE.minLevel && mulberry32(((hero.level * 7919) ^ ((hero.stats && hero.stats.expeditions || 0) * 104729) ^ (idx * 31 + 0x51ed)) >>> 0)() < ELITE.chance;
-      var Lm = findMonsterLevel(canonF, ch.tactic, eliteTarget(d, moon, elite), { seed: 1000 + idx, n: 240, power: moon.power });
+      var Lm = findMonsterLevel(canonF, ch.tactic, heroTarget(hero, d, moon, elite), { seed: 1000 + idx, n: 240, power: moon.power });
       var region = regionFor(Lm, d);
       var guards = region.guards.filter(function (g) { return !used[g]; });
       // az őrző a szintből és a megtett kalandok számából adódik (képességsorrend-cserével nem lehet könnyebb őrzőt „horgászni”)
@@ -2925,7 +2935,7 @@ import postgres from 'npm:postgres@3.4.9';
     itemStats: itemStats, makeItem: makeItem, affixText: affixText, salvageValue: salvageValue, sellValue: sellValue, upgradeCost: upgradeCost,
     newHero: newHero, unlockedSkills: unlockedSkills, nextSkillUnlock: nextSkillUnlock, heroStats: heroStats, power: power, powerRaw: powerRaw, lootLevel: lootLevel,
     fighterFromHero: fighterFromHero, monsterFighter: monsterFighter, simulateFight: simulateFight, simulateDuel: simulateDuel, duelChance: duelChance, PVP: PVP, winChance: winChance,
-    findMonsterLevel: findMonsterLevel, canonHero: canonHero, offerTraits: offerTraits, COMBAT: COMBAT, regionFor: regionFor, makeOffers: makeOffers, offerTarget: offerTarget, ELITE: ELITE, offerMoon: offerMoon, eliteTarget: eliteTarget, normEvent: normEvent, eventOptions: eventOptions, eventCost: eventCost, eventCheckChance: eventCheckChance, applyFollow: applyFollow, offerChance: offerChance,
+    findMonsterLevel: findMonsterLevel, canonHero: canonHero, offerTraits: offerTraits, COMBAT: COMBAT, regionFor: regionFor, makeOffers: makeOffers, offerTarget: offerTarget, GEAR_EDGE: GEAR_EDGE, gearEdge: gearEdge, gearBonus: gearBonus, heroTarget: heroTarget, ELITE: ELITE, offerMoon: offerMoon, eliteTarget: eliteTarget, normEvent: normEvent, eventOptions: eventOptions, eventCost: eventCost, eventCheckChance: eventCheckChance, applyFollow: applyFollow, offerChance: offerChance,
     startExpedition: startExpedition, resolveCard: resolveCard, guardPreview: guardPreview, fightGuard: fightGuard,
     finishExpedition: finishExpedition, applyChoice: applyChoice, lossAdvice: lossAdvice,
     torchState: torchState, spendTorch: spendTorch, dustRoom: dustRoom, dustCap: dustCap, weekOf: weekOf, addDust: addDust, addXp: addXp,
@@ -3203,7 +3213,7 @@ import postgres from 'npm:postgres@3.4.9';
   function offersKey(save) {
     const h = save.hero;
     const eq = D.SLOT_ORDER.map(s => h.equipped[s] ? h.equipped[s].id + ':' + (h.equipped[s].plus || 0) + ':' + (h.equipped[s].rerolls || 0) : '').join(',');
-    return ['v4', h.level, h.loadout.slice().sort().join('.'), save.settings.moon, eq, h.path == null ? '' : h.path].join('|'); // a taktika nem hoz új kalandot, csak az esélyt számolja újra
+    return ['v5', h.level, E.moonRank(h), h.loadout.slice().sort().join('.'), save.settings.moon, eq, h.path == null ? '' : h.path].join('|'); // a taktika nem hoz új kalandot, csak az esélyt számolja újra
   }
   function refreshOffers(save) {
     if (save.expedition) return;
@@ -4264,7 +4274,7 @@ import postgres from 'npm:postgres@3.4.9';
     if (!E.DIFF[exp.offer.diff]) return;
     // ugyanazzal a céllal (a hold kockázatával együtt) és ugyanazokkal a próbaharcokkal, mint az ajánlat
     const ch = E.canonHero(h); // az alap felálláshoz mérünk: a sorrend és a taktika váltása nem tolja feljebb az őrzőt
-    const lm = E.findMonsterLevel(E.fighterFromHero(ch), ch.tactic, E.eliteTarget(exp.offer.diff, moon, exp.offer.elite), { seed: 1000 + E.DIFF_ORDER.indexOf(exp.offer.diff), n: 240, power: moon.power });
+    const lm = E.findMonsterLevel(E.fighterFromHero(ch), ch.tactic, E.heroTarget(h, exp.offer.diff, moon, exp.offer.elite), { seed: 1000 + E.DIFF_ORDER.indexOf(exp.offer.diff), n: 240, power: moon.power });
     if (lm > exp.offer.lm) { exp.offer.lm = lm; exp.offer.level = Math.max(1, Math.round(lm)); }
   }
   ['equip', 'equipIds', 'upgrade', 'reroll', 'pathPick', 'transfer'].forEach(n => wrap(n, save => recalibrate(save)));

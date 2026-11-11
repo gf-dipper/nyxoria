@@ -666,7 +666,7 @@
     if (!E.DIFF[exp.offer.diff]) return;
     // ugyanazzal a céllal (a hold kockázatával együtt) és ugyanazokkal a próbaharcokkal, mint az ajánlat
     const ch = E.canonHero(h); // az alap felálláshoz mérünk: a sorrend és a taktika váltása nem tolja feljebb az őrzőt
-    const lm = E.findMonsterLevel(E.fighterFromHero(ch), ch.tactic, E.eliteTarget(exp.offer.diff, moon, exp.offer.elite), { seed: 1000 + E.DIFF_ORDER.indexOf(exp.offer.diff), n: 240, power: moon.power });
+    const lm = E.findMonsterLevel(E.fighterFromHero(ch), ch.tactic, E.heroTarget(h, exp.offer.diff, moon, exp.offer.elite), { seed: 1000 + E.DIFF_ORDER.indexOf(exp.offer.diff), n: 240, power: moon.power });
     if (lm > exp.offer.lm) { exp.offer.lm = lm; exp.offer.level = Math.max(1, Math.round(lm)); }
   }
   ['equip', 'equipIds', 'upgrade', 'reroll', 'pathPick', 'transfer'].forEach(n => wrap(n, save => recalibrate(save)));

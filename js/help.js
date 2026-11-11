@@ -79,6 +79,7 @@
             'Közepes: a jó középút.',
             'Nehéz: kockázatos, de több tapasztalat, Holdezüst, Csillagpor és tárgy jár, és főleg innen jönnek a legendás tárgyak.'
           ] },
+          { h: 'Mit ér a jó felszerelés?', p: 'A kalandok szörnyei a hősöd erejéhez igazodnak, de nem teljesen: minél többet ad a felszerelésed (jobb ritkaság, fejlesztés) és a Hold-rangod, annál nagyobb győzelmi eséllyel indulsz. Kezdő holmival a Közepes nagyjából 65–70%, a Nehéz 35–40% (az őrző természetétől függően). Maxra fejlesztett legendás felszereléssel a Közepes 85%, a Nehéz 55–60% körül jár. Közben a szörnyek szintje és a zsákmány is nő. Az előnyödet a Karakter oldalon látod.' },
           { h: 'Az őrzők természete', p: 'A {TRAIT_MIN}. szinttől a három ajánlat őrzője más-más természetű; ez a kaland kártyáján és az őrző előtt is látszik. Az őrző ereje a hősöd alap felállásához igazodik (a képességek a megszerzés sorrendjében, a kasztod ajánlott taktikájával), ezért aki a sorrenddel és a taktikával alkalmazkodik, annak tényleg jobb az esélye. A kártyán látott esély mindig a mostani felállásodra szól. A Karakter oldalon az „Ajánlott sorrend” kaland közben az éppen rád váró őrző ellen számol.', list: [
             'Páncélos: az első 3 körben a sebzés közel harmadát felfogja. A páncéltörő képesség rögtön áttöri.',
             'Fürge: nehezebb eltalálni, a nagy csapások elől különösen gyakran kitér. A méreg és a kísérő lény biztosabb.',
