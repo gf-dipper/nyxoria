@@ -228,3 +228,22 @@ alter table public.admin_log enable row level security;
 alter table public.world_state add column if not exists notice text;
 alter table public.world_state add column if not exists notice_at timestamptz;
 
+
+-- hibajegyek: a játékból beküldött hibák, az admin felületen kezelhetők
+create table if not exists public.bug_reports (
+  id       bigserial primary key,
+  at       timestamptz not null default now(),
+  user_id  uuid,
+  hero     text,
+  level    int,
+  class_id text,
+  screen   text,
+  device   text,
+  version  text,
+  body     text not null,
+  status   text not null default 'uj',
+  note     text
+);
+create index if not exists bug_reports_status_idx on public.bug_reports (status, id desc);
+create index if not exists bug_reports_user_idx on public.bug_reports (user_id, at desc);
+alter table public.bug_reports enable row level security;

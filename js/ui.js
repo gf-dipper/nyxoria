@@ -517,7 +517,15 @@
     }
     if (kind === 'keszulo') return wrap('Készülő funkciók', 'Ezek még készülnek. A Discordon szólunk, amint valamelyik elindul.', `<ul class="nx-list">${SOON.map(([a, b]) => li(a, b, null)).join('')}</ul>`);
     if (kind === 'discord') return wrap('Discord-szerver', 'Csevegés, bejelentések, segítség', `<p>A Nyxoria a Discord-közösség játéka. Ott jelentjük be a heti szörnyet és az újdonságokat, és ott kérhetsz segítséget.${ONLINE ? ' A játékba is a Discord-fiókoddal lépsz be.' : ''}</p><div class="nx-note">A szerver meghívóját a Nyxoria tulajdonosától kérheted el.</div>`);
-    if (kind === 'hiba') { const code = `NYX-${h ? h.level : 0}-${(h ? h.name : 'vendeg').replace(/[^\p{L}\p{N}]/gu, '').slice(0, 12)}`; return wrap('Hiba bejelentése', 'Zárt teszt: minden észrevétel számít', `<p>Ha valami furcsát látsz, írd meg nekünk a Discordon. Segít, ha leírod, mit csináltál előtte, és ha küldesz egy képernyőképet.</p><div class="nx-note">Ezt az azonosítót másold be az üzenetedbe: <b>${esc(code)}</b></div>`, `<button class="btn primary block" data-act="copy" data-v="${esc(code)}">Azonosító kimásolása</button>`); }
+    if (kind === 'hiba') {
+      const code = `NYX-${h ? h.level : 0}-${(h ? h.name : 'vendeg').replace(/[^\p{L}\p{N}]/gu, '').slice(0, 12)}`;
+      if (!ONLINE || !S.me) return wrap('Hiba bejelentése', 'Béta: minden észrevétel számít', `<p>Gyakorló módban nem tudjuk fogadni a hibajegyet, ezért írd meg nekünk a Discordon. Segít, ha leírod, mit csináltál előtte, és ha küldesz egy képernyőképet.</p><div class="nx-note">Ezt az azonosítót másold be az üzenetedbe: <b>${esc(code)}</b></div>`, `<button class="btn primary block" data-act="copy" data-v="${esc(code)}">Azonosító kimásolása</button>`);
+      if (S.bugSent) return wrap('Köszönjük!', 'Megkaptuk a hibajegyet', `<p>Az adminok látják, és igyekeznek minél előbb kijavítani. Ha képernyőképed is van róla, nyugodtan küldd el a Discordon is.</p>`, `<button class="btn primary block" data-act="modal-close">Rendben</button>`);
+      return wrap('Hiba bejelentése', 'Béta: minden észrevétel számít', `<p class="small">Írd le, mi történt, és mit csináltál előtte. A hősöd, a képernyő, ahol most vagy, és az eszközöd adatai automatikusan mellé kerülnek.</p>
+        <textarea class="input nx-bug" id="nx-bug" maxlength="1500" rows="6" placeholder="Pl.: A Táskában a Szétszedés gombra nyomtam, és eltűnt a felszerelt kardom is." aria-label="A hiba leírása">${esc(S.bugDraft || '')}</textarea>
+        <p class="small muted" style="margin-top:6px">Képernyőképet a Discordon tudsz küldeni, ehhez az azonosítód: <b>${esc(code)}</b></p>`,
+        `<button class="btn primary block" data-act="bug-send"${S.busy ? ' disabled' : ''}>${S.busy ? 'Küldés…' : 'Hibajegy elküldése'}</button>`);
+    }
     if (kind === 'sugo') return wrap('Súgó', 'Bubó, a kalauz bagoly mindent elmagyaráz', `<ul class="nx-list">
         ${li('Hogyan kezdjek?', 'Indíts egy kalandot a táborból: ez a fő játék. Három tisztáson választasz egy-egy kártyát, a végén megküzdesz az őrzővel.')}
         ${li('Mi a fáklya?', 'Egy kaland egy fáklyába kerül, a fáklyák maguktól újragyulladnak. Fáradtan is mehetsz, de kevesebb tapasztalatot és Holdezüstöt kapsz, tárgyat pedig nem.')}
@@ -636,10 +644,12 @@
     remote('admin', Object.assign({ op: op }, args || {})).then(r => { if (done) done(r); render(); }).catch(e => { toast(e.message || 'Hiba történt.'); render(); });
   }
   const ago = t => { if (!t) return '–'; const m = Math.round((Date.now() - t) / 60000); return m < 60 ? `${Math.max(1, m)} perce` : m < 1440 ? `${Math.round(m / 60)} órája` : `${Math.round(m / 1440)} napja`; };
-  const ADMIN_ACT = { ban: 'kitiltás', unban: 'visszaengedés', grant: 'ajándék / levonás', rename: 'átnevezés', notice: 'bejelentés', giftAll: 'ajándék mindenkinek', bossReset: 'heti szörny újraindítása', guildRename: 'céh átnevezése', guildDisband: 'céh feloszlatása', setAdmin: 'admin jog', resources: 'erőforrások', itemCreate: 'tárgy készítése', itemEdit: 'tárgy módosítása', itemRemove: 'tárgy törlése', heroSet: 'hős adatai', resetDaily: 'napi keretek' };
+  const ADMIN_ACT = { bugSet: 'hibajegy kezelése', ban: 'kitiltás', unban: 'visszaengedés', grant: 'ajándék / levonás', rename: 'átnevezés', notice: 'bejelentés', giftAll: 'ajándék mindenkinek', bossReset: 'heti szörny újraindítása', guildRename: 'céh átnevezése', guildDisband: 'céh feloszlatása', setAdmin: 'admin jog', resources: 'erőforrások', itemCreate: 'tárgy készítése', itemEdit: 'tárgy módosítása', itemRemove: 'tárgy törlése', heroSet: 'hős adatai', resetDaily: 'napi keretek' };
   function renderAdmin() {
     const A2 = S.admin = S.admin || { tab: 'attekintes' }, tab = A2.tab;
-    const tabs = [['attekintes', 'Áttekintés'], ['jatekosok', 'Játékosok'], ['kozles', 'Bejelentés és ajándék'], ['vilag', 'Világ']];
+    const nb = A2.bugCounts ? A2.bugCounts.uj : A2.stats && A2.stats.stats ? A2.stats.stats.bugs : 0;
+    const tabs = [['attekintes', 'Áttekintés'], ['hibak', `Hibajegyek${nb ? ` (${nb})` : ''}`], ['jatekosok', 'Játékosok'], ['kozles', 'Bejelentés és ajándék'], ['vilag', 'Világ']];
+    if (tab === 'hibak' && !A2.bugs && !A2.loading4) { A2.loading4 = true; adminCall('bugs', { status: A2.bugF === 'mind' ? '' : (A2.bugF || 'uj') }, r => { A2.bugs = r.bugs; A2.bugCounts = r.counts; A2.loading4 = false; }); }
     if (tab === 'attekintes' && !A2.stats && !A2.loading1) { A2.loading1 = true; adminCall('stats', {}, r => { A2.stats = r; A2.loading1 = false; }); adminCall('world', {}, r => { A2.world = r; }); }
     if (tab === 'vilag' && !A2.world && !A2.loading2) { A2.loading2 = true; adminCall('world', {}, r => { A2.world = r; A2.loading2 = false; }); }
     if (tab === 'jatekosok' && !A2.players && !A2.loading3) { A2.loading3 = true; adminCall('players', { q: A2.q || '' }, r => { A2.players = r.players; A2.loading3 = false; }); }
@@ -653,6 +663,21 @@
         ${w && w.flagged.length ? `<h3 class="nx-h3" style="margin-top:16px">Gyanús aktivitás</h3><ul class="nx-glog">${w.flagged.map(f => `<li><button class="nx-lnk" data-act="admin-open" data-v="${f.uid}">${esc(f.hero || f.discord || '?')}</button> <span class="small muted">(${esc(f.discord || '')})</span> – ${f.why.map(esc).join(', ')}</li>`).join('')}</ul>` : ''}
         <h3 class="nx-h3" style="margin-top:16px">Legutóbbi játékos-műveletek</h3>${logList(A2.stats.recent, r => `<div class="chron-item"><span class="dot"></span><div><time>${new Date(r.at).toLocaleString('hu-HU')}</time>${esc(r.name || '?')}: ${esc(r.action)}</div></div>`)}
         ${w ? `<h3 class="nx-h3" style="margin-top:16px">Admin-napló</h3>${logList(w.adminLog, a => `<div class="chron-item"><span class="dot"></span><div><time>${new Date(a.at).toLocaleString('hu-HU')}</time><b>${esc(a.admin || '?')}</b>: ${esc(ADMIN_ACT[a.action] || a.action)}${a.target ? ` – ${esc(a.target)}` : ''} <span class="small muted">${esc(JSON.stringify(a.info || {}))}</span></div></div>`)}` : ''}`;
+    }
+    if (tab === 'hibak' && A2.bugs) {
+      const f = A2.bugF || 'uj', c = A2.bugCounts || {}, SN = { uj: 'Új', kesz: 'Javítva', elvetve: 'Elvetve' };
+      const SCR = { kaland: 'Tábor', hos: 'Karakter', taska: 'Táska', kozosseg: 'Közösség', kronika: 'Krónika', beallitas: 'Beállítások', sugo: 'Súgó' };
+      const filt = [['uj', `Új (${c.uj || 0})`], ['kesz', `Javítva (${c.kesz || 0})`], ['elvetve', `Elvetve (${c.elvetve || 0})`], ['mind', 'Mind']];
+      body = `<div class="seg nx-bugf" role="tablist" style="margin-top:12px">${filt.map(([k, n]) => `<button role="tab" aria-selected="${f === k}" data-act="admin-bugf" data-v="${k}">${n}</button>`).join('')}</div>
+        ${A2.bugs.length ? `<ul class="nx-bugs">${A2.bugs.map(b => `<li class="nx-bugi st-${b.status}">
+          <div class="nx-bug-h"><span class="badge">#${b.id}</span><b>${b.uid ? `<button class="nx-lnk" data-act="admin-bugwho" data-v="${b.uid}">${esc(b.hero || b.discord || '?')}</button>` : esc(b.hero || '?')}</b>
+            <span class="small muted">${b.level ? `${b.level}. szintű` : ''}${b.classId && D.CLASSES[b.classId] ? ` ${esc(D.CLASSES[b.classId].name.toLowerCase())}` : ''}${b.discord ? ` · ${esc(b.discord)}` : ''}</span>
+            <span class="small muted nx-bug-t">${new Date(b.at).toLocaleString('hu-HU')} · ${ago(b.at)}</span></div>
+          <p class="nx-bug-b">${esc(b.text)}</p>
+          <p class="small muted">${[b.screen ? `Képernyő: ${esc(SCR[b.screen] || b.screen)}` : '', b.device ? esc(b.device) : '', b.version ? `v${esc(b.version)}` : ''].filter(Boolean).join(' · ')}${f === 'mind' ? ` · <b>${SN[b.status] || esc(b.status)}</b>` : ''}</p>
+          ${b.note ? `<p class="small">Megjegyzés: ${esc(b.note)}</p>` : ''}
+          <div class="row wrap" style="gap:6px;margin-top:8px">${b.status !== 'kesz' ? `<button class="btn sm" data-act="admin-bugset" data-v="${b.id}" data-st="kesz">Kijavítottam</button>` : ''}${b.status !== 'elvetve' ? `<button class="btn sm ghost" data-act="admin-bugset" data-v="${b.id}" data-st="elvetve">Elvetem</button>` : ''}${b.status !== 'uj' ? `<button class="btn sm ghost" data-act="admin-bugset" data-v="${b.id}" data-st="uj">Újranyitom</button>` : ''}<button class="btn sm ghost" data-act="admin-bugnote" data-v="${b.id}">Megjegyzés</button></div></li>`).join('')}</ul>`
+          : `<p class="muted" style="margin-top:12px">${f === 'uj' ? 'Nincs új hibajegy. 🎉' : 'Itt még nincs semmi.'}</p>`}`;
     }
     if (tab === 'jatekosok') {
       const list = A2.players ? (A2.players.length ? `<div class="nx-admlist">${A2.players.map(p => `<button class="nx-admrow${A2.sel === p.uid ? ' on' : ''}" data-act="admin-open" data-v="${p.uid}">
@@ -2263,7 +2288,11 @@
     'hero-delete'(v) { const inp = el('del-name'), x = heroList().filter(y => y.slot === +v)[0]; if (!x || !inp || inp.value.trim().toLowerCase() !== x.name.toLowerCase()) { toast('A törléshez írd be pontosan a hős nevét.'); return; } act('heroDelete', { slot: +v, confirm: inp.value.trim() }, async () => { S.delSlot = null; if (ONLINE) await refreshState(); toast(`${x.name} törölve.`); }); },
     'notice-ok'() { try { localStorage.setItem('nyx-notice', String(S.notice.at)); } catch (e) { /* privát mód */ } render(); },
     'admin-tab'(v) { S.admin.tab = v; render(); },
-    'admin-refresh'() { const t = S.admin ? S.admin.tab : 'attekintes', sel = S.admin && S.admin.sel; S.admin = { tab: t, q: S.admin && S.admin.q, sel: sel }; if (sel) actions['admin-open'](sel); else render(); },
+    'admin-bugf'(v) { S.admin.bugF = v; S.admin.bugs = null; render(); },
+    'admin-bugset'(v, t) { const st = t && t.dataset ? t.dataset.st : ''; adminCall('bugSet', { id: +v, status: st }, () => { toast(st === 'kesz' ? 'Javítottnak jelölve.' : st === 'elvetve' ? 'Elvetve.' : 'Újranyitva.'); S.admin.bugs = null; }); },
+    'admin-bugnote'(v) { const n = prompt('Megjegyzés a hibajegyhez (csak az adminok látják, üresen törli):'); if (n == null) return; const b = (S.admin.bugs || []).find(x => x.id === +v); adminCall('bugSet', { id: +v, status: b ? b.status : 'uj', note: n }, () => { toast('Megjegyzés elmentve.'); S.admin.bugs = null; }); },
+    'admin-bugwho'(v) { actions['admin-open'](v); },
+    'admin-refresh'() { const t = S.admin ? S.admin.tab : 'attekintes', sel = S.admin && S.admin.sel; S.admin = { tab: t, q: S.admin && S.admin.q, sel: sel, bugF: S.admin && S.admin.bugF }; if (sel) actions['admin-open'](sel); else render(); },
     'admin-search'() { S.admin.q = (el('adm-q') || {}).value || ''; S.admin.players = null; render(); },
     'admin-open'(v) { const A2 = S.admin; if (A2.sel !== v) { A2.hslot = 0; A2.hd = null; A2.ib = null; } A2.sel = v; if (A2.tab !== 'jatekosok') { A2.tab = 'jatekosok'; } adminCall('player', { uid: v }, r => { A2.detail = r; }); render(); },
     'admin-hslot'(v) { S.admin.hslot = +v; S.admin.hd = null; render(); },
@@ -2408,7 +2437,17 @@
     },
     // karakterkészítő
     restyle() { S.restyleFrom = S.screen === 'atszabas' ? S.restyleFrom : S.screen; S.screen = 'atszabas'; render(); scrollTop(); },
-    info(v) { S.modal = { type: 'info', kind: v }; render(); },
+    info(v) { if (v === 'hiba') { S.bugFrom = S.screen; S.bugSent = false; } S.modal = { type: 'info', kind: v }; render(); if (v === 'hiba') { const t = el('nx-bug'); if (t && !matchMedia('(pointer: coarse)').matches) t.focus(); } },
+    'bug-send'() {
+      const t = ((el('nx-bug') || {}).value || '').trim(); if (t.length < 5) { toast('Írj egy kicsit többet, hogy tudjuk, mi történt.'); return; }
+      const ua = navigator.userAgent || '', br = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /SamsungBrowser/.test(ua) ? 'Samsung' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'egyéb';
+      const os = /Android/.test(ua) ? 'Android' : /iPhone|iPad|iPod/.test(ua) ? 'iOS' : /Windows/.test(ua) ? 'Windows' : /Mac OS/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : '';
+      const sc = document.querySelector('script[src*="ui.js"]'), ver = sc && /v=([\w.-]+)/.exec(sc.getAttribute('src')), device = `${matchMedia('(pointer: coarse)').matches ? 'érintős' : 'egér'} · ${innerWidth}×${innerHeight} · ${os} ${br}`.trim();
+      S.busy = true; render();
+      remote('bug', { text: t, screen: S.bugFrom || S.screen, device: device, version: ver ? ver[1] : '' })
+        .then(() => { S.busy = false; S.bugDraft = ''; S.bugSent = true; render(); })
+        .catch(e => { S.busy = false; toast(e.message || 'Nem sikerült elküldeni, próbáld újra.'); render(); });
+    },
     goto(v) { if (!leaveOk()) return; S.modal = null; gotoTarget(v); },
     'title-go'() { markTitle(); S.phase = 'game'; S.screen = 'kaland'; render(); scrollTop(); const g = el('nx-greet'); if (g) g.focus({ preventScroll: true }); },
     copy(v) { try { navigator.clipboard.writeText(v).then(() => toast('Kimásoltam: ' + v), () => toast('Jelöld ki és másold: ' + v)); } catch (e) { toast('Jelöld ki és másold: ' + v); } },
@@ -2473,6 +2512,7 @@
   let helpT = 0;
   document.addEventListener('input', ev => {
     if (/^g-(name|tag|motto|color)$/.test(ev.target.id)) { readGuildForm(); return; }
+    if (ev.target.id === 'nx-bug') { S.bugDraft = ev.target.value; return; }
     if (ev.target.id === 'gm-q') { const q = gmFold(ev.target.value); S.gmQ = ev.target.value; let n = 0; document.querySelectorAll('.nx-members li[data-gm]').forEach(li => { const on = !q || li.dataset.gm.includes(q); li.hidden = !on; if (on) n++; }); const e = document.querySelector('.nx-gm-none'); if (e) e.hidden = n > 0; return; }
     if (ev.target.id !== 'help-q') return;
     clearTimeout(helpT);

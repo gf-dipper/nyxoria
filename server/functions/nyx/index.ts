@@ -4760,6 +4760,52 @@ async function ranks(user, args) {
   return { rows: rows.map(r => ({ name: r.name, classId: r.class_id, level: r.level, value: Number(r.value), me: r.user_id === user.id && (!myName || r.name.toLowerCase() === myName) })) };
 }
 
+// ---------- hibajegyek ----------
+// A tábla első használatkor magától létrejön (ugyanaz, mint a schema.sql végén), így nincs külön adatbázis-lépés.
+let bugsReady = false;
+async function ensureBugs() {
+  if (bugsReady) return;
+  const [ex] = await sql`select to_regclass('public.bug_reports') as t`;
+  if (ex && ex.t) { bugsReady = true; return; }
+  try { await sql.unsafe(`create table if not exists public.bug_reports (
+  id       bigserial primary key,
+  at       timestamptz not null default now(),
+  user_id  uuid,
+  hero     text,
+  level    int,
+  class_id text,
+  screen   text,
+  device   text,
+  version  text,
+  body     text not null,
+  status   text not null default 'uj',
+  note     text
+);
+create index if not exists bug_reports_status_idx on public.bug_reports (status, id desc);
+create index if not exists bug_reports_user_idx on public.bug_reports (user_id, at desc);
+alter table public.bug_reports enable row level security;`); }
+  catch (e) { if (e.code !== '23505' && e.code !== '42P07') throw e; } // egyszerre két kérés hozta létre: nem baj
+  bugsReady = true;
+}
+const BUG_STATUS = { uj: 'Új', kesz: 'Javítva', elvetve: 'Elvetve' };
+async function bugReport(user, args) {
+  await ensureBugs();
+  if (typeof args.text !== 'string') throw new GameError('arg', 'Írj egy kicsit többet, hogy tudjuk, mi történt.');
+  const body = args.text.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u200b-\u200f\u2060\ufeff]/g, '').trim().slice(0, 1500);
+  if (body.length < 5) throw new GameError('arg', 'Írj egy kicsit többet, hogy tudjuk, mi történt.');
+  const cut = (v, l) => typeof v === 'string' ? v.replace(/[\u0000-\u001f]/g, '').slice(0, l) || null : null;
+  const screen = typeof args.screen === 'string' && /^[a-z0-9_-]{1,24}$/.test(args.screen) ? args.screen : null;
+  const [h] = await sql`select name, level, class_id from heroes where user_id = ${user.id}`;
+  await sql.begin(async tx => {
+    await tx`select pg_advisory_xact_lock(hashtext(${'bug:' + user.id}))`; // párhuzamos kérések se kerüljék meg a korlátot
+    const [{ n }] = await tx`select count(*)::int as n from bug_reports where user_id = ${user.id} and at > now() - interval '1 hour'`;
+    if (n >= 6) throw new GameError('rate', 'Egy órán belül már sok hibát küldtél. Köszönjük! Kicsit később küldd a többit.');
+    await tx`insert into bug_reports (user_id, hero, level, class_id, screen, device, version, body)
+             values (${user.id}, ${h ? h.name : null}, ${h ? h.level : null}, ${h ? h.class_id : null}, ${screen}, ${cut(args.device, 120)}, ${cut(args.version, 30)}, ${body})`;
+  });
+  return { ok: true };
+}
+
 // ---------- admin ----------
 async function admin(user, player, args) {
   if (!(player.is_admin || isAdminId(user.discordId))) throw new GameError('admin', 'Ehhez nincs jogod.', 403);
@@ -4769,7 +4815,18 @@ async function admin(user, player, args) {
                           (select coalesce(max(level), 0) from ${ALLH(sql)} h)::int as maxlevel from heroes`;
     const [p] = await sql`select count(*)::int as players, count(*) filter (where banned)::int as banned from players`;
     const recent = await sql`select at, action, info, (select name from heroes h where h.user_id = l.user_id) as name from action_log l order by id desc limit 20`;
-    return { stats: Object.assign({}, s, p, { silver: Number(s.silver) }), recent: recent.map(r => ({ at: new Date(r.at).getTime(), action: r.action, name: r.name, info: r.info })) };
+    await ensureBugs();
+    const [bq] = await sql`select count(*)::int as n from bug_reports where status = 'uj'`;
+    return { stats: Object.assign({}, s, p, { silver: Number(s.silver), bugs: bq.n }), recent: recent.map(r => ({ at: new Date(r.at).getTime(), action: r.action, name: r.name, info: r.info })) };
+  }
+  if (args.op === 'bugs') {
+    await ensureBugs();
+    const st = BUG_STATUS[args.status] ? args.status : null;
+    const rows = st ? await sql`select b.*, p.discord_name from bug_reports b left join players p on p.user_id = b.user_id where b.status = ${st} order by b.id desc limit 150`
+                    : await sql`select b.*, p.discord_name from bug_reports b left join players p on p.user_id = b.user_id order by b.id desc limit 150`;
+    const cnt = await sql`select status, count(*)::int as n from bug_reports group by status`;
+    const counts = { uj: 0, kesz: 0, elvetve: 0 }; cnt.forEach(c => { counts[c.status] = c.n; });
+    return { counts: counts, bugs: rows.map(b => ({ id: Number(b.id), at: new Date(b.at).getTime(), uid: b.user_id, discord: b.discord_name, hero: b.hero, level: b.level, classId: b.class_id, screen: b.screen, device: b.device, version: b.version, text: b.body, status: b.status, note: b.note })) };
   }
   const alog = (target, action, info) => sql`insert into admin_log (admin_id, target, action, info) values (${user.id}, ${target || null}, ${action}, ${sql.json(info || {})})`;
   const uidOf = async () => {
@@ -4989,6 +5046,17 @@ async function admin(user, player, args) {
     return { boss: b ? { id: Number(b.id), name: b.name, level: b.level, hp: Number(b.hp), maxHp: Number(b.max_hp), killed: !!b.killed_at, ends: new Date(b.ends_at).getTime(), participants: bp.n, damage: Number(bp.dmg) } : null,
       guilds: guilds.map(g => ({ id: Number(g.id), name: g.name, tag: g.tag, stars: g.stars, members: g.members, created: new Date(g.created_at).getTime() })), notice: w ? w.notice : null,
       flagged: flagged.slice(0, 40), adminLog: recent.map(a => ({ at: new Date(a.at).getTime(), action: a.action, info: a.info, admin: a.admin, target: a.target })) };
+  }
+  if (args.op === 'bugSet') {
+    await ensureBugs();
+    const id = Number(args.id) | 0, st = String(args.status || '');
+    if (!BUG_STATUS[st]) throw new GameError('arg', 'Ismeretlen állapot.');
+    const hasNote = typeof args.note === 'string', note = hasNote ? args.note.trim().slice(0, 300) || null : null;
+    const [b] = hasNote ? await sql`update bug_reports set status = ${st}, note = ${note} where id = ${id} returning user_id`
+                        : await sql`update bug_reports set status = ${st} where id = ${id} returning user_id`;
+    if (!b) throw new GameError('arg', 'Nincs ilyen hibajegy.');
+    await alog(b.user_id, 'bugSet', { id: id, status: st });
+    return { ok: true };
   }
   if (args.op === 'bossReset') {
     const [b] = await sql`select id, name from world_bosses order by id desc limit 1`;
@@ -5292,6 +5360,7 @@ async function handle(req) {
     if (action === 'ranks') return json(await ranks(user, args), 200, origin);
     if (action === 'profile') return json({ result: await profile(user, args) }, 200, origin);
     if (action === 'admin') return json(await admin(user, player, args), 200, origin);
+    if (action === 'bug') return json({ result: await bugReport(user, args) }, 200, origin);
 
     if (action === 'create') {
       const now = Date.now();
