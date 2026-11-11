@@ -478,14 +478,18 @@
     const h = hero(), t = E.torchState(S.save, now()), offers = S.save.offers || [], rec = offers.filter(o => o.diff === 'kozepes')[0];
     const chips = nextSteps(h, t);
     const narrow = window.matchMedia ? matchMedia('(max-width: 760px)').matches : false;
+    // telefonon a teendők a jelenet alá kerülnek, hogy ne takarják a hőst
+    const chipRow = `<div class="nx-chips" role="group" aria-label="Ami most rád vár">${chips.join('')}</div>`;
+    const below = window.matchMedia ? matchMedia('(max-width: 1023px)').matches : narrow; // tableten is szűk a jelenet
     const hint = rec ? `Ajánlott: ${esc(region(rec.region).name)}, ${pct(rec.chance)} győzelmi esély.` : '';
     const torch = t.count < E.TORCH.max ? ` A következő fáklya ${timeLeft(t.nextIn)} múlva gyullad.` : t.rested ? ' Minden fáklyád ég, Frissességet gyűjtesz.' : '';
     return `<section class="nx-camp" aria-labelledby="nx-greet"><div class="nx-stage">
       ${A.sceneSvg('tabor', 4, { live: true, narrow: narrow })}
       <div class="nx-shade"></div>
       <div class="nx-greet"><h2 id="nx-greet" tabindex="-1">${esc(greetLine(h.name))}</h2><p>${t.count ? 'A tábortűz ég. Merre indulsz?' : 'Elfogytak a fáklyák, de fáradtan is mehetsz.'}</p>
-        ${chips.length ? `<div class="nx-chips" role="group" aria-label="Ami most rád vár">${chips.join('')}</div>` : ''}</div>
+        ${chips.length && !below ? chipRow : ''}</div>
       <div class="nx-herobox">${A.heroSvg(h, { full: true, live: true })}</div></div>
+      ${chips.length && below ? `<div class="nx-chipbar">${chipRow}</div>` : ''}
       <div class="nx-cta"><p class="nx-hint">${hint}${torch}</p><button class="btn fakla lg" data-act="goto" data-v="offers">${ni('kaland')}Kalandra fel</button></div>
     </section>`;
   }
@@ -1170,6 +1174,10 @@
     });
   }
   window.addEventListener('resize', () => requestAnimationFrame(scrollHints), { passive: true });
+  // billentyűvel elért, félig kilógó teendő gördüljön be a sorba
+  document.addEventListener('focusin', e => { const b = e.target.closest && e.target.closest('.nx-chips button'); if (b && b.scrollIntoView) b.scrollIntoView({ inline: 'nearest', block: 'nearest' }); });
+  // telefon ↔ asztali határ átlépésekor (pl. elforgatás) a tábor elrendezése is váltson
+  if (window.matchMedia) { const re = () => { if (S.screen === 'kaland' && !S.modal) render(); }; ['(max-width: 760px)', '(max-width: 1023px)'].forEach(q => { const mq = matchMedia(q); mq.addEventListener ? mq.addEventListener('change', re) : mq.addListener && mq.addListener(re); }); }
   function render() {
     if (S.modal && S.modal !== S.sndModal) { S.sndModal = S.modal; const mt = S.modal.type; if (mt === 'level') SND('level'); else if (mt === 'legend') SND('loot'); else if (mt === 'chest' || mt === 'patrol') SND('coin'); } else if (!S.modal) S.sndModal = null;
     requestAnimationFrame(() => { scrollHints(); if (S.combat) skbUpdate(S.combat); });

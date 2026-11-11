@@ -1372,3 +1372,13 @@ html { scrollbar-width: thin; scrollbar-color: rgba(127, 140, 255, .35) transpar
 .nx-edge .bar.edge { height: 6px; }
 .nx-edge .bar.edge > i { background: linear-gradient(90deg, #e8a13a, #ffd98a); }
 .nx-edge p { margin-top: 6px; line-height: 1.4; }
+
+/* telefonon a tábor teendői a jelenet alatt sorakoznak, nem a hős előtt */
+.nx-chipbar { border-top: 1px solid var(--ej-600); background: #12163d; padding: 8px 0 0; }
+.nx-chipbar .nx-chips { margin: 0; padding: 2px 14px 8px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; align-items: center; }
+.nx-chipbar .nx-chips button { flex: none; }
+.nx-chipbar .nx-chips button.nx-next { max-width: min(72vw, 420px); white-space: normal; flex-wrap: wrap; text-align: left; line-height: 17px; padding: 7px 14px; border-radius: 16px; row-gap: 4px; }
+.nx-chipbar .nx-chips button.nx-next .nx-next-l { flex-basis: 100%; width: max-content; max-width: max-content; }
+@media (max-width: 760px) and (max-height: 640px) { .nx-stage { height: 230px; } }
+/* 761–899 px között (álló tablet) nem fér ki a felső sáv: a gyakorló jelvény ilyenkor elmarad (a Közösség panel jelzi) */
+@media (min-width: 761px) and (max-width: 899px) { .nx-practice { display: none; } }
