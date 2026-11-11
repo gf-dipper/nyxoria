@@ -2072,7 +2072,7 @@
   }
   function owlHtml() {
     if (S.screen === 'atszabas') return ''; // a készítőben Bubó nem takarja ki a választást
-    if (!S.owl || S.modal || (S.owlScreen && S.owlScreen !== S.screen)) return '';
+    if (!S.owl || S.modal || (S.combat && !S.combat.done) || (S.owlScreen && S.owlScreen !== S.screen)) return ''; // harc közben a bagoly nem takarja a gombokat
     const text = D.OWL_TIPS[S.owl];
     if (!text) return '';
     const still = S.owlShown === S.owl ? ' still' : ''; S.owlShown = S.owl;
